@@ -2,7 +2,10 @@
  
 ## Team
 | Name | Student ID | Role this milestone |
-|Anas Mohammed|4510440|leader|
+|Anas Mohammed Aljamil|4510440|leader|
+|Abdulaziz Omar Ateeq|4320434|member|
+|Abdullah Siddique|4412383|member|
+
  
 ## The problem
 One paragraph. A real task that real people do badly today.
