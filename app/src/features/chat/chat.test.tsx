@@ -73,6 +73,28 @@ it('shows the thread, the read receipt, and marks the other side read', async ()
   await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/conversations/1/read', 'POST'));
 });
 
+it.each([
+  ['succeeds', null],
+  ['fails', new ApiError(500, 'HTTP_500', 'down')],
+])('marks a thread read once when the request %s (no repeat loop)', async (_, failure) => {
+  serve(() => undefined);
+  const served = mockApi.getMockImplementation()!;
+  mockApi.mockImplementation(async (path, method, body) => {
+    if (path === '/conversations/1/read') {
+      await new Promise((resolve) => setTimeout(resolve, 50)); // a real request takes time
+      if (failure) throw failure;
+      return undefined;
+    }
+    return served(path, method, body);
+  });
+  await renderWithProviders(<ConversationScreen />);
+  expect(await screen.findByText('Yes, bring it printed.')).toBeTruthy();
+  await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/conversations/1/read', 'POST'));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const reads = mockApi.mock.calls.filter(([path]) => path === '/conversations/1/read');
+  expect(reads).toHaveLength(1);
+});
+
 it('shows a message at once and lets a failed one be sent again', async () => {
   let fail = true;
   serve((body) => {

@@ -402,6 +402,11 @@ export function useMarkConversationRead(conversationId: number) {
   return useMutation({
     mutationFn: () => api<void>(`/conversations/${conversationId}/read`, 'POST'),
     onSuccess: () => {
+      // Show the other side's messages as read at once; the refetch below confirms it.
+      const readAt = new Date().toISOString();
+      client.setQueryData<ChatMessage[]>(queryKeys.messages(conversationId), (current) =>
+        current?.map((m) => (m.mine || m.read_at ? m : { ...m, read_at: readAt })),
+      );
       client.invalidateQueries({ queryKey: queryKeys.conversations });
       client.invalidateQueries({ queryKey: queryKeys.notifications });
     },

@@ -5,7 +5,7 @@
  * at once; if it fails it stays with "Not sent. Tap to try again." Professors get quick
  * replies. The composer stays above the keyboard. Opening the thread marks it read.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   I18nManager,
@@ -85,11 +85,17 @@ export default function ConversationScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const name = conversation ? participantName(conversation.other, language, t) : '';
-  const hasUnread = (messages.data ?? []).some((m) => !m.mine && !m.read_at);
-  const { mutate: markAsRead, isPending: marking } = markRead;
+  // Mark the thread read once per newest unread message: not again when the request ends
+  // (a failure would otherwise retry in a tight loop), only when a newer message arrives.
+  const newestUnread = (messages.data ?? []).find((m) => !m.mine && !m.read_at)?.message_id;
+  const markedUpTo = useRef<number | undefined>(undefined);
+  const { mutate: markAsRead } = markRead;
   useEffect(() => {
-    if (hasUnread && !marking) markAsRead();
-  }, [hasUnread, marking, markAsRead]);
+    if (newestUnread !== undefined && newestUnread !== markedUpTo.current) {
+      markedUpTo.current = newestUnread;
+      markAsRead();
+    }
+  }, [newestUnread, markAsRead]);
 
   const deliver = (item: Outgoing) => {
     setOutbox((current) => [
