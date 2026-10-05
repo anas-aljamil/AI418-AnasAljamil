@@ -17,7 +17,7 @@ Section 5 then critiques both directions against DESIGN.md Section 3 and lists w
 
 They are design sketches, not screens.
 
-**Recommendation:** Direction B (Section 6). You can also mix: for example, B's doors with A's typography.
+**Recommendation:** the mix in Section 7: Direction B's doors and colors with Direction A's IBM Plex typography. Plain B is the alternative if you prefer Readex Pro's rounder voice.
 
 ---
 
@@ -359,6 +359,22 @@ The first draft scored 11–14 under deuteranopia (green, red and amber collapse
 
 **Mixing is possible.** For example, B's doors and dark theme with A's IBM Plex typography, or A's layout density with B's doors.
 
-## 7. What I need from you
+## 7. The mix: B's doors and colors with A's typography
+
+Preview: [`design-plan/direction-mix.png`](design-plan/direction-mix.png).
+
+**What it combines:**
+- **From Direction B:** everything visual. That is the petrol palette (light and dark), the solid arched doors that light up, the door-forward Home and the hero door on Professor Status, and the motion plan.
+- **From Direction A:** only the typefaces, IBM Plex Sans Arabic and IBM Plex Sans, with A's type scale (body 17).
+
+**What changes compared with B:**
+- **Arabic text is about 17% narrower** (measured), so names, departments and status labels fit on small phones and at 200% text size with fewer wraps. This removes B's main cost.
+- **Mixed lines still match:** Plex Arabic and Plex Latin were drawn together, so Arabic and English on one line still share a baseline.
+- **The cost:** a slightly more neutral, less rounded voice than Readex Pro, and two font families to bundle instead of one.
+- **Unchanged:** colors, doors and layout, so the contrast and color-blindness results in Section 4 apply as they are.
+
+**This is now my recommendation:** B's signature with the most compact, legible Arabic.
+
+## 8. What I need from you
 1. **Choose A, B, or a named mix.** I will record the choice in DESIGN.md Section 11.
 2. **Approve the Expo client dependency list** in [plan.md](plan.md) so P3b can start. Readex Pro and IBM Plex Sans Arabic are both available as `@expo-google-fonts/*` packages; I used their files for these previews.
