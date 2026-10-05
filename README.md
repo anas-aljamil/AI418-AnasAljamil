@@ -45,7 +45,19 @@ Full step-by-step guide (Windows and macOS, including the phone): [docs/run-on-p
 
 Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example `s.almutairi@university.example` (student), `n.alharbi@university.example` (professor) and `admin@university.example` (admin).
 
+### Backend API (FastAPI)
+1. Add a `JWT_SECRET` (a long random string) to `.env`.
+2. Run:
+   ```bash
+   cd backend
+   python3.12 -m venv .venv && source .venv/bin/activate   # Windows: py -3.12 -m venv .venv && .venv\Scripts\activate
+   pip install -e ".[dev]"
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # API docs: http://localhost:8000/docs
+   pytest                                                     # 92 tests against a throwaway MySQL database
+   ```
+
 ### Database documentation
 - [ER diagram + Chen-notation description](docs/er-diagram.md) ([PNG](docs/er-diagram.png))
 - [Normalization and MySQL design decisions](docs/normalization.md)
 - [Phase plan and acceptance criteria](docs/plan.md)
+- [Security: sign-in, tokens, CSRF, rate limits](docs/security.md)

@@ -16,7 +16,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
 - `docs/er-diagram.md` has the Mermaid diagram and a Chen-notation description; `docs/normalization.md` explains 3NF and every MySQL-specific choice.
 - `docs/run-on-phone.md` and the README explain MySQL setup on Windows and macOS (MySQL Installer / Homebrew) and loading the files from Workbench or the CLI.
 
-### P2: Backend API, auth, tests (unchanged scope)
+### P2: Backend API, auth, tests
 - FastAPI under `/api/v1`, SQLAlchemy 2.x on MySQL via PyMySQL; every connection sets `time_zone = '+00:00'` and utf8mb4.
 - Endpoints:
   - auth (login, refresh, logout, me);
@@ -32,7 +32,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - at least one named test per Section 4 rule, with edge cases at exactly 4 h, exactly 1 h and override expiry, and a fake clock;
   - ownership and role tests;
   - the shared error shape;
-  - a 429 on login and messages;
+  - a 429 on login (the same limiter covers messages in P5);
   - CORS for the Expo web dev server.
 - `/docs` loads; ruff is clean; `.env.example` is complete; CLAUDE.md commands are filled in.
 
@@ -107,7 +107,7 @@ These cannot be verified in this cloud sandbox (no phone or emulator) or by web 
 |---|---|---|
 | fastapi, sqlalchemy, pydantic | Stack from CLAUDE.md Section 5 | In the stack |
 | uvicorn, argon2-cffi, PyJWT, pydantic-settings, httpx (tests), ruff, pytest | Server, password hashing, JWT, settings, tests, lint | Approved |
-| **PyMySQL[rsa] 1.2.x** | MySQL driver. Pure Python, so it installs on Windows and macOS with no compiler or MySQL client libraries (mysqlclient needs both on macOS). The `rsa` extra adds `cryptography`, required for MySQL 8's default `caching_sha2_password` login over a non-TLS connection | **Proposed** |
+| **PyMySQL[rsa] 1.2.x** | MySQL driver. Pure Python, so it installs on Windows and macOS with no compiler or MySQL client libraries (mysqlclient needs both on macOS). The `rsa` extra adds `cryptography`, required for MySQL 8's default `caching_sha2_password` login over a non-TLS connection | Approved 2026-10-05 |
 
 P1 adds no dependency: its scripts use only the Python standard library and the `mysql` command-line client that ships with MySQL.
 

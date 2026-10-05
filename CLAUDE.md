@@ -21,7 +21,7 @@ Booking: slot length 15 or 30 min (per professor); a slot cannot be double-booke
 Appointment lifecycle: pending -> approved | declined | cancelled | completed | no_show.
 Chat is allowed only between a student and a professor, and only after the student has at least one non-declined appointment with that professor, or the professor has enabled "open messages".
 5. Tech stack
-Backend: Python 3.12, FastAPI, SQLAlchemy 2.x, Pydantic v2, MySQL driver PyMySQL (proposed, awaiting approval; see docs/plan.md).
+Backend: Python 3.12, FastAPI, SQLAlchemy 2.x, Pydantic v2, MySQL driver PyMySQL[rsa].
 Database: MySQL 8.0 (not MariaDB) is the only database for development, tests and submission. InnoDB for every table; utf8mb4 with collation utf8mb4_0900_ai_ci for the database, tables and connections; DATETIME in UTC with session time_zone '+00:00'; TIME for schedule times.
 Client: Expo (React Native) + TypeScript + Expo Router, one codebase for Android, iOS (via Expo Go) and the Expo web build. Typed theme module for tokens (no CSS variables), react-native-svg for the doors and icons, Reanimated for motion, TanStack Query, react-i18next. The exact dependency list is in docs/plan.md and needs approval before P3b.
 Realtime: polling every 15-30s is acceptable for MVP; WebSocket/SSE only if time allows.
@@ -68,13 +68,13 @@ P4: Remaining screens (search, profile, booking, appointments, professor status,
 P5: Chat + notifications + settings.
 P6: queries.sql, views, trigger demo, docs, README, test plan, final design QA.
 12. Commands (keep this section updated)
-Backend dev: <fill in once created>
+Backend dev: cd backend && python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]" && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   (API docs at /docs; needs JWT_SECRET in .env)
 Client dev: <fill in once created>
-Tests: <fill in once created>
+Tests: cd backend && .venv/bin/pytest   (builds and drops a <DB_NAME>_test MySQL database; fixed clock Monday 2026-10-05 10:00 Riyadh)
 DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; reads DB_* from .env; needs the mysql client on PATH or MYSQL_CLI in .env)
 DB checks (constraints, seed rules, charset, reserved words, ER sync): python3 scripts/check_db.py
 DB load by hand: mysql -u root -p < db/create_database.sql, then run db/schema.sql and db/seed.sql in the mawjood database (CLI or MySQL Workbench; see docs/run-on-phone.md)
-Lint/format: <fill in once created>
+Lint/format: cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 13. Working agreement
 Work in small phases. Never start the next phase without my approval.
 Before coding a phase: state the plan and acceptance criteria. After coding: run the app and tests, fix failures, then report what changed and how to verify.
@@ -94,4 +94,5 @@ Status outside any schedule block = Away; Unknown only when a professor has no s
 Seed: fictional, anchored on the week of Sunday 2026-10-04; demo password Mawjood-Demo-2026 for every seed account. 5-10 rows per table except users (16, supertype = sum of subtypes) and schedule_blocks (32, a realistic weekly timetable).
 Auth: 15-minute JWT access token in memory; refresh token in expo-secure-store (native, body) or an httpOnly SameSite=Strict cookie read only by the refresh endpoint plus a custom header (web, against CSRF).
 Arabic search normalization (diacritics, alef forms, teh marbuta, alef maksura) is done in the API; the collation alone does not fold these letters.
-Approved backend dependencies: uvicorn, argon2-cffi, PyJWT, pydantic-settings, httpx (tests), ruff. Proposed, awaiting approval: PyMySQL[rsa] and the client list in docs/plan.md.
+Approved backend dependencies: uvicorn, argon2-cffi, PyJWT, pydantic-settings, PyMySQL[rsa] (approved 2026-10-05), pytest, httpx (tests), ruff. Proposed, awaiting approval: the client list in docs/plan.md.
+API decisions (P2): bookings are open for this week and next (up to the Riyadh midnight starting the Sunday after next, matching the DESIGN.md 7.5 day strip); only a professor's latest override counts; clearing a status set in the same second deletes that override (the expires_at > created_at CHECK leaves no other way); professor search and filtering run in Python over one query (small directory; Arabic normalization needs Python); appointments belonging to someone else return 404, not 403; login is rate-limited now, messages in P5 (docs/security.md).

@@ -3,11 +3,11 @@
 This guide takes you from a fresh computer to the app running on your phone. It has four parts:
 
 1. **MySQL 8.0** on your computer, holding the Mawjood database.
-2. **The backend API** (Python), which reads MySQL. *Available from P2.*
+2. **The backend API** (Python), which reads MySQL.
 3. **The app** (Expo), served from your computer to **Expo Go** on your phone over the same Wi-Fi. *Available from P3b.*
 4. **How the app finds the backend.**
 
-Parts 1 and 4 apply today. Parts 2 and 3 describe the planned commands; they are filled in and tested when those phases are delivered.
+Parts 1, 2 and 4 work today. Part 3 describes the planned commands; it is filled in and tested when the app is delivered (P3b).
 
 ---
 
@@ -100,18 +100,29 @@ Every seed account uses the password `Mawjood-Demo-2026` (fictional demo data on
 
 ---
 
-## 2. Backend API (available from P2)
+## 2. Backend API
+
+Needs Python 3.12 and the database from Part 1. The API reads the same `.env` file as the scripts (`DB_*` settings). It also needs a `JWT_SECRET`: a long random string that signs sign-in tokens. Generate one and paste it into `.env`:
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"     # Windows: py -c "..."
+```
 
 From the repository folder:
 ```bash
 cd backend
-python3 -m venv .venv
-# Windows: .venv\Scripts\activate      macOS: source .venv/bin/activate
-pip install -e .
+python3.12 -m venv .venv            # Windows: py -3.12 -m venv .venv
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 - `--host 0.0.0.0` is required: it lets your **phone** reach the API, not just your computer.
-- Open <http://localhost:8000/docs> on the computer to confirm the API is running.
+- Open <http://localhost:8000/docs> on the computer. The interactive API documentation lets you sign in and try every endpoint with the demo accounts.
+- From the phone's browser, `http://<your computer's address>:8000/api/v1/health` should show `{"status":"ok"}` (Part 4 explains how to find the address). If it doesn't, check the firewall below.
+
+Run the backend tests (they build and drop a separate `mawjood_test` database):
+```bash
+pytest
+```
 
 **Firewall:**
 - **Windows:** the first run shows a Windows Defender Firewall prompt. Allow **Private networks**. If you missed it, allow Python in *Windows Security → Firewall → Allow an app through firewall*.
