@@ -91,9 +91,17 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 
 | # | Check | Steps | Expected | Android | iOS |
 |---|---|---|---|---|---|
-| 51 | Student sign-up | Sign-in screen, "Create an account", fill in with a new `@university.example` address, choose a department, Create account | Home opens at once, greeting the new name | needs a real phone | needs a real phone |
+| 51 | Student sign-up | Sign-in screen, "Create an account", fill in with your `<university number>@upm.edu.sa` address, choose a department in the menu, Create account | "University number: ..." appears under the email; Home opens at once, greeting the new name | needs a real phone | needs a real phone |
 | 52 | Form and keyboard | Move through the fields with the keyboard open; turn on TalkBack/VoiceOver | No field is hidden by the keyboard; every field and chip is read with its label; errors are read when they appear | needs a real phone | needs a real phone |
 | 53 | Professor request | Choose Professor, fill in, Send request; try to sign in; then, as `admin@university.example`, open Professors, set the account active; sign in again | "Request sent"; sign-in says the account is not active yet; after activation the professor lands on My status | needs a real phone | needs a real phone |
+
+## After P6: clock, department menu
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 54 | 12-hour clock | Look at a professor's profile, the booking times and your appointments, in Arabic and in English | Times read like 9:30 AM / 9:30 ص, never 13:00 | needs a real phone | needs a real phone |
+| 55 | Schedule time picker | As a professor, Schedule, Add a block; set the end to 1:30 PM in three taps (PM, 1, :30); save | The sheet scrolls; the chosen time shows above the chips; the block appears as 10:00 AM–1:30 PM | needs a real phone | needs a real phone |
+| 56 | Department menu | Sign-up, admin Professors (Add) and Search: open the department field | A sheet with the three colleges as headings; choosing a department closes it and shows the choice; TalkBack/VoiceOver reads "Department, Software Engineering" | needs a real phone | needs a real phone |
 
 ## Later phases (added when the feature exists)
 

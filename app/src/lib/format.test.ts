@@ -11,6 +11,7 @@ import {
   riyadhDayDifference,
   riyadhTime,
   clockText,
+  untilText,
 } from './format';
 
 describe('Arabic plural categories (CLDR)', () => {
@@ -166,6 +167,27 @@ describe('12-hour clock (owner decision)', () => {
   ])('%s reads %s / %s', (hhmm, english, arabic) => {
     expect(clockText(hhmm, tFor(en))).toBe(english);
     expect(clockText(hhmm, tFor(ar))).toBe(arabic);
+  });
+});
+
+describe('status end', () => {
+  const t = ((key: string, values?: Record<string, string>) =>
+    key === 'prof.until'
+      ? `until ${values?.time}`
+      : key === 'time.clock'
+        ? `${values?.time} ${values?.period}`
+        : key.endsWith('am')
+          ? 'AM'
+          : key.endsWith('pm')
+            ? 'PM'
+            : key) as unknown as Parameters<typeof untilText>[1];
+
+  it('names the return time on the 12-hour clock', () => {
+    expect(untilText(new Date('2026-10-05T08:30:00Z'), t)).toBe('until 11:30 AM');
+  });
+
+  it('says "the rest of today" for a status that ends at Riyadh midnight', () => {
+    expect(untilText(new Date('2026-10-05T21:00:00Z'), t)).toBe('prof.until_end_of_day');
   });
 });
 

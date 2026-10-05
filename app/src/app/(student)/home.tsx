@@ -87,8 +87,11 @@ export default function HomeScreen() {
 
   const pinsState = sectionState(pins, online);
   const departmentState = sectionState(departmentList, online);
+  // An empty department (no professors in the app yet) is not the same as "nobody is in".
+  const departmentEmpty = departmentList.data !== undefined && departmentList.data.length === 0;
   const nobodyIn =
     departmentList.data !== undefined &&
+    !departmentEmpty &&
     !departmentList.data.some((p) => p.status.status === 'in_office');
   const rows = searching ? (search.data ?? []) : (departmentList.data ?? []);
 
@@ -177,6 +180,7 @@ export default function HomeScreen() {
             />
           ) : null}
           {nobodyIn ? <Text color="muted">{t('home.nobody_in')}</Text> : null}
+          {departmentEmpty ? <Text color="muted">{t('home.department_empty')}</Text> : null}
         </>
       )}
 

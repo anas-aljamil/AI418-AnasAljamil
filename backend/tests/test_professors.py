@@ -42,6 +42,14 @@ def test_search_matches_english_names_and_departments_case_insensitively(client,
     assert names(civil.json()) == ["Reem Al-Dosari", "Faisal Al-Zahrani"]  # Reem is in office
 
 
+def test_search_matches_the_college(client, auth):
+    engineering = client.get(
+        "/api/v1/professors", params={"q": "كلية الهندسة", "lang": "en"}, headers=auth(SAAD)
+    )
+    # Civil and Electrical Engineering are in the College of Engineering; in office first.
+    assert names(engineering.json()) == ["Reem Al-Dosari", "Faisal Al-Zahrani", "Tariq Haddad"]
+
+
 def test_filters_by_department_status_and_office_hours_today(client, auth):
     headers = auth(SAAD)
     software = client.get("/api/v1/professors?department_id=1&lang=en", headers=headers).json()

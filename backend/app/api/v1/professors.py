@@ -64,7 +64,7 @@ def list_departments(
 )
 def list_professors(
     q: Annotated[
-        str | None, Query(max_length=100, description="Name or department, Arabic or English")
+        str | None, Query(max_length=100, description="Name, department or college, Arabic or English")
     ] = None,
     department_id: Annotated[list[int] | None, Query()] = None,
     status: Annotated[list[StatusFilter] | None, Query()] = None,
@@ -92,6 +92,8 @@ def list_professors(
             professor.department.name_ar,
             professor.department.name_en,
             professor.department.code,
+            professor.department.college.name_ar,
+            professor.department.college.name_en,
         ):
             continue
         row = directory.summary(professor, overrides.get(professor.professor_id), now, pins)

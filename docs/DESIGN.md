@@ -224,6 +224,9 @@ Append entries as: date, decision, reason.
 2026-10-05, Notification preferences (Appointments, Messages) only filter what the bell shows on this phone; nothing is sent outside the app, Reason: CLAUDE.md Section 3 rules out push, email and SMS.
 2026-10-05, Sign-up is one screen reached from sign-in by a quiet link: role tabs (Student, Professor), names, university email, password, department chips, then student number and year, or title and rank. Checks run before sending and show next to each field, Reason: account creation is rare, so one scrollable form beats a multi-step wizard, and the role decides which fields appear.
 2026-10-05, A professor's sign-up ends on "Request sent" with a closed (away) door, and the admin list marks such accounts "Not active" (the word now used for every inactive account), Reason: a professor account must be approved, and "Deactivated" read wrong for an account that was never active.
+2026-10-05, Times are shown on the 12-hour clock with the period in the UI language ("9:30 AM", "9:30 ص"; Western digits), and the schedule editor picks hour, minutes and AM/PM with chips, Reason: owner request; people at the university read and say times this way, and typing "13:00" on a phone keyboard was error-prone.
+2026-10-05, Departments are chosen from a menu: a field that opens a sheet with each college as a heading and its departments as a radio list, Reason: owner request; 12 departments as chips were a wall of buttons, and the college gives the list its structure.
+2026-10-05, A status without a return time reads "for the rest of today" instead of "until 12:00 AM", and a student whose department has no professors yet is told so instead of "nobody is in", Reason: both earlier messages were literally true and still misleading.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

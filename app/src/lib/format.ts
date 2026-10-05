@@ -54,6 +54,17 @@ export function clockText(hhmm: string, t: TFunction): string {
   });
 }
 
+/**
+ * "until 11:30 AM", or "for the rest of today" when the status ends at Riyadh midnight (a
+ * manual status without a return time), which "until 12:00 AM" would say confusingly.
+ */
+export function untilText(until: Date, t: TFunction): string {
+  const time = riyadhTime(until);
+  return time === '00:00'
+    ? t('prof.until_end_of_day')
+    : t('prof.until', { time: clockText(time, t) });
+}
+
 /** "HH:MM" (24-hour) in Riyadh time for any UTC instant; for logic and keys. Show it with clockText. */
 export function riyadhTime(utc: Date): string {
   const local = new Date(utc.getTime() + RIYADH_OFFSET_MS);

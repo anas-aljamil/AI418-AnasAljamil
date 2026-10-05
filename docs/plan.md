@@ -125,6 +125,34 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - an open conversation re-sent "mark as read" about 18 times a second after the request ended (success or failure). It now marks once per new message; regression test in `chat.test.tsx`.
 - No other defects found. All suites pass: check_db 63/63, check_sql 38/38, pytest 123, Jest 103, Playwright 37.
 
+### After P6: university email, colleges, 12-hour clock (owner request, 2026-10-05)
+- **Owner decisions:**
+  - sign-up uses the university's domain `upm.edu.sa`, and a student's address is their university number;
+  - departments come from a menu grouped by college, so a new `colleges` table holds the 3 colleges and their 12 departments (Mechatronics left out);
+  - every time shows AM/PM.
+- **Result (2026-10-05):** met.
+  - **Database:**
+    - `colleges` table and `departments.college_id`;
+    - check_db 65/65 (unknown college, deleting a college with departments);
+    - check_sql 39/39 with a colleges section;
+    - ER diagram (with PNG) and normalization doc updated.
+  - **API:**
+    - departments carry their college; `GET /api/v1/colleges`;
+    - sign-up domain and student-number rule;
+    - search matches college names.
+  - **App:**
+    - `clockText` everywhere;
+    - schedule time picker (Playwright at 320 px);
+    - department menu in sign-up, the admin forms and Search.
+  - **Fixed:**
+    - stale saved data from the previous version (cache version changed);
+    - a new department sent without a college;
+    - admin accounts defaulting to the first department;
+    - the duplicate-email message on sign-up;
+    - "until 12:00 AM";
+    - an empty department shown as "nobody is in".
+  - Phone checks #54-#56.
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.

@@ -261,7 +261,8 @@
     "load_failed": "Couldn't load your professors",
     "try_again": "Try again",
     "status_changed": "{{name}} is now {{status}}",
-    "when_countdown": "{{when}}, {{countdown}}"
+    "when_countdown": "{{when}}, {{countdown}}",
+    "department_empty": "Your department has no professors in Mawjood yet. Use Search to find professors in other departments."
   },
   "tabs": {
     "home": "Home",
@@ -329,7 +330,8 @@
     "now": "Now {{time}}",
     "book": "Book",
     "back": "Back",
-    "load_failed": "Couldn't load this professor"
+    "load_failed": "Couldn't load this professor",
+    "until_end_of_day": "for the rest of today"
   },
   "booking": {
     "title": "Book with {{name}}",

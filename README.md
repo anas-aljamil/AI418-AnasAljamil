@@ -55,7 +55,7 @@ Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example 
    python3.12 -m venv .venv && source .venv/bin/activate   # Windows: py -3.12 -m venv .venv && .venv\Scripts\activate
    pip install -e ".[dev]"
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # API docs: http://localhost:8000/docs
-   pytest                                                     # 123 tests against a throwaway MySQL database
+   pytest                                                     # 124 tests against a throwaway MySQL database
    ```
 
 ### App (Expo: Android and iOS through Expo Go, plus the web build)
@@ -75,7 +75,7 @@ The app finds the backend on the same computer by itself (details and fixes for 
   - Requests, Schedule, Messages with quick replies, and notifications.
 - **Admins:** departments, offices, professors and students (create, edit, delete).
 - **Settings for everyone:** language, theme and text size.
-- **New users:** "Create an account" on the sign-in screen (university email only).
+- **New users:** "Create an account" on the sign-in screen with a university email (`@upm.edu.sa`; students use their university number, like `4510440@upm.edu.sa`).
   - Students start at once.
   - A professor's account waits until an admin sets it active.
 

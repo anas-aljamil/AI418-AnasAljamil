@@ -115,6 +115,17 @@ it('invites the student to search and pin when nothing is pinned', async () => {
   expect(screen.getByRole('button', { name: 'Search professors' })).toBeTruthy();
 });
 
+it('says when the department has no professors yet, not that nobody is in', async () => {
+  serve({ ...standard, 'GET /professors?department_id=1': page([]) });
+  await renderWithProviders(<HomeScreen />);
+  expect(
+    await screen.findByText(
+      'Your department has no professors in Mawjood yet. Use Search to find professors in other departments.',
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText('Nobody in your department is in their office right now.')).toBeNull();
+});
+
 it('says what went wrong when a section cannot load, and retries', async () => {
   let pinsFail = true;
   serve({

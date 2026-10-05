@@ -261,7 +261,8 @@
     "load_failed": "تعذّر تحميل أساتذتك",
     "try_again": "حاول مرة أخرى",
     "status_changed": "{{name}}: {{status}} الآن",
-    "when_countdown": "{{when}}، {{countdown}}"
+    "when_countdown": "{{when}}، {{countdown}}",
+    "department_empty": "لا يوجد أساتذة من قسمك في موجود بعد. استخدم البحث للعثور على أساتذة الأقسام الأخرى."
   },
   "tabs": {
     "home": "الرئيسية",
@@ -329,7 +330,8 @@
     "now": "الآن {{time}}",
     "book": "احجز",
     "back": "رجوع",
-    "load_failed": "تعذّر تحميل صفحة الأستاذ"
+    "load_failed": "تعذّر تحميل صفحة الأستاذ",
+    "until_end_of_day": "حتى نهاية اليوم"
   },
   "booking": {
     "title": "احجز مع {{name}}",
