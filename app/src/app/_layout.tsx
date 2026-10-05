@@ -1,7 +1,7 @@
 /**
- * Root layout: loads the IBM Plex fonts and the saved language before hiding the
- * splash screen (no flash of fallback text or wrong direction), then provides
- * safe areas, theme and toasts to every screen.
+ * Root layout: loads the IBM Plex fonts, the saved language and the saved session before
+ * hiding the splash screen (no flash of fallback text, wrong direction or the sign-in screen),
+ * then provides safe areas, strings, theme, sign-in state, server data and toasts.
  */
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
@@ -20,15 +20,24 @@ import {
 } from '@expo-google-fonts/ibm-plex-sans';
 import { I18nextProvider } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 
 import i18n, { initI18n } from '@/i18n';
+import { persistOptions, queryClient } from '@/api/queryClient';
+import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-function ThemedStack() {
+function AppShell() {
   const { scheme, colors } = useTheme();
+  const { state } = useAuth();
+  const restoring = state.status === 'restoring';
+  useEffect(() => {
+    if (!restoring) SplashScreen.hideAsync().catch(() => undefined);
+  }, [restoring]);
+  if (restoring) return null;
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
@@ -52,20 +61,19 @@ export default function RootLayout() {
     initI18n().finally(() => setLanguageReady(true));
   }, []);
 
-  const ready = (fontsLoaded || !!fontError) && languageReady;
-  useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => undefined);
-  }, [ready]);
-
-  if (!ready) return null;
+  if (!(fontsLoaded || fontError) || !languageReady) return null;
 
   return (
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider>
-          <ToastProvider>
-            <ThemedStack />
-          </ToastProvider>
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+            <AuthProvider>
+              <ToastProvider>
+                <AppShell />
+              </ToastProvider>
+            </AuthProvider>
+          </PersistQueryClientProvider>
         </ThemeProvider>
       </I18nextProvider>
     </SafeAreaProvider>

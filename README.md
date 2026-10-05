@@ -63,13 +63,13 @@ cd app
 npm install
 npx expo start        # scan the QR code with Expo Go (Android) or the Camera app (iPhone); press w for the web build
 ```
-The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). Until P3c it opens on the styleguide, which shows every colour, font, component and door state in Arabic and English, light and dark.
+The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The first launch asks for the language, then you sign in with a demo account (below). Students land on Home: pinned professors with their live door status, the next appointment, search, and their department, refreshed every 20 seconds and still readable offline.
 
 Checks:
 ```bash
 npm run typecheck && npm run lint && npm run format && npm test      # TypeScript, ESLint, Prettier, Jest
-npm run export:web && npx expo serve --port 8081                      # web build; then, in a second terminal:
-npm run screenshots                                                   # Playwright at 360/768/1280 px -> docs/screenshots/
+npm run export:web && npx expo serve --port 8081                      # web build (test harness only); then, in a second terminal:
+npm run screenshots                                                   # Playwright -> docs/screenshots/ (API with DEMO_NOW, see CLAUDE.md)
 ```
 What can only be checked on a real phone (haptics, TalkBack/VoiceOver, 200% text, safe areas, Android back, keyboard): [docs/phone-checklist.md](docs/phone-checklist.md).
 
@@ -79,4 +79,4 @@ What can only be checked on a real phone (haptics, TalkBack/VoiceOver, 200% text
 - [Phase plan and acceptance criteria](docs/plan.md)
 - [Security: sign-in, tokens, CSRF, rate limits](docs/security.md)
 - [Design system](docs/DESIGN.md) and [design plan with the chosen direction](docs/design-plan.md)
-- [Styleguide screenshots](docs/screenshots/p3b/)
+- Screenshots: [styleguide](docs/screenshots/p3b/), [language, sign-in and home](docs/screenshots/p3c/)

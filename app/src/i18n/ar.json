@@ -42,7 +42,9 @@
   },
   "common": {
     "close": "إغلاق",
-    "loading": "جارٍ التحميل"
+    "loading": "جارٍ التحميل",
+    "try_again": "حاول مرة أخرى",
+    "separator": "، "
   },
   "sample": {
     "professor_name": "د. نورة الحربي",
@@ -102,5 +104,123 @@
     "variant_title": "عنوان 20",
     "variant_heading": "عنوان رئيسي 24",
     "variant_display": "عرض 30"
+  },
+  "honorific": {
+    "dr": "د.",
+    "prof": "أ.د.",
+    "mr": "أ.",
+    "ms": "أ.",
+    "eng": "م."
+  },
+  "weekday": {
+    "0": "الأحد",
+    "1": "الاثنين",
+    "2": "الثلاثاء",
+    "3": "الأربعاء",
+    "4": "الخميس",
+    "5": "الجمعة",
+    "6": "السبت"
+  },
+  "when": {
+    "today": "اليوم {{time}}",
+    "tomorrow": "غدًا {{time}}",
+    "weekday": "{{day}} {{time}}"
+  },
+  "countdown": {
+    "now": "يبدأ الآن",
+    "minutes_one": "بعد دقيقة",
+    "minutes_two": "بعد دقيقتين",
+    "minutes_few": "بعد {{count}} دقائق",
+    "minutes_many": "بعد {{count}} دقيقة",
+    "minutes_other": "بعد {{count}} دقيقة",
+    "hours_one": "بعد ساعة",
+    "hours_two": "بعد ساعتين",
+    "hours_few": "بعد {{count}} ساعات",
+    "hours_many": "بعد {{count}} ساعة",
+    "hours_other": "بعد {{count}} ساعة",
+    "days_one": "غدًا",
+    "days_two": "بعد يومين",
+    "days_few": "بعد {{count}} أيام",
+    "days_many": "بعد {{count}} يومًا",
+    "days_other": "بعد {{count}} يوم"
+  },
+  "office": {
+    "short": "مبنى {{building}}، غرفة {{room}}",
+    "none": "لم يُحدَّد المكتب"
+  },
+  "greeting": {
+    "morning": "صباح الخير يا {{name}}",
+    "afternoon": "مساء الخير يا {{name}}",
+    "evening": "مساء الخير يا {{name}}"
+  },
+  "language": {
+    "title": "اختر لغتك",
+    "hint": "يمكنك تغييرها لاحقًا من صفحة حسابك.",
+    "continue": "متابعة"
+  },
+  "signin": {
+    "title": "تسجيل الدخول",
+    "subtitle": "استخدم بريدك الجامعي. حسابك هو ما يحدّد ظهور شاشات الطالب أو عضو هيئة التدريس.",
+    "email": "البريد الجامعي",
+    "password": "كلمة المرور",
+    "show_password": "إظهار كلمة المرور",
+    "hide_password": "إخفاء كلمة المرور",
+    "submit": "تسجيل الدخول",
+    "submitting": "جارٍ تسجيل الدخول",
+    "missing": "أدخل بريدك الجامعي وكلمة المرور."
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "ACCOUNT_DISABLED": "هذا الحساب موقوف. تواصل مع مسؤول النظام.",
+    "RATE_LIMITED": "محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.",
+    "NETWORK": "تعذّر الوصول إلى خادم موجود. تحقّق من اتصالك ثم حاول مرة أخرى.",
+    "generic": "حدث خطأ في الخادم. حاول مرة أخرى بعد قليل."
+  },
+  "home": {
+    "search_label": "ابحث عن أستاذ",
+    "search_placeholder": "الاسم أو القسم",
+    "clear_search": "مسح البحث",
+    "results": "النتائج",
+    "no_results": "لا يوجد أستاذ يطابق «{{query}}». جرّب جزءًا من الاسم بالعربية أو الإنجليزية.",
+    "next_appointment": "موعدك القادم",
+    "appointment_pending": "بانتظار الموافقة",
+    "appointment_approved": "تمت الموافقة",
+    "my_professors": "أساتذتي",
+    "available_now": "المتاحون الآن",
+    "department_caption": "{{department}}، الموجودون في مكاتبهم أولًا",
+    "nobody_in": "لا أحد من أساتذة قسمك في مكتبه الآن.",
+    "empty_pins_title": "لم تثبّت أي أستاذ بعد",
+    "empty_pins_body": "ابحث عن أساتذتك وثبّتهم لترى حالتهم هنا أولًا.",
+    "empty_pins_action": "ابحث عن أستاذ",
+    "pin": "ثبّت {{name}}",
+    "unpin": "ألغِ تثبيت {{name}}",
+    "pinned": "تم تثبيت {{name}}",
+    "unpinned": "أُلغي تثبيت {{name}}",
+    "pin_failed": "تعذّر تغيير التثبيت. حاول مرة أخرى.",
+    "offline": "أنت غير متصل. هذه الحالات من الساعة {{time}}.",
+    "unreachable": "تعذّر الوصول إلى الخادم. هذه الحالات من الساعة {{time}}.",
+    "load_failed": "تعذّر تحميل أساتذتك",
+    "try_again": "حاول مرة أخرى",
+    "status_changed": "{{name}}: {{status}} الآن",
+    "when_countdown": "{{when}}، {{countdown}}"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "profile": "حسابي"
+  },
+  "profile": {
+    "title": "حسابي",
+    "student_line": "{{department}}، السنة {{year}}",
+    "sign_out": "تسجيل الخروج",
+    "styleguide": "دليل التصميم (للتطوير فقط)"
+  },
+  "role": {
+    "student": "طالب",
+    "professor": "عضو هيئة تدريس",
+    "admin": "مسؤول النظام"
+  },
+  "staff": {
+    "title": "شاشاتك قادمة قريبًا",
+    "body": "شاشات أعضاء هيئة التدريس والمسؤولين ستصل في الإصدار القادم من التطبيق. يمكنك الآن تسجيل الخروج من هنا."
   }
 }

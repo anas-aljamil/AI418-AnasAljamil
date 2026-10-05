@@ -1,4 +1,12 @@
-import { pluralCategory, relativeUpdateKey, riyadhTime } from './format';
+import {
+  appointmentDay,
+  countdownKey,
+  greetingKey,
+  pluralCategory,
+  relativeUpdateKey,
+  riyadhDayDifference,
+  riyadhTime,
+} from './format';
 
 describe('Arabic plural categories (CLDR)', () => {
   it.each([
@@ -52,5 +60,52 @@ describe('Riyadh time', () => {
   it('formats UTC as Riyadh HH:MM with Western digits', () => {
     expect(riyadhTime(new Date('2026-10-11T07:30:00Z'))).toBe('10:30');
     expect(riyadhTime(new Date('2026-10-05T21:05:00Z'))).toBe('00:05');
+  });
+});
+
+describe('Riyadh days, greetings and countdowns', () => {
+  // Monday 2026-10-05 10:00 in Riyadh.
+  const now = new Date('2026-10-05T07:00:00Z');
+
+  it('counts calendar days in Riyadh, not in UTC', () => {
+    // 22:30 UTC on Monday is already 01:30 on Tuesday in Riyadh.
+    expect(riyadhDayDifference(new Date('2026-10-05T22:30:00Z'), now)).toBe(1);
+    expect(riyadhDayDifference(new Date('2026-10-05T20:59:00Z'), now)).toBe(0);
+  });
+
+  it('greets by the time of day in Riyadh', () => {
+    expect(greetingKey(new Date('2026-10-05T03:00:00Z'))).toBe('greeting.morning'); // 06:00
+    expect(greetingKey(new Date('2026-10-05T10:00:00Z'))).toBe('greeting.afternoon'); // 13:00
+    expect(greetingKey(new Date('2026-10-05T16:00:00Z'))).toBe('greeting.evening'); // 19:00
+  });
+
+  it('names the day of an appointment: today, tomorrow or the weekday', () => {
+    expect(appointmentDay(new Date('2026-10-05T09:30:00Z'), now)).toEqual({
+      key: 'when.today',
+      time: '12:30',
+      weekday: 1,
+    });
+    expect(appointmentDay(new Date('2026-10-06T06:00:00Z'), now).key).toBe('when.tomorrow');
+    expect(appointmentDay(new Date('2026-10-11T07:30:00Z'), now)).toEqual({
+      key: 'when.weekday',
+      time: '10:30',
+      weekday: 0, // Sunday
+    });
+  });
+
+  it('counts down in minutes, hours, then calendar days, with Arabic plural forms', () => {
+    expect(countdownKey('ar', new Date('2026-10-05T07:00:30Z'), now).key).toBe('countdown.now');
+    expect(countdownKey('ar', new Date('2026-10-05T07:25:00Z'), now)).toEqual({
+      key: 'countdown.minutes_many',
+      count: 25,
+    });
+    expect(countdownKey('ar', new Date('2026-10-05T10:00:00Z'), now)).toEqual({
+      key: 'countdown.hours_few',
+      count: 3,
+    });
+    expect(countdownKey('ar', new Date('2026-10-11T07:30:00Z'), now)).toEqual({
+      key: 'countdown.days_few',
+      count: 6,
+    });
   });
 });

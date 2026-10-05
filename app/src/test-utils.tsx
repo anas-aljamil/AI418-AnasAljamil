@@ -1,8 +1,10 @@
 import { render } from '@testing-library/react-native';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import i18n, { resources } from '@/i18n';
+import { ToastProvider } from '@/components/Toast';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import type { Language } from '@/theme/tokens';
 
@@ -11,7 +13,10 @@ const metrics = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
 
-/** Render inside the real providers (theme, i18n, safe areas) in the given language. */
+/**
+ * Render inside the real providers (safe areas, i18n, theme, a fresh data cache without
+ * retries, toasts) in the given language.
+ */
 export async function renderWithProviders(ui: React.ReactElement, language: Language = 'en') {
   if (!i18n.isInitialized) {
     await i18n.use(initReactI18next).init({
@@ -26,7 +31,15 @@ export async function renderWithProviders(ui: React.ReactElement, language: Lang
   return render(
     <SafeAreaProvider initialMetrics={metrics}>
       <I18nextProvider i18n={i18n}>
-        <ThemeProvider>{ui}</ThemeProvider>
+        <ThemeProvider>
+          <QueryClientProvider
+            client={
+              new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+            }
+          >
+            <ToastProvider>{ui}</ToastProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </I18nextProvider>
     </SafeAreaProvider>,
   );

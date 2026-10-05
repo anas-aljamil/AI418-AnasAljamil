@@ -2,7 +2,7 @@
 
 The cloud sandbox has no phone or emulator, so these checks cannot run there (see [plan.md, "Checks that need a real phone"](plan.md#checks-that-need-a-real-phone)). They stay marked **needs a real phone** until someone runs them on a device and records the result here.
 
-**Setup:** [run-on-phone.md](run-on-phone.md), Sections 1-3. Start MySQL, the backend and `npx expo start`, then open the app in Expo Go. The app opens on `/styleguide` until P3c adds the real home screen.
+**Setup:** [run-on-phone.md](run-on-phone.md), Sections 1-3. Start MySQL, the backend and `npx expo start`, then open the app in Expo Go. The styleguide (P3b checks) is reached from **Profile → Styleguide (development only)** after signing in as a student.
 
 **Record each result as:**
 - ✅ passed;
@@ -29,12 +29,28 @@ Run on at least one Android phone and one iPhone if you can.
 | 12 | Dark mode follows the system | Set the theme to **System**, then switch the phone between light and dark | The app follows straight away. **Light** and **Dark** override the system and survive an app restart. The area behind the app (seen briefly on rotation or when swiping back) matches the theme | needs a real phone | needs a real phone |
 | 13 | Smoothness (indicative) | Scroll the whole styleguide quickly; tap through the door statuses | Scrolling stays smooth, and the door animation doesn't stutter. Expo Go runs a development build, so this is indicative only; the real numbers (cold start under 2 s, 60 fps) need a release build (plan.md) | needs a real phone | needs a real phone |
 
+## P3c: language, sign-in, student home
+
+Start from a fresh install of the app's data: in Expo Go, long-press the project and clear its data, or delete and re-add it. Sign in with `s.almutairi@university.example` / `Mawjood-Demo-2026`. Run the API without `DEMO_NOW` to see real-time statuses, or with it for the same statuses as the screenshots.
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 14 | Language first | Open the app for the first time with the phone in Arabic, then again (after clearing data) in English | The language screen comes first, the phone's language is preselected but nothing changes until **Continue** | needs a real phone | needs a real phone |
+| 15 | Direction after the choice | On the language screen pick the language that is not the phone's and tap Continue | One short restart, then sign-in in the chosen direction | needs a real phone | needs a real phone |
+| 16 | Keyboard on sign-in | Tap the email field, type, press the return key; on the password field press return | The fields stay above the keyboard; return moves to the password, then signs in; the email keyboard has @ | needs a real phone | needs a real phone |
+| 17 | Password managers | Tap the email field | iOS offers saved passwords (username/password content types); Android autofill offers saved accounts | needs a real phone | needs a real phone |
+| 18 | Stay signed in (secure storage) | Sign in, close Expo Go fully, reopen | Home opens straight away, signed in, without the sign-in screen | needs a real phone | needs a real phone |
+| 19 | "Is Dr. X in?" in 3 s | With the app closed, start a stopwatch, open it | The pinned professors' doors and statuses are readable within 3 seconds, with no taps | needs a real phone | needs a real phone |
+| 20 | Offline | On Home, turn on airplane mode, wait 30 s | The statuses stay, a notice says "You're offline. These statuses are from HH:MM."; turning the connection back on removes it at the next poll | needs a real phone | needs a real phone |
+| 21 | Offline cold start | In airplane mode, close and reopen the app | Home opens signed in with the last known statuses and the offline notice; never a blank screen | needs a real phone | needs a real phone |
+| 22 | Live status with a screen reader | Turn on TalkBack/VoiceOver on Home; on a computer, set a pinned professor's status in http://localhost:8000/docs (sign in as `n.alharbi@university.example`, `POST /api/v1/me/status`) | Within about 20 s the door changes and the reader says, for example, "Dr. Noura Al-Harbi is now In office" | needs a real phone | needs a real phone |
+| 23 | Pin from search | Type part of a name (Arabic or English) in the search field, tap the pin beside a result | A toast confirms; clearing the search shows the professor under **My professors** | needs a real phone | needs a real phone |
+| 24 | Arabic alignment | In Arabic, look at the status text at the end of each row and at text typed into the search field | Status text hugs the left edge of the row; typed Arabic starts at the right | needs a real phone | needs a real phone |
+| 25 | Tab bar | Look at the tab bar with the largest system text size | Labels are readable and not cut off; the bar sits above the home indicator or navigation bar | needs a real phone | needs a real phone |
+| 26 | Sign out | Profile → Sign out, then close and reopen the app | Sign-in screen; reopening does not sign you back in | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
-- **P3c:**
-  - the refresh token is stored in secure storage, and you stay signed in after closing the app;
-  - the keyboard on the sign-in screen;
-  - the offline notice with airplane mode.
 - **P4:**
   - booking haptic;
   - the professor's one-tap status change with haptic;

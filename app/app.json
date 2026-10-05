@@ -42,7 +42,8 @@
           "imageWidth": 120,
           "image": "./assets/splash-icon.png"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "mawjood",
     "experiments": {

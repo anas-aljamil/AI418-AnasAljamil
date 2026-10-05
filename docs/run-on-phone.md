@@ -7,7 +7,7 @@ This guide takes you from a fresh computer to the app running on your phone. It 
 3. **The app** (Expo), served from your computer to **Expo Go** on your phone over the same Wi-Fi.
 4. **How the app finds the backend.**
 
-All four parts work today. Until P3c, the app opens on the styleguide screen.
+All four parts work today.
 
 ---
 
@@ -142,7 +142,7 @@ pytest
 4. Scan the QR code:
    - **Android:** with the Expo Go app;
    - **iPhone:** with the Camera app.
-5. The app opens in Expo Go. Until P3c adds the real home screen, it opens on the styleguide (`/styleguide`). Its first card, **Server connection**, shows whether the phone can reach the backend.
+5. The app opens in Expo Go: first the language screen, then sign-in. Use a demo account (Section 1, *Demo accounts*); students land on Home. If sign-in says it can't reach the server, see Section 4.
 6. Press `w` in the terminal to open the web build in a browser too.
 
 What to try on the phone, step by step: [phone-checklist.md](phone-checklist.md).

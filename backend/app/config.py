@@ -1,5 +1,6 @@
 """Application settings, read from the repository's .env file and the environment."""
 
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -11,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore", env_ignore_empty=True)
 
     db_host: str = "127.0.0.1"
     db_port: int = 3306
@@ -30,6 +31,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:8081", "http://127.0.0.1:8081"]
 
     login_attempts_per_minute: int = 5
+
+    # Freeze the API clock for screenshots and demos, e.g. 2026-10-05T07:00:00Z. Empty = real time.
+    demo_now: datetime | None = None
 
     def database_url(self, database: str | None = None) -> URL:
         return URL.create(

@@ -42,7 +42,9 @@
   },
   "common": {
     "close": "Close",
-    "loading": "Loading"
+    "loading": "Loading",
+    "try_again": "Try again",
+    "separator": ", "
   },
   "sample": {
     "professor_name": "Dr. Noura Al-Harbi",
@@ -102,5 +104,123 @@
     "variant_title": "Title 20",
     "variant_heading": "Heading 24",
     "variant_display": "Display 30"
+  },
+  "honorific": {
+    "dr": "Dr.",
+    "prof": "Prof.",
+    "mr": "Mr.",
+    "ms": "Ms.",
+    "eng": "Eng."
+  },
+  "weekday": {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
+  },
+  "when": {
+    "today": "Today {{time}}",
+    "tomorrow": "Tomorrow {{time}}",
+    "weekday": "{{day}} {{time}}"
+  },
+  "countdown": {
+    "now": "starting now",
+    "minutes_one": "in 1 min",
+    "minutes_two": "in 2 min",
+    "minutes_few": "in {{count}} min",
+    "minutes_many": "in {{count}} min",
+    "minutes_other": "in {{count}} min",
+    "hours_one": "in 1 hour",
+    "hours_two": "in 2 hours",
+    "hours_few": "in {{count}} hours",
+    "hours_many": "in {{count}} hours",
+    "hours_other": "in {{count}} hours",
+    "days_one": "tomorrow",
+    "days_two": "in 2 days",
+    "days_few": "in {{count}} days",
+    "days_many": "in {{count}} days",
+    "days_other": "in {{count}} days"
+  },
+  "office": {
+    "short": "Building {{building}}, room {{room}}",
+    "none": "Office not set"
+  },
+  "greeting": {
+    "morning": "Good morning, {{name}}",
+    "afternoon": "Good afternoon, {{name}}",
+    "evening": "Good evening, {{name}}"
+  },
+  "language": {
+    "title": "Choose your language",
+    "hint": "You can change it later in your profile.",
+    "continue": "Continue"
+  },
+  "signin": {
+    "title": "Sign in",
+    "subtitle": "Use your university email. Your account decides whether you see the student or professor screens.",
+    "email": "University email",
+    "password": "Password",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "submit": "Sign in",
+    "submitting": "Signing in",
+    "missing": "Enter your email and password."
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "The email or password is incorrect.",
+    "ACCOUNT_DISABLED": "This account has been deactivated. Contact the administrator.",
+    "RATE_LIMITED": "Too many attempts. Wait a minute, then try again.",
+    "NETWORK": "Can't reach the Mawjood server. Check your connection, then try again.",
+    "generic": "Something went wrong on the server. Try again in a moment."
+  },
+  "home": {
+    "search_label": "Search professors",
+    "search_placeholder": "Name or department",
+    "clear_search": "Clear search",
+    "results": "Results",
+    "no_results": "No professor matches “{{query}}”. Try part of the name, in Arabic or English.",
+    "next_appointment": "Next appointment",
+    "appointment_pending": "Waiting for approval",
+    "appointment_approved": "Approved",
+    "my_professors": "My professors",
+    "available_now": "Available now",
+    "department_caption": "{{department}}, in office first",
+    "nobody_in": "Nobody in your department is in their office right now.",
+    "empty_pins_title": "No professors pinned yet",
+    "empty_pins_body": "Search for your professors and pin them to see their status here first.",
+    "empty_pins_action": "Search professors",
+    "pin": "Pin {{name}}",
+    "unpin": "Unpin {{name}}",
+    "pinned": "{{name}} is pinned",
+    "unpinned": "{{name}} is no longer pinned",
+    "pin_failed": "Couldn't change the pin. Try again.",
+    "offline": "You're offline. These statuses are from {{time}}.",
+    "unreachable": "Can't reach the server. These statuses are from {{time}}.",
+    "load_failed": "Couldn't load your professors",
+    "try_again": "Try again",
+    "status_changed": "{{name}} is now {{status}}",
+    "when_countdown": "{{when}}, {{countdown}}"
+  },
+  "tabs": {
+    "home": "Home",
+    "profile": "Profile"
+  },
+  "profile": {
+    "title": "Profile",
+    "student_line": "{{department}}, year {{year}}",
+    "sign_out": "Sign out",
+    "styleguide": "Styleguide (development only)"
+  },
+  "role": {
+    "student": "Student",
+    "professor": "Professor",
+    "admin": "Administrator"
+  },
+  "staff": {
+    "title": "Your screens are on the way",
+    "body": "Professor and administrator screens arrive in the next version of the app. For now, you can sign out here."
   }
 }

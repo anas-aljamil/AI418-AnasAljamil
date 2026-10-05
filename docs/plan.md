@@ -56,6 +56,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
 - Loading, empty, error and offline states are built, with last known data persisted and an offline notice.
 - "Is Dr. X in?" is answerable within 3 s and a professor's status is reachable in at most 2 taps, both demonstrated (screen recording or timed Playwright run on web).
 - DESIGN.md Section 12 checklist reported per item as verified or needs-a-phone.
+- **Result (2026-10-05):** met on the web build; timed Playwright run: pinned status visible about 300 ms after opening, 0 taps. Section 12 report: [design-qa.md](design-qa.md); phone checks #14-#26 in [phone-checklist.md](phone-checklist.md). Screenshots at 360 px only, since the phone app is now the product (CLAUDE.md Section 14, product focus).
 
 ### P4: Remaining screens and admin area
 - Search (Arabic normalization), professor profile, booking sheet with the signature moment and haptic, my appointments, and the professor tabs (Status, Requests, Schedule editor). Professor status change takes 1 tap; booking takes at most 4 steps (counted).

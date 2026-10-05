@@ -1,8 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
+import { textAlignFor } from '@/lib/direction';
 import { relativeUpdateKey } from '@/lib/format';
-import { space, type StatusKey } from '@/theme/tokens';
+import { spokenList } from '@/lib/names';
+import { space, type Language, type StatusKey } from '@/theme/tokens';
 import { Door } from './Door';
 import { Text } from './Text';
 
@@ -17,6 +20,27 @@ interface StatusLabelProps {
   withDoor?: boolean;
 }
 
+/**
+ * The words for a status: the door to draw, the label, and "updated X ago" (or "from the
+ * schedule"). Shared by every place that shows a status, including screen-reader labels.
+ */
+export function describeStatus(
+  status: StatusKey,
+  confirmed: boolean,
+  updatedAt: Date | null | undefined,
+  now: Date,
+  language: Language,
+  t: TFunction,
+): { door: StatusKey; label: string; updated: string } {
+  const unconfirmed = status === 'in_office' && !confirmed;
+  const relative = updatedAt ? relativeUpdateKey(language, updatedAt, now) : null;
+  return {
+    door: unconfirmed ? 'unknown' : status,
+    label: unconfirmed ? t('status.in_office_unconfirmed') : t(`status.${status}`),
+    updated: relative ? t(relative.key, { count: relative.count }) : t('time.from_schedule'),
+  };
+}
+
 /** Status is always icon + label + colour, with a relative "updated X ago" (CLAUDE.md Section 4). */
 export function StatusLabel({
   status,
@@ -27,28 +51,19 @@ export function StatusLabel({
 }: StatusLabelProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language === 'ar' ? 'ar' : 'en';
-  const shown: StatusKey = status === 'in_office' && !confirmed ? 'unknown' : status;
-  const label =
-    status === 'in_office' && !confirmed
-      ? t('status.in_office_unconfirmed')
-      : t(`status.${status}`);
-  const updated = updatedAt ? relativeUpdateKey(language, updatedAt, now) : null;
+  const { door, label, updated } = describeStatus(status, confirmed, updatedAt, now, language, t);
   // Wrapped lines hug the row's end edge (left in Arabic, right in English).
-  const endAlign = language === 'ar' ? 'left' : 'right';
+  const endAlign = textAlignFor('end', language);
 
   return (
-    <View
-      style={styles.row}
-      accessible
-      accessibilityLabel={updated ? `${label}, ${t(updated.key, { count: updated.count })}` : label}
-    >
-      {withDoor && <Door status={shown} size={20} />}
+    <View style={styles.row} accessible accessibilityLabel={spokenList([label, updated], t)}>
+      {withDoor && <Door status={door} size={20} />}
       <View style={styles.text}>
         <Text variant="label" style={{ textAlign: endAlign }}>
           {label}
         </Text>
         <Text variant="caption" color="muted" style={{ textAlign: endAlign }}>
-          {updated ? t(updated.key, { count: updated.count }) : t('time.from_schedule')}
+          {updated}
         </Text>
       </View>
     </View>

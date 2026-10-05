@@ -5,6 +5,7 @@ no daylight saving time, so local conversions are a constant offset.
 """
 
 from datetime import UTC, date, datetime, time, timedelta
+from functools import lru_cache
 
 RIYADH_OFFSET = timedelta(hours=3)
 
@@ -24,12 +25,20 @@ class FixedClock(Clock):
         return self.at
 
 
-_clock = Clock()
-
-
+@lru_cache
 def get_clock() -> Clock:
-    """FastAPI dependency; tests override it with a FixedClock."""
-    return _clock
+    """FastAPI dependency; tests override it with a FixedClock.
+
+    DEMO_NOW in .env freezes the clock for screenshots and demos (empty = real time).
+    """
+    from app.config import get_settings  # deferred: config is loaded on first request
+
+    demo_now = get_settings().demo_now
+    if demo_now is None:
+        return Clock()
+    if demo_now.tzinfo is not None:
+        demo_now = demo_now.astimezone(UTC).replace(tzinfo=None)
+    return FixedClock(demo_now)
 
 
 def to_riyadh(utc: datetime) -> datetime:

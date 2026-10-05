@@ -67,3 +67,11 @@ How the tokens behave:
 - **Privacy:**
   - nothing logs tokens, passwords or request bodies;
   - seed data is fictional (`university.example` is a reserved domain).
+
+## Data kept on the phone (P3c)
+
+- **Refresh token:** expo-secure-store only (Keychain on iOS, Keystore-backed storage on Android). The web build never sees it (httpOnly cookie).
+- **Access token:** memory only; it is never written to storage.
+- **Public profile** (name, role, email, department) in AsyncStorage under `mawjood.user`, so the app can open signed in while offline. It holds no secret.
+- **Last known API data** (pins, department list, next appointment) in AsyncStorage under `mawjood.cache` for at most 24 hours, so statuses stay readable offline. Search results are not kept.
+- **Sign-out** deletes the refresh token, the profile and the cached data. A refresh token the server rejects does the same.

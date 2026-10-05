@@ -7,3 +7,15 @@ jest.mock('react-native-reanimated', () => ({
   ...jest.requireActual<object>('react-native-reanimated/mock'),
   useReducedMotion: () => false,
 }));
+jest.mock('@react-native-community/netinfo', () =>
+  jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
+// The secure store is a native Keychain/Keystore module; tests use an in-memory map.
+jest.mock('expo-secure-store', () => {
+  const values = new Map<string, string>();
+  return {
+    getItemAsync: jest.fn(async (key: string) => values.get(key) ?? null),
+    setItemAsync: jest.fn(async (key: string, value: string) => void values.set(key, value)),
+    deleteItemAsync: jest.fn(async (key: string) => void values.delete(key)),
+  };
+});

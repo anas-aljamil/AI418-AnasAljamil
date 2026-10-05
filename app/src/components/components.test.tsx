@@ -12,7 +12,7 @@ describe('Button', () => {
   it('is a labelled button that reports presses', async () => {
     const onPress = jest.fn();
     await renderWithProviders(<Button label="Book 10:30" onPress={onPress} />);
-    fireEvent.press(screen.getByRole('button', { name: 'Book 10:30' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Book 10:30' }));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -20,7 +20,7 @@ describe('Button', () => {
     const onPress = jest.fn();
     await renderWithProviders(<Button label="Book 10:30" onPress={onPress} disabled />);
     const button = screen.getByRole('button', { name: 'Book 10:30' });
-    fireEvent.press(button);
+    await fireEvent.press(button);
     expect(onPress).not.toHaveBeenCalled();
     expect(button).toBeDisabled();
   });
@@ -94,7 +94,7 @@ describe('EmptyState', () => {
         onAction={onAction}
       />,
     );
-    fireEvent.press(screen.getByRole('button', { name: 'Search professors' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Search professors' }));
     expect(onAction).toHaveBeenCalled();
   });
 });

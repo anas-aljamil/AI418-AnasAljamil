@@ -1,6 +1,12 @@
 import { Redirect } from 'expo-router';
 
-// Until the language, sign-in and home screens exist (P3c), the app opens on the styleguide.
+import { useAuth } from '@/auth/AuthProvider';
+import { isLanguageChosen } from '@/i18n';
+
+/** Where the app opens: language (first launch), then sign-in, then the home for the role. */
 export default function Index() {
-  return <Redirect href="/styleguide" />;
+  const { state } = useAuth();
+  if (!isLanguageChosen()) return <Redirect href="/language" />;
+  if (state.status !== 'signedIn') return <Redirect href="/sign-in" />;
+  return <Redirect href={state.user.role === 'student' ? '/home' : '/staff'} />;
 }
