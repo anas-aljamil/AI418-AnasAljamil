@@ -71,7 +71,9 @@ P6: queries.sql, views, trigger, docs, README, test plan, final design QA.
 Backend dev: <fill in once created>
 Frontend dev: <fill in once created>
 Tests: <fill in once created>
-DB reset + seed: <fill in once created>
+DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; creates db/mawjood.db)
+DB checks (constraints, seed rules, ER sync): python3 scripts/check_db.py
+DB portability check (needs a PostgreSQL role that can create databases): scripts/verify_postgres.sh
 Lint/format: <fill in once created>
 13. Working agreement
 Work in small phases. Never start the next phase without my approval.
@@ -82,3 +84,12 @@ Do not add features, dependencies, or schema changes outside this document witho
 Prefer simple, readable code with comments where the logic is non-obvious; no dead code or TODO litter.
 If requirements conflict, stop and ask one precise question.
 Update this file whenever a decision changes (commands, schema names, assumptions).
+14. Decisions and assumptions (approved 2026-10-05)
+Schema: tables departments, users, offices, students, professors, schedule_blocks, status_overrides, appointments, pins, conversations, messages, notifications (rationale in docs/normalization.md). "users" avoids the PostgreSQL reserved word.
+SQL layout: db/schema.sql is portable (SQLite + PostgreSQL). Dialect-only objects live in db/dialect/sqlite.sql and db/dialect/postgresql.sql (+ postgresql_sequences.sql after seeding). Load order: schema -> dialect -> seed.
+Storage: *_at columns are UTC text 'YYYY-MM-DD HH:MM:SS'; schedule times are Riyadh 'HH:MM' on a 15-minute grid; day_of_week 0 = Sunday .. 4 = Thursday.
+Double booking: partial unique index (same start) in schema.sql + overlap trigger in db/dialect/*; the API also pre-checks.
+Status outside any schedule block = Away; Unknown only when a professor has no schedule. An override without a return time expires at the end of that Riyadh day.
+Seed: fictional, anchored on the week of Sunday 2026-10-04; demo password Mawjood-Demo-2026 for every seed account. 5-10 rows per table except users (16, supertype = sum of subtypes) and schedule_blocks (32, a realistic weekly timetable).
+Auth: 15-minute JWT access token in memory + refresh token in an httpOnly SameSite=Strict cookie read only by the refresh endpoint (which also requires a custom header against CSRF).
+Approved dependencies: backend uvicorn, argon2-cffi, PyJWT, pydantic-settings, httpx (tests), ruff; frontend react-router, @fontsource/*, Radix primitives, eslint, prettier, @playwright/test.
