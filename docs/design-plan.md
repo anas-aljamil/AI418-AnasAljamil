@@ -1,5 +1,7 @@
 # Mawjood: design plan (P3a)
 
+> **Decision (2026-10-05): Direction A with square lit doors, Section 9.** It uses Direction A's palette, IBM Plex type and layout, with square doors in the solid, lit-from-inside style. Logged in DESIGN.md Section 11.
+
 Two directions for you to choose from, following DESIGN.md Section 10, step 1. No app code yet. Each direction has:
 - named colors for light and dark;
 - typeface and type scale;
