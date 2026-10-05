@@ -22,10 +22,11 @@ import {
   setSessionExpiredHandler,
   signInRequest,
   signOutRequest,
+  signUpRequest,
 } from '@/api/client';
 import { clearCachedData } from '@/api/queryClient';
 import { refreshTokenStore } from '@/auth/tokenStore';
-import type { Me } from '@/api/types';
+import type { Me, SignUpBody } from '@/api/types';
 import { preferenceKeys, readPreference, removePreference, writePreference } from '@/lib/storage';
 
 type AuthState =
@@ -36,6 +37,8 @@ type AuthState =
 interface AuthValue {
   state: AuthState;
   signIn: (email: string, password: string) => Promise<Me>;
+  /** 'signedIn' for students; 'pending' when a professor's account waits for an admin. */
+  signUp: (body: SignUpBody) => Promise<'signedIn' | 'pending'>;
   signOut: () => Promise<void>;
 }
 
@@ -98,12 +101,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signedIn],
   );
 
+  const signUp = useCallback(
+    async (body: SignUpBody) => {
+      const result = await signUpRequest(body);
+      if (result.kind === 'pending') return 'pending' as const;
+      signedIn(result.tokens.user);
+      return 'signedIn' as const;
+    },
+    [signedIn],
+  );
+
   const signOut = useCallback(async () => {
     await signOutRequest();
     await forget();
   }, [forget]);
 
-  const value = useMemo(() => ({ state, signIn, signOut }), [state, signIn, signOut]);
+  const value = useMemo(
+    () => ({ state, signIn, signUp, signOut }),
+    [state, signIn, signUp, signOut],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

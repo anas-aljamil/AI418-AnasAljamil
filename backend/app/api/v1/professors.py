@@ -24,11 +24,14 @@ router = APIRouter(tags=["professors"])
 StatusFilter = Literal["in_office", "in_class", "busy", "away", "unknown"]
 
 
-@router.get("/departments", response_model=Page[DepartmentOut], summary="List departments")
+@router.get(
+    "/departments",
+    response_model=Page[DepartmentOut],
+    summary="List departments (public: the sign-up form needs it)",
+)
 def list_departments(
     page: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
 ) -> Page[DepartmentOut]:
     rows = db.scalars(select(Department).order_by(Department.code)).all()
     return paginate([DepartmentOut.model_validate(r) for r in rows], page)

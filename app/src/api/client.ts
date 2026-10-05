@@ -12,7 +12,7 @@ import { Platform } from 'react-native';
 
 import { apiUrl } from '@/lib/apiUrl';
 import { refreshTokenStore } from '@/auth/tokenStore';
-import type { TokenResponse } from './types';
+import type { SignUpBody, TokenResponse } from './types';
 
 const TIMEOUT_MS = 12_000;
 const isWeb = Platform.OS === 'web';
@@ -130,6 +130,23 @@ export async function signInRequest(email: string, password: string): Promise<To
   );
   await acceptTokens(tokens);
   return tokens;
+}
+
+/** Students are signed in at once; a professor's account waits for an admin (HTTP 202). */
+export async function signUpRequest(
+  body: SignUpBody,
+): Promise<{ kind: 'signedIn'; tokens: TokenResponse } | { kind: 'pending' }> {
+  const response = await send('/auth/signup', 'POST', {
+    ...body,
+    client: isWeb ? 'web' : 'native',
+  });
+  if (response.status === 202) {
+    await parse<unknown>(response);
+    return { kind: 'pending' };
+  }
+  const tokens = await parse<TokenResponse>(response);
+  await acceptTokens(tokens);
+  return { kind: 'signedIn', tokens };
 }
 
 /** Forget the tokens here and, best effort, the web cookie on the server. */

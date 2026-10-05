@@ -11,6 +11,7 @@ from pydantic import (
     AfterValidator,
     AwareDatetime,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PlainSerializer,
@@ -344,6 +345,44 @@ class AdminStudentPatch(AccountPatch):
     university_no: str | None = Field(default=None, pattern=r"^[A-Z0-9]{4,12}$")
     department_id: int | None = None
     study_year: int | None = Field(default=None, ge=1, le=6)
+
+
+def _strip_upper(value: object) -> object:
+    return value.strip().upper() if isinstance(value, str) else value
+
+
+def _strip_lower(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+class _SignUpBase(AccountIn):
+    # Typed emails are forgiven their case and spaces; the stored address is lower case.
+    email: Annotated[Email, BeforeValidator(_strip_lower)]
+    department_id: int
+    # As for sign-in: "native" gets the refresh token in the body, "web" as a cookie.
+    client: Literal["native", "web"] = "native"
+
+
+class StudentSignUpIn(_SignUpBase):
+    role: Literal["student"]
+    university_no: Annotated[str, BeforeValidator(_strip_upper), Field(pattern=r"^[A-Z0-9]{4,12}$")]
+    study_year: int = Field(ge=1, le=6)
+
+
+class ProfessorSignUpIn(_SignUpBase):
+    role: Literal["professor"]
+    honorific: Honorific = "dr"
+    academic_rank: Rank = "assistant_professor"
+
+
+SignUpIn = Annotated[StudentSignUpIn | ProfessorSignUpIn, Field(discriminator="role")]
+
+
+class PendingOut(BaseModel):
+    """A professor's sign-up: the account exists but waits for an admin to activate it."""
+
+    pending: Literal[True] = True
+    email: str
 
 
 class AccountOut(Out):

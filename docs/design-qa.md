@@ -70,3 +70,19 @@ Each item is marked **verified** (with how) or **needs a real phone** (with the 
 | All copy from i18n; buttons name their action | **Verified**: `strings.test.ts` (same keys, placeholders, no untranslated Arabic). |
 | Lighthouse | Not run: the web build is only the test harness (product focus). |
 
+## After P6: sign-up (2026-10-05)
+
+| Section 12 item | Result |
+|---|---|
+| Answers its main question within 3 s | **Verified** by review: the title and one sentence say who can sign up and what happens next. |
+| One clear primary action | **Verified**: Create account (students) or Send request (professors); "Already have an account? Sign in" is a quiet link. |
+| Loading, empty, error and offline states | **Verified** (Jest): each field error shows next to its field, with a summary above the button. Server errors appear at the field they concern (taken email, university domain, taken number). Offline gives the usual network message. |
+| Arabic (RTL) and English (LTR), no clipped Arabic | **Verified** on the web build: `docs/screenshots/signup/ar-sign-up.png`. Phones: needs a real phone (#52). |
+| Light and dark pass contrast | **Verified**: theme tokens only. |
+| Nothing from Section 3 | **Verified** by review. |
+| 320 width and 200% text | Chips wrap; one column. 200% text: needs a real phone (#52). |
+| Screen reader; keyboard on web | **Verified**: every input has a label; the role is a tab pair; chips are buttons with names (years read "Year 2"); the error summary is a live region. TalkBack/VoiceOver: needs a real phone (#52). |
+| Safe areas, Android back, keyboard | KeyboardAvoidingView and a scrolling form; needs a real phone (#52). |
+| Motion purposeful, reduced motion | No new motion. |
+| All copy from i18n; buttons name their action | **Verified**: `strings.test.ts`; "Create account", "Send request", "Back to sign in". |
+

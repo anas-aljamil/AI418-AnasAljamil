@@ -15,14 +15,13 @@ from sqlalchemy.orm import Session
 
 from app.core.arabic import matches
 from app.core.clock import Clock, get_clock
-from app.core.errors import AppError, not_found
+from app.core.errors import not_found
 from app.core.pagination import Page, PageParams, page_params, paginate
 from app.core.security import hash_password
 from app.db import get_db
 from app.deps import current_admin
 from app.models import Department, Office, Professor, Student, User
 from app.schemas import (
-    AccountIn,
     AccountPatch,
     AdminProfessorIn,
     AdminProfessorOut,
@@ -37,6 +36,7 @@ from app.schemas import (
     OfficeOut,
     OfficePatch,
 )
+from app.services import accounts
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(current_admin)])
 Search = Annotated[str | None, Query(max_length=100)]
@@ -51,41 +51,10 @@ def _get[T](db: Session, model: type[T], key: int, label: str) -> T:
     return row
 
 
-def _ensure_email_free(db: Session, email: str, except_user_id: int | None = None) -> None:
-    existing = db.scalar(select(User.user_id).where(User.email == email))
-    if existing is not None and existing != except_user_id:
-        raise AppError(409, "EMAIL_TAKEN", "Another account already uses this email.")
-
-
-def _ensure_exists(db: Session, department_id: int | None, office_id: int | None = None) -> None:
-    if department_id is not None and db.get(Department, department_id) is None:
-        raise AppError(422, "INVALID_REFERENCE", "The department does not exist.")
-    if office_id is not None and db.get(Office, office_id) is None:
-        raise AppError(422, "INVALID_REFERENCE", "The office does not exist.")
-
-
-def _create_user(db: Session, body: AccountIn, role: str, now) -> User:
-    _ensure_email_free(db, body.email)
-    user = User(
-        email=body.email,
-        password_hash=hash_password(body.password),
-        role=role,
-        full_name_ar=body.full_name_ar,
-        full_name_en=body.full_name_en,
-        preferred_locale=body.preferred_locale,
-        is_active=True,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(user)
-    db.flush()
-    return user
-
-
 def _apply_account_patch(db: Session, user: User, body: AccountPatch, now) -> None:
     changes = body.model_dump(exclude_unset=True, include=ACCOUNT_FIELDS)
     if "email" in changes:
-        _ensure_email_free(db, changes["email"], user.user_id)
+        accounts.ensure_email_free(db, changes["email"], user.user_id)
     if "password" in changes:
         user.password_hash = hash_password(changes.pop("password"))
     for field, value in changes.items():
@@ -207,8 +176,8 @@ def list_professors(
 def create_professor(
     body: AdminProfessorIn, db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
 ) -> AdminProfessorOut:
-    _ensure_exists(db, body.department_id, body.office_id)
-    user = _create_user(db, body, "professor", clock.now())
+    accounts.ensure_exists(db, body.department_id, body.office_id)
+    user = accounts.create_user(db, body, "professor", clock.now())
     professor = Professor(
         professor_id=user.user_id,
         department_id=body.department_id,
@@ -233,7 +202,7 @@ def update_professor(
     professor = _get(db, Professor, professor_id, "Professor")
     _apply_account_patch(db, professor.user, body, clock.now())
     changes = body.model_dump(exclude_unset=True, exclude=ACCOUNT_FIELDS)
-    _ensure_exists(db, changes.get("department_id"), changes.get("office_id"))
+    accounts.ensure_exists(db, changes.get("department_id"), changes.get("office_id"))
     for field, value in changes.items():
         setattr(professor, field, value)
     db.commit()
@@ -284,10 +253,9 @@ def list_students(
 def create_student(
     body: AdminStudentIn, db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
 ) -> AdminStudentOut:
-    _ensure_exists(db, body.department_id)
-    if db.scalar(select(Student.student_id).where(Student.university_no == body.university_no)):
-        raise AppError(409, "UNIVERSITY_NO_TAKEN", "Another student already has this university number.")
-    user = _create_user(db, body, "student", clock.now())
+    accounts.ensure_exists(db, body.department_id)
+    accounts.ensure_university_no_free(db, body.university_no)
+    user = accounts.create_user(db, body, "student", clock.now())
     student = Student(
         student_id=user.user_id,
         university_no=body.university_no,
@@ -306,7 +274,7 @@ def update_student(
     student = _get(db, Student, student_id, "Student")
     _apply_account_patch(db, student.user, body, clock.now())
     changes = body.model_dump(exclude_unset=True, exclude=ACCOUNT_FIELDS)
-    _ensure_exists(db, changes.get("department_id"))
+    accounts.ensure_exists(db, changes.get("department_id"))
     for field, value in changes.items():
         setattr(student, field, value)
     db.commit()

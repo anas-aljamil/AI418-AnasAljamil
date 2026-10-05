@@ -2,6 +2,7 @@
  * Sign in with a university email (DESIGN.md 7.1). The role comes from the account.
  * Return on the email field moves to the password; return on the password signs in.
  * Errors say what happened and how to fix it, and are announced to screen readers.
+ * New users go to Create an account (sign-up.tsx).
  */
 import { useRef, useState } from 'react';
 import {
@@ -131,6 +132,11 @@ export default function SignInScreen() {
             onPress={submit}
             disabled={busy}
             block
+          />
+          <Button
+            variant="quiet"
+            label={t('signup.link')}
+            onPress={() => router.push('/sign-up')}
           />
         </View>
 

@@ -8,10 +8,10 @@ This plan says what is tested, at which level, how to run it, and what passed. E
 |---|---|---|---|
 | Database | `scripts/check_db.py` (63 checks) | The schema rejects bad data with the expected MySQL error (CHECK, UNIQUE, foreign keys, subtype guard, triggers). The seed obeys the business rules. Character set, engine and reserved words are right. The ER diagram matches the schema. | throwaway `<DB_NAME>_check` database |
 | SQL deliverables | `scripts/check_sql.py` (38 checks) | Every statement in `db/queries.sql` runs on MySQL 8. Each table has at least 5 queries and 2 aggregates, and every required clause is used. The views and the trigger demo give the results the seed implies. The data-quality queries return no rows. | throwaway `<DB_NAME>_sql` database |
-| Backend | pytest (109 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
-| App units | Jest + React Native Testing Library (97 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
-| End to end | Playwright on the Expo web build (34 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
-| Real phone | [phone-checklist.md](phone-checklist.md) (#1-#50) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
+| Backend | pytest (123 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
+| App units | Jest + React Native Testing Library (101 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
+| End to end | Playwright on the Expo web build (37 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
+| Real phone | [phone-checklist.md](phone-checklist.md) (#1-#53) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
 
 The fixed moment for every automated level is **Monday 2026-10-05 10:00 Riyadh (07:00 UTC)**, in the week the seed is anchored on.
 
@@ -24,12 +24,12 @@ cd backend && .venv/bin/pytest && .venv/bin/ruff check . && .venv/bin/ruff forma
 cd app && npm run typecheck && npm run lint && npm run format && npm test
 # End to end: fresh seed, API with the demo clock, web build served on :8081
 python3 scripts/reset_db.py
-cd backend && DEMO_NOW=2026-10-05T07:00:00Z LOGIN_ATTEMPTS_PER_MINUTE=100 .venv/bin/uvicorn app.main:app --port 8000
+cd backend && DEMO_NOW=2026-10-05T07:00:00Z LOGIN_ATTEMPTS_PER_MINUTE=100 SIGNUPS_PER_MINUTE=100 .venv/bin/uvicorn app.main:app --port 8000
 cd app && npm run export:web && npx expo serve --port 8081
 cd app && npm run screenshots                                    # all specs, one at a time
 ```
 
-The end-to-end specs share the database and change it (bookings, messages, admin rows), so they run one at a time on a fresh seed. A second run needs `reset_db.py` first.
+The end-to-end specs share the database and change it (bookings, messages, admin rows, new accounts), so they run one at a time on a fresh seed. A second run needs `reset_db.py` first. The raised login and sign-up limits are for repeated test runs only: at the defaults (5 per minute), a second run within a minute is correctly refused with 429.
 
 ## 3. Traceability
 
@@ -66,7 +66,8 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 | Hashed passwords (argon2id) | `test_auth.py` login tests against the argon2 seed hashes |
 | Parameterized queries | All SQL goes through SQLAlchemy with bound parameters (review; [security.md](security.md)) |
 | Short-lived access token; refresh token in the secure store (native) or an httpOnly SameSite=Strict cookie (web); CSRF | `test_access_token_expires_after_15_minutes`, `test_web_login_sets_httponly_strict_cookie_instead_of_body_token`, `test_web_refresh_needs_the_csrf_header`; Jest `client.test.ts` |
-| Rate limits on login and messages | `test_login_is_rate_limited_after_5_attempts_per_minute`, `test_sending_is_rate_limited` |
+| Rate limits on login and messages (and sign-up) | `test_login_is_rate_limited_after_5_attempts_per_minute`, `test_sending_is_rate_limited`, `test_sign_up_is_rate_limited` |
+| Sign-up: university domain only, never admin, professors wait for an admin | `test_only_the_university_domain_may_sign_up`, `test_nobody_can_sign_up_as_an_admin`, `test_a_professor_signs_up_and_waits_for_an_admin`; Playwright `signup.spec.ts` (checked in MySQL) |
 | Roles and ownership on the server | `test_roles_are_enforced_server_side`, `test_other_professors_cannot_see_or_change_an_appointment`, `test_only_participants_see_a_conversation`, `test_non_admins_cannot_use_the_admin_api` |
 
 ### UX targets (CLAUDE.md Section 10)
@@ -85,10 +86,10 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 |---|---|
 | `check_db.py` | 63/63 |
 | `check_sql.py` | 38/38 |
-| pytest | 109 passed; ruff clean |
-| Jest | 97 passed; typecheck, lint and format clean |
-| Playwright | 34 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 8 |
-| Real phone | #1-#50 not yet run (no phone in the cloud sandbox) |
+| pytest | 123 passed; ruff clean |
+| Jest | 101 passed; typecheck, lint and format clean |
+| Playwright | 37 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 8, sign-up 3 |
+| Real phone | #1-#53 not yet run (no phone in the cloud sandbox) |
 
 ## 5. Not covered, and why
 

@@ -21,6 +21,10 @@ const KNOWN = [
   'VALIDATION_ERROR',
   'NOT_FOUND',
   'FORBIDDEN',
+  'EMAIL_TAKEN',
+  'UNIVERSITY_NO_TAKEN',
+  'EMAIL_DOMAIN',
+  'INVALID_REFERENCE',
 ];
 
 /** The i18n key that says what happened and how to fix it (DESIGN.md Section 8). */

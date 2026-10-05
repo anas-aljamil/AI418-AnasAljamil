@@ -105,6 +105,19 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - **Final design QA:** every tab of every role, plus the profile, the booking sheet, notifications and a conversation, fits 320 px in Arabic (light) and English (dark). Playwright `e2e/final.spec.ts`; screenshots in `docs/screenshots/final/`.
   - **Test plan with traceability:** [test-plan.md](test-plan.md). Lighthouse was not run (web build is the test harness only).
 
+### After P6: Sign-up (owner request, 2026-10-05)
+- **Decisions (owner):** students and professors may sign up; only university email addresses; a student is signed in at once; a professor waits for an admin to activate the account.
+- **Acceptance criteria:**
+  - a student creates an account from the sign-in screen and lands on Home, checked in MySQL;
+  - a professor's request creates an inactive account, which cannot sign in until the admin sets it active;
+  - other domains and `admin` are refused; field errors show next to the field; sign-up is rate-limited.
+- **Result (2026-10-05):** met.
+  - `POST /api/v1/auth/signup`: 14 backend tests.
+  - Sign-up screen with field checks: 4 Jest tests.
+  - `app/e2e/signup.spec.ts`: student signs up; professor request, admin activation and the professor's first sign-in; Arabic form and the domain rule; each checked in MySQL.
+  - The department list (`GET /api/v1/departments`) is now public, because the form needs it before sign-in.
+  - Found on the way: the admin forms showed a generic server error for a taken email or university number. Those codes now have their own messages.
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.

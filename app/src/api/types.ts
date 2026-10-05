@@ -1,5 +1,5 @@
 /** Shapes returned by the Mawjood API (backend/app/schemas.py). Timestamps are UTC ISO strings. */
-import type { StatusKey } from '@/theme/tokens';
+import type { Language, StatusKey } from '@/theme/tokens';
 
 export type Role = 'student' | 'professor' | 'admin';
 
@@ -50,6 +50,19 @@ export interface TokenResponse {
 }
 
 export type Honorific = 'dr' | 'prof' | 'mr' | 'ms' | 'eng';
+
+/** POST /auth/signup (the client adds "client"). */
+interface SignUpAccount {
+  email: string;
+  password: string;
+  full_name_ar: string;
+  full_name_en: string;
+  preferred_locale: Language;
+  department_id: number;
+}
+export type SignUpBody =
+  | (SignUpAccount & { role: 'student'; university_no: string; study_year: number })
+  | (SignUpAccount & { role: 'professor'; honorific: Honorific; academic_rank: Rank });
 
 export interface ProfessorStatus {
   status: StatusKey;

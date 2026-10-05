@@ -46,6 +46,7 @@ How the tokens behave:
 
 ## Rate limiting
 - **Login:** 5 attempts per minute for each combination of client address and email, then 429 `RATE_LIMITED` with a `Retry-After` header.
+- **Sign-up:** 5 accounts per minute for each client address (`SIGNUPS_PER_MINUTE`), then 429 `RATE_LIMITED`.
 - **Sending messages:** 20 per minute for each user (`MESSAGES_PER_MINUTE`), then 429 `RATE_LIMITED`.
 - **Limitation:** the limiter is in memory, so it resets on restart and covers one server process. That is enough for a single-server MVP.
 
@@ -67,6 +68,15 @@ How the tokens behave:
 - **Privacy:**
   - nothing logs tokens, passwords or request bodies;
   - seed data is fictional (`university.example` is a reserved domain).
+
+## Sign-up (after P6)
+
+- **Who:** students and professors create their own accounts; admins never come from sign-up. The role is part of the request, but the request cannot pick `admin`, and the API refuses it.
+- **Only the university domain:** the address must end with `@` + `SIGNUP_EMAIL_DOMAIN` (default `university.example`). There is no email verification (email is out of scope, CLAUDE.md Section 3), so the domain rule is the only proof of membership. Look-alikes such as `x@evil.university.example` or `x@university.example.evil.com` are refused.
+- **Students** are active at once and receive tokens exactly as at sign-in (refresh token in the body for the phone, httpOnly cookie for the web build).
+- **Professors** are created inactive and receive no tokens (HTTP 202). They cannot sign in, and students do not see them, until an admin sets the account active. So nobody can make themselves a professor and approve bookings or read chats.
+- **Passwords:** at least 8 characters, hashed with argon2id like every other account.
+- **Errors:** a taken email (409 `EMAIL_TAKEN`) does reveal that an account exists. That is accepted: the address is a university directory entry, and sign-up is rate-limited.
 
 ## Chat (P5)
 

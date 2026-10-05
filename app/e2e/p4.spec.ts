@@ -243,7 +243,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   ).toBe('S9999');
   await admin.getByText('Test Student', { exact: true }).click();
   await admin.getByRole('button', { name: '3', exact: true }).click();
-  await admin.getByRole('button', { name: 'Deactivated', exact: true }).click();
+  await admin.getByRole('button', { name: 'Not active', exact: true }).click();
   await save();
   expect(
     sql(

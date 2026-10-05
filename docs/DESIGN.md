@@ -222,6 +222,8 @@ Append entries as: date, decision, reason.
 2026-10-05, The Messages tab badge counts unread messages and the tab is named "Messages, 2 unread", Reason: screen readers otherwise read the badge number before the tab name.
 2026-10-05, Text size (Default, Large 115%, Larger 130%) multiplies the phone's own text size, still capped at 200% in total; tab labels ignore it and shrink to fit one line, Reason: five tabs at 360 dp leave about 72 dp each.
 2026-10-05, Notification preferences (Appointments, Messages) only filter what the bell shows on this phone; nothing is sent outside the app, Reason: CLAUDE.md Section 3 rules out push, email and SMS.
+2026-10-05, Sign-up is one screen reached from sign-in by a quiet link: role tabs (Student, Professor), names, university email, password, department chips, then student number and year, or title and rank. Checks run before sending and show next to each field, Reason: account creation is rare, so one scrollable form beats a multi-step wizard, and the role decides which fields appear.
+2026-10-05, A professor's sign-up ends on "Request sent" with a closed (away) door, and the admin list marks such accounts "Not active" (the word now used for every inactive account), Reason: a professor account must be approved, and "Deactivated" read wrong for an account that was never active.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

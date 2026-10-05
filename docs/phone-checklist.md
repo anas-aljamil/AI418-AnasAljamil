@@ -87,6 +87,14 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 | 49 | Text size | Profile, Text size: Larger; then also set the phone's largest text size | Every screen grows; nothing is clipped; the five tab labels stay on one line (they shrink rather than overlap) | needs a real phone | needs a real phone |
 | 50 | Notification preferences | Turn off Messages; send Saad a message from Dr. Noura | The bell does not count it and the list says some are hidden; the Messages tab still shows it | needs a real phone | needs a real phone |
 
+## After P6: sign-up
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 51 | Student sign-up | Sign-in screen, "Create an account", fill in with a new `@university.example` address, choose a department, Create account | Home opens at once, greeting the new name | needs a real phone | needs a real phone |
+| 52 | Form and keyboard | Move through the fields with the keyboard open; turn on TalkBack/VoiceOver | No field is hidden by the keyboard; every field and chip is read with its label; errors are read when they appear | needs a real phone | needs a real phone |
+| 53 | Professor request | Choose Professor, fill in, Send request; try to sign in; then, as `admin@university.example`, open Professors, set the account active; sign in again | "Request sent"; sign-in says the account is not active yet; after activation the professor lands on My status | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
 - **P6:** a final pass of everything above. Record each result in the Android and iOS columns ("pass", or what went wrong). Until then every row stays "needs a real phone". The automated evidence for each area is listed in [test-plan.md](test-plan.md).
