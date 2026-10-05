@@ -5,6 +5,10 @@ import type { Language } from '@/theme/tokens';
 import { api } from './client';
 import { POLL_MS } from './queryClient';
 import type {
+  AppNotification,
+  ChatMessage,
+  Conversation,
+  Unread,
   AdminProfessor,
   AdminStudent,
   Appointment,
@@ -37,6 +41,10 @@ export const queryKeys = {
   myStatus: ['me', 'status'] as const,
   mySchedule: ['me', 'schedule'] as const,
   admin: (resource: AdminResource) => ['admin', resource] as const,
+  conversations: ['chat'] as const,
+  messages: (id: number) => ['chat', id] as const,
+  notifications: ['notifications'] as const,
+  unread: ['notifications', 'unread'] as const,
 };
 
 export interface SearchFilters {
@@ -334,5 +342,96 @@ export function usePinToggle() {
       client.invalidateQueries({ queryKey: queryKeys.pins });
       client.invalidateQueries({ queryKey: queryKeys.professors });
     },
+  });
+}
+
+// --- chat and notifications (P5) ------------------------------------------------
+
+/** An open thread polls a little faster than lists (still within 15-30 s, CLAUDE.md Section 5). */
+export const THREAD_POLL_MS = 15_000;
+
+export function useConversations() {
+  return useQuery({
+    queryKey: queryKeys.conversations,
+    queryFn: () => api<Page<Conversation>>('/conversations?limit=100').then((page) => page.items),
+    refetchInterval: POLL_MS,
+  });
+}
+
+/** The latest 100 messages, newest first (the thread list is inverted). */
+export function useMessages(conversationId: number) {
+  return useQuery({
+    queryKey: queryKeys.messages(conversationId),
+    queryFn: () =>
+      api<Page<ChatMessage>>(`/conversations/${conversationId}/messages?limit=100`).then(
+        (page) => page.items,
+      ),
+    enabled: conversationId > 0,
+    refetchInterval: THREAD_POLL_MS,
+  });
+}
+
+/** Open (or reopen) the conversation with a professor (students) or a student (professors). */
+export function useOpenConversation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (other: { professor_id: number } | { student_id: number }) =>
+      api<Conversation>('/conversations', 'POST', other),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.conversations }),
+  });
+}
+
+export function useSendMessage(conversationId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) =>
+      api<ChatMessage>(`/conversations/${conversationId}/messages`, 'POST', { body }),
+    onSuccess: (message) => {
+      client.setQueryData<ChatMessage[]>(queryKeys.messages(conversationId), (current = []) => [
+        message,
+        ...current.filter((m) => m.message_id !== message.message_id),
+      ]);
+      client.invalidateQueries({ queryKey: queryKeys.conversations });
+    },
+  });
+}
+
+/** Marks the other side's messages read (they see "Read") and clears the badge. */
+export function useMarkConversationRead(conversationId: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<void>(`/conversations/${conversationId}/read`, 'POST'),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.conversations });
+      client.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+}
+
+export function useNotifications(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => api<Page<AppNotification>>('/notifications?limit=50').then((page) => page.items),
+    enabled,
+    refetchInterval: POLL_MS,
+  });
+}
+
+export function useUnread(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.unread,
+    queryFn: () => api<Unread>('/notifications/unread'),
+    enabled,
+    refetchInterval: POLL_MS,
+  });
+}
+
+/** Mark some notifications read, or all of them when ids is null. */
+export function useMarkNotificationsRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[] | null) =>
+      api<void>('/notifications/read', 'POST', ids === null ? {} : { ids }),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.notifications }),
   });
 }

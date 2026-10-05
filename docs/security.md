@@ -46,7 +46,7 @@ How the tokens behave:
 
 ## Rate limiting
 - **Login:** 5 attempts per minute for each combination of client address and email, then 429 `RATE_LIMITED` with a `Retry-After` header.
-- **Sending messages** will use the same limiter when chat is added in P5.
+- **Sending messages:** 20 per minute for each user (`MESSAGES_PER_MINUTE`), then 429 `RATE_LIMITED`.
 - **Limitation:** the limiter is in memory, so it resets on restart and covers one server process. That is enough for a single-server MVP.
 
 ## Authorization
@@ -68,10 +68,17 @@ How the tokens behave:
   - nothing logs tokens, passwords or request bodies;
   - seed data is fictional (`university.example` is a reserved domain).
 
-## Data kept on the phone (P3c)
+## Chat (P5)
+
+- **Who may chat:** only the student and the professor of a conversation; anyone else gets 404. Eligibility (a non-declined appointment, or the professor accepts messages from everyone) is checked when the conversation opens and again on every message, so a later decline closes the chat.
+- **Admins** cannot read conversations (403).
+- **Message bodies** are plain text, 1-1000 characters, stored as given and rendered as text (never as HTML).
+
+## Data kept on the phone (P3c, P5)
 
 - **Refresh token:** expo-secure-store only (Keychain on iOS, Keystore-backed storage on Android). The web build never sees it (httpOnly cookie).
 - **Access token:** memory only; it is never written to storage.
 - **Public profile** (name, role, email, department) in AsyncStorage under `mawjood.user`, so the app can open signed in while offline. It holds no secret.
-- **Last known API data** (pins, department list, next appointment) in AsyncStorage under `mawjood.cache` for at most 24 hours, so statuses stay readable offline. Search results are not kept.
+- **Last known API data** (pins, department list, appointments, conversations and their messages, notifications) in AsyncStorage under `mawjood.cache` for at most 24 hours, so statuses stay readable offline. Search results are not kept.
 - **Sign-out** deletes the refresh token, the profile and the cached data. A refresh token the server rejects does the same.
+- **Settings** (language, theme, text size, which notifications to show) in AsyncStorage; they are not personal data and stay after sign-out.

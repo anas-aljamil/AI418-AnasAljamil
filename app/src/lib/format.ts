@@ -148,3 +148,10 @@ export function dateTimeText(start: Date, t: TFunction): string {
   const local = riyadhLocal(start);
   return `${t(`weekday.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1} ${riyadhTime(start)}`;
 }
+
+/** Short time for lists: "10:30" today, otherwise "Sun 4/10" (weekday short, day/month). */
+export function shortWhen(at: Date, now: Date, t: TFunction): string {
+  if (riyadhDayDifference(at, now) === 0) return riyadhTime(at);
+  const local = riyadhLocal(at);
+  return `${t(`weekday_short.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1}`;
+}

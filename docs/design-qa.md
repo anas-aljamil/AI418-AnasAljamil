@@ -35,3 +35,21 @@ Each item is marked **verified** (with how) or **needs a real phone** (with the 
 | Motion purposeful, reduced motion | **Verified** by review: the booking moment (door opens, check) and the door on status changes are the only motion; reduced motion swaps instantly (Door component). Haptics only on status change and booking confirmed. |
 | All copy from i18n; buttons name their action | **Verified**: `strings.test.ts`; labels such as "Book 10:30", "Cancel appointment", "Approve: Lama Al-Shehri, Tomorrow 10:00". |
 | Lighthouse | Not run (web build is the test harness only). |
+
+## P5: conversations, thread, notifications, settings (2026-10-05)
+
+| Section 12 item | Result |
+|---|---|
+| Answers its main question within 3 s | **Verified** on the web build: the conversation list shows who wrote, the unread count and the last message; the Messages tab and the bell carry unread counts. On a phone: needs a real phone (#46). |
+| One clear primary action | **Verified** by review: Send (thread), the quick replies for professors, opening a row (lists), Mark all as read (notifications). |
+| Loading, empty, error and offline states | **Verified**: skeletons while loading; empty states for no conversations (with Search professors for students), no messages, no notifications; a retry on load errors; a failed send stays with "Not sent. Tap to try again." (Jest). Offline: needs a real phone (#44). |
+| Arabic (RTL) and English (LTR), no clipped Arabic | **Verified** on the web build: `docs/screenshots/p5/ar-*` and `en-*`; bubbles sit at the end edge for your messages and the start edge for theirs in both directions. Phones: needs a real phone (#42). |
+| Light and dark pass contrast | **Verified**: only theme tokens are used (lint); your bubbles use primary / on-primary, which pass AA in both themes (`tokens.test.ts`). |
+| Nothing from Section 3 | **Verified** by review: no middle dots (meta lines use the language's comma), no emoji, no decorative motion; bubbles and rows are flat. |
+| 320 width and 200% text | Bubbles are at most 80% wide and wrap; the composer grows to several lines. At 360 px the five tab labels did not fit, so they now shrink to fit one line on phones (DESIGN.md Section 11). 200% text: needs a real phone (#49). |
+| Screen reader; keyboard on web | **Verified**: rows read as one sentence ("Dr. Noura Al-Harbi, 1 unread, ..."); the composer is labelled "Message to Dr. Noura Al-Harbi"; the Messages tab says "Messages, 1 unread" and the bell "Notifications, 2 new" (Playwright queries by these names); send errors are in a live region. TalkBack/VoiceOver: needs a real phone (#46). |
+| Safe areas, Android back, keyboard | The header respects the top inset and the composer the bottom inset; KeyboardAvoidingView keeps the composer above the keyboard. Needs a real phone (#41). |
+| Motion purposeful, reduced motion | **Verified** by review: no new motion; sending only fades the pending bubble. |
+| All copy from i18n; buttons name their action | **Verified**: `strings.test.ts`; labels such as "Send", "Come now", "Message Dr. Noura Al-Harbi", "Mark all as read". |
+| Lighthouse | Not run (web build is the test harness only). |
+

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import i18n, { resources } from '@/i18n';
 import { ToastProvider } from '@/components/Toast';
+import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import type { Language } from '@/theme/tokens';
 
@@ -43,7 +44,9 @@ export async function renderWithProviders(ui: React.ReactElement, language: Lang
               })
             }
           >
-            <ToastProvider>{ui}</ToastProvider>
+            <SettingsProvider>
+              <ToastProvider>{ui}</ToastProvider>
+            </SettingsProvider>
           </QueryClientProvider>
         </ThemeProvider>
       </I18nextProvider>

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import admin, appointments, auth, me, professors
+from app.api.v1 import admin, appointments, auth, conversations, me, notifications, professors
 from app.config import get_settings
 from app.core.errors import install_error_handlers
 
@@ -31,7 +31,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    for module in (auth, professors, me, appointments, admin):
+    for module in (auth, professors, me, appointments, conversations, notifications, admin):
         api.include_router(module.router)
     app.include_router(api)
     return app

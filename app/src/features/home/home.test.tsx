@@ -23,7 +23,10 @@ const mockUser = {
   full_name_en: 'Saad Al-Mutairi',
   student: { university_no: 'S1001', study_year: 3, department: computerScience },
 } as Me;
-jest.mock('@/auth/AuthProvider', () => ({ useUser: () => mockUser }));
+jest.mock('@/auth/AuthProvider', () => ({
+  useUser: () => mockUser,
+  useAuth: () => ({ state: { status: 'signedIn', user: mockUser } }),
+}));
 
 const mockApi = api as jest.MockedFunction<typeof api>;
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60000).toISOString();
@@ -89,6 +92,7 @@ const standard: Routes = {
   'GET /me/pins': page([noura]),
   'GET /professors?department_id=1': page([noura, khalid]),
   'GET /appointments': page([appointment]),
+  'GET /notifications': page([]),
 };
 
 beforeEach(() => mockApi.mockReset());

@@ -1,7 +1,7 @@
 /** How people and places are written in each language (DESIGN.md Section 8). */
 import type { TFunction } from 'i18next';
 
-import type { Department, Honorific, Office } from '@/api/types';
+import type { Department, Honorific, Office, Participant } from '@/api/types';
 import type { Language } from '@/theme/tokens';
 
 interface Named {
@@ -51,4 +51,11 @@ export function officeFull(office: Office | null, t: TFunction): string {
         room: office.room_number,
       })
     : t('office.none');
+}
+
+/** A chat participant: "Dr. Noura Al-Harbi" for professors, the full name for students. */
+export function participantName(person: Participant, language: Language, t: TFunction): string {
+  return person.role === 'professor' && person.honorific
+    ? professorName({ ...person, honorific: person.honorific }, language, t)
+    : fullName(person, language);
 }

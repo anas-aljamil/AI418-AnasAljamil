@@ -23,6 +23,7 @@ import { useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
+import { NotificationBell } from '@/components/NotificationBell';
 import { SkeletonRow } from '@/components/Placeholders';
 import { describeStatus } from '@/components/StatusLabel';
 import { Text } from '@/components/Text';
@@ -99,9 +100,12 @@ export default function StatusScreen() {
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets
     >
-      <Text variant="heading" role="heading">
-        {t('status_screen.title')}
-      </Text>
+      <View style={styles.headRow}>
+        <Text variant="heading" role="heading" style={styles.grow}>
+          {t('status_screen.title')}
+        </Text>
+        <NotificationBell />
+      </View>
 
       {current && described ? (
         <>
@@ -277,6 +281,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
   },
   grow: { flex: 1 },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   start: { alignItems: 'flex-start' },

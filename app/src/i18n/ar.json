@@ -38,7 +38,16 @@
     "theme_dark": "داكن",
     "language_ar": "العربية",
     "language_en": "English",
-    "direction_reload": "سيُعاد تشغيل التطبيق لتغيير اتجاه العرض."
+    "direction_reload": "سيُعاد تشغيل التطبيق لتغيير اتجاه العرض.",
+    "text_size": "حجم النص",
+    "text_default": "افتراضي",
+    "text_large": "كبير",
+    "text_larger": "أكبر",
+    "text_size_helper": "يُضاف إلى حجم النص في هاتفك، حتى ضعف الحجم العادي.",
+    "notifications": "الإشعارات داخل التطبيق",
+    "notify_appointments": "المواعيد",
+    "notify_messages": "الرسائل",
+    "notifications_helper": "اختر ما يظهر تحت الجرس. لا يُرسل أي إشعار خارج التطبيق."
   },
   "common": {
     "close": "إغلاق",
@@ -233,7 +242,8 @@
     "departments": "الأقسام",
     "offices": "المكاتب",
     "professors": "الأساتذة",
-    "students": "الطلاب"
+    "students": "الطلاب",
+    "messages": "الرسائل"
   },
   "profile": {
     "title": "حسابي",
@@ -440,5 +450,48 @@
     "saved": "حُفظ",
     "deleted": "حُذف",
     "person_line": "{{department}}، {{email}}"
+  },
+  "chat": {
+    "title": "الرسائل",
+    "empty_title": "لا محادثات بعد",
+    "empty_student": "يمكنك مراسلة أستاذ بعد حجز موعد معه، أو إذا كان يستقبل الرسائل من جميع الطلاب.",
+    "empty_professor": "يمكن للطلاب الذين حجزوا معك مراسلتك من هنا.",
+    "empty_action": "ابحث عن أستاذ",
+    "you": "أنت: {{body}}",
+    "no_messages": "لا رسائل بعد. ابدأ المحادثة.",
+    "unread": "{{count}} غير مقروءة",
+    "student": "طالب",
+    "professor": "عضو هيئة تدريس",
+    "composer": "رسالة إلى {{name}}",
+    "send": "أرسل",
+    "sending": "جارٍ الإرسال",
+    "sent": "أُرسلت",
+    "read": "قُرئت",
+    "failed": "لم تُرسل. اضغط لإعادة المحاولة.",
+    "today": "اليوم",
+    "quick_replies": "ردود سريعة",
+    "quick_come_now": "تفضّل الآن",
+    "quick_late": "سأتأخر 10 دقائق",
+    "quick_reschedule": "لنحدد موعدًا آخر",
+    "message": "راسل",
+    "message_label": "راسل {{name}}",
+    "not_allowed": "يمكنك مراسلة {{name}} بعد حجز موعد معه.",
+    "load_failed": "تعذّر تحميل المحادثة"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "open": "الإشعارات، {{count}} جديدة",
+    "open_none": "الإشعارات",
+    "today": "اليوم",
+    "earlier": "سابقًا",
+    "new": "جديد",
+    "mark_all": "اجعلها كلها مقروءة",
+    "empty": "لا إشعارات. ستظهر هنا تحديثات المواعيد والرسائل الجديدة.",
+    "hidden": "بعض الإشعارات مخفية حسب إعداداتك.",
+    "appointment_requested": "طلب موعد من {{name}}: {{when}}",
+    "appointment_approved": "تمت الموافقة على موعدك مع {{name}}: {{when}}",
+    "appointment_declined": "لم تتم الموافقة على طلبك مع {{name}}: {{when}}",
+    "appointment_cancelled": "أُلغي الموعد مع {{name}}: {{when}}",
+    "new_message": "رسالة جديدة من {{name}}"
   }
 }

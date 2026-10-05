@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { textAlignFor } from '@/lib/direction';
+import { useSettings } from '@/settings/SettingsProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   fontFamilies,
@@ -42,7 +43,8 @@ export function TextField({
   const { i18n } = useTranslation();
   const [focused, setFocused] = useState(false);
   const language = i18n.language === 'ar' ? 'ar' : 'en';
-  const body = typeScale.body;
+  const { textScale } = useSettings();
+  const body = { size: typeScale.body.size * textScale };
   const borderColor = error ? colors.danger : focused ? colors.primary : colors.line;
 
   return (
@@ -54,7 +56,7 @@ export function TextField({
         aria-invalid={!!error}
         value={value}
         maxLength={maxLength}
-        maxFontSizeMultiplier={maxFontScale}
+        maxFontSizeMultiplier={maxFontScale / textScale}
         placeholderTextColor={colors.muted}
         onFocus={(e) => {
           setFocused(true);

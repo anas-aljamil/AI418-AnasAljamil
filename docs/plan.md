@@ -32,7 +32,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - at least one named test per Section 4 rule, with edge cases at exactly 4 h, exactly 1 h and override expiry, and a fake clock;
   - ownership and role tests;
   - the shared error shape;
-  - a 429 on login (the same limiter covers messages in P5);
+  - a 429 on login (the same limiter covers messages since P5);
   - CORS for the Expo web dev server.
 - `/docs` loads; ruff is clean; `.env.example` is complete; CLAUDE.md commands are filled in.
 
@@ -82,6 +82,13 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - the chat composer stays above the keyboard.
 - In-app notifications (polling): grouped by today/earlier, linked to their source, with an unread badge on the tab. Settings: language (with reload), theme, text size, in-app notification preferences.
 - Backend tests for chat eligibility and notification creation; Jest tests for the thread and list; screenshots; Section 12 checklist.
+
+- **Result (2026-10-05):** met on the web build against the real API and MySQL (`app/e2e/p5.spec.ts`):
+  - a student writes to Dr. Noura; she sees "Messages, 1 unread" and "Notifications, 2 new", opens the message from the bell and answers with one quick reply; the student's open thread shows the reply and "Read" within one poll (15 s); each step is checked in MySQL;
+  - a student without a booking cannot open a chat with a professor who does not accept messages from everyone (no conversation row is created);
+  - "Larger" text makes the Profile text 1.3 times bigger, and turning off message notifications hides them under the bell;
+  - Arabic screens: conversations, both sides of a thread, notifications.
+  - Backend: 11 new tests (eligibility, participants only, receipts, merged notifications, validation, the 20-per-minute message limit); 106 in total. Jest: thread (optimistic send, failure and retry, quick replies) and notifications (grouping, hidden by settings). Section 12 report: [design-qa.md](design-qa.md); phone checks #41-#50 in [phone-checklist.md](phone-checklist.md).
 
 ### P6: SQL deliverables, docs, final QA
 - `db/queries.sql` meets CLAUDE.md Section 6 per table, with at least 2 views (`v_professors_in_office_now`, `v_professor_current_status`, `v_upcoming_appointments`) and a demonstration of the double-booking trigger firing.

@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Pin from 'lucide-react-native/icons/pin';
 
-import { useProfessor } from '@/api/queries';
+import { useOpenConversation, useProfessor } from '@/api/queries';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Door } from '@/components/Door';
@@ -20,6 +20,7 @@ import { describeStatus } from '@/components/StatusLabel';
 import { IconButton } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TodayTimeline } from '@/components/TodayTimeline';
+import { useToast } from '@/components/Toast';
 import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
@@ -42,7 +43,25 @@ export default function ProfessorProfile() {
   const isStudent = state.status === 'signedIn' && state.user.role === 'student';
   const professor = useProfessor(professorId);
   const togglePin = usePinWithToast();
+  const toast = useToast();
   const [booking, setBooking] = useState(false);
+
+  const openChat = useOpenConversation();
+  // The chat rule is checked by the API; when it says no, tapping explains why.
+  const message = () => {
+    if (!data) return;
+    if (!data.can_message) {
+      toast(t('chat.not_allowed', { name }));
+      return;
+    }
+    openChat.mutate(
+      { professor_id: data.professor_id },
+      {
+        onSuccess: (conversation) => router.push(`/conversations/${conversation.conversation_id}`),
+        onError: (error) => toast(t(errorKey(error))),
+      },
+    );
+  };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
   // Directional icons mirror in right-to-left layouts (DESIGN.md Section 9). On native the
@@ -158,6 +177,13 @@ export default function ProfessorProfile() {
           <View style={styles.grow}>
             <Button label={t('prof.book')} onPress={() => setBooking(true)} block />
           </View>
+          <Button
+            variant="secondary"
+            label={t('chat.message')}
+            accessibilityLabel={t('chat.message_label', { name })}
+            disabled={openChat.isPending}
+            onPress={message}
+          />
           <IconButton
             label={t(data.is_pinned ? 'home.unpin' : 'home.pin', { name })}
             selected={!!data.is_pinned}

@@ -70,10 +70,23 @@ Sign in as the account named in each check (password `Mawjood-Demo-2026`). `l.al
 | 39 | Admin forms | As `admin@university.example`, add a department with an invalid code, then a valid one; delete it | Errors show next to the fields and above Save; delete asks first | needs a real phone | needs a real phone |
 | 40 | Five tabs at 200% text | With the largest text size, look at the admin tab bar | All five labels readable, none clipped | needs a real phone | needs a real phone |
 
+## P5: chat, notifications, settings
+
+Use two phones (or one phone and the web build): `s.almutairi@university.example` (student) and `n.alharbi@university.example` (Dr. Noura); `y.alghamdi@university.example` has no booking with Mr. Faisal.
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 41 | Composer and keyboard | As Saad, Messages, Dr. Noura, tap the message field and type three lines | The field and Send stay above the keyboard; the newest message stays visible; Android back closes the keyboard first | needs a real phone | needs a real phone |
+| 42 | Bubbles in both directions | Read the thread in Arabic, then in English | Your bubbles at the end edge (left in Arabic, right in English), theirs at the start edge; the back arrow points toward the start edge | needs a real phone | needs a real phone |
+| 43 | Send and receipt | Send a message; on Dr. Noura's phone open the conversation | Saad sees "Sent" at once and "Read" within about 15 s | needs a real phone | needs a real phone |
+| 44 | Failed send | Turn on airplane mode and send | The message stays, "Not sent. Tap to try again."; tap it after reconnecting and it sends | needs a real phone | needs a real phone |
+| 45 | Quick reply | As Dr. Noura, tap "Come now" | It sends in one tap; Saad sees it within about 15 s | needs a real phone | needs a real phone |
+| 46 | Badges | After #43 (before reading), look at Dr. Noura's tab bar and bell; turn on TalkBack/VoiceOver and move to the Messages tab | A number on Messages and on the bell; the reader says "Messages, 1 unread" and "Notifications, 2 new" | needs a real phone | needs a real phone |
+| 47 | Notifications | Tap the bell, then the new message row | Today / Earlier groups; the row opens the conversation; "Mark all as read" clears the New marks | needs a real phone | needs a real phone |
+| 48 | Chat not allowed | As Yousef, open Mr. Faisal's profile and tap Message | A message explains that a booking is needed first; no conversation opens | needs a real phone | needs a real phone |
+| 49 | Text size | Profile, Text size: Larger; then also set the phone's largest text size | Every screen grows; nothing is clipped; the five tab labels stay on one line (they shrink rather than overlap) | needs a real phone | needs a real phone |
+| 50 | Notification preferences | Turn off Messages; send Saad a message from Dr. Noura | The bell does not count it and the list says some are hidden; the Messages tab still shows it | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
-- **P5:**
-  - the chat composer stays above the keyboard;
-  - message bubbles in both directions;
-  - notification badges.
 - **P6:** a final pass of everything above.

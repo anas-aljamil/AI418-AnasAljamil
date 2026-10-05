@@ -114,6 +114,8 @@ export interface ProfessorDetail extends ProfessorSummary {
   slot_minutes: 15 | 30;
   open_messages: boolean;
   today: { date: string; day_of_week: number; now_local_time: string; blocks: Block[] };
+  /** Students only: whether the chat rule allows messaging this professor. */
+  can_message?: boolean | null;
 }
 
 export interface Slot {
@@ -159,4 +161,49 @@ export interface AdminStudent extends Account {
   university_no: string;
   department: Department;
   study_year: number;
+}
+
+export interface Participant extends Person {
+  role: 'student' | 'professor';
+  honorific: Honorific | null;
+}
+
+export interface ChatMessage {
+  message_id: number;
+  sender_role: 'student' | 'professor';
+  mine: boolean;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface Conversation {
+  conversation_id: number;
+  other: Participant;
+  last_message: { body: string; mine: boolean; created_at: string } | null;
+  unread_count: number;
+  created_at: string;
+}
+
+export type NotificationType =
+  | 'appointment_requested'
+  | 'appointment_approved'
+  | 'appointment_declined'
+  | 'appointment_cancelled'
+  | 'new_message';
+
+export interface AppNotification {
+  notification_id: number;
+  type: NotificationType;
+  created_at: string;
+  read_at: string | null;
+  appointment_id: number | null;
+  conversation_id: number | null;
+  actor: Participant | null;
+  starts_at: string | null;
+}
+
+export interface Unread {
+  notifications: number;
+  messages: number;
 }

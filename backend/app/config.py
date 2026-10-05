@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:8081", "http://127.0.0.1:8081"]
 
     login_attempts_per_minute: int = 5
+    messages_per_minute: int = 20
 
     # Freeze the API clock for screenshots and demos, e.g. 2026-10-05T07:00:00Z. Empty = real time.
     demo_now: datetime | None = None

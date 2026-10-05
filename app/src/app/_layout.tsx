@@ -25,6 +25,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import i18n, { initI18n } from '@/i18n';
 import { persistOptions, queryClient } from '@/api/queryClient';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 
@@ -67,13 +68,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider>
-          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-            <AuthProvider>
-              <ToastProvider>
-                <AppShell />
-              </ToastProvider>
-            </AuthProvider>
-          </PersistQueryClientProvider>
+          <SettingsProvider>
+            <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+              <AuthProvider>
+                <ToastProvider>
+                  <AppShell />
+                </ToastProvider>
+              </AuthProvider>
+            </PersistQueryClientProvider>
+          </SettingsProvider>
         </ThemeProvider>
       </I18nextProvider>
     </SafeAreaProvider>

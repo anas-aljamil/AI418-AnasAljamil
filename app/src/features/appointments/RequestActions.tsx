@@ -1,12 +1,13 @@
 /**
- * What a professor can do with one appointment: approve or decline a request, and mark an
- * approved appointment completed or no-show once it has started. Each button names the student
- * and time for screen readers, since several cards show the same labels.
+ * What a professor can do with one appointment: approve or decline a request, mark an approved
+ * appointment completed or no-show once it has started, and message the student. Each button
+ * names the student and time for screen readers, since several cards show the same labels.
  */
 import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { useAppointmentAction, type AppointmentAction } from '@/api/queries';
+import { useAppointmentAction, useOpenConversation, type AppointmentAction } from '@/api/queries';
 import type { Appointment } from '@/api/types';
 import { Button } from '@/components/Button';
 import { useToast } from '@/components/Toast';
@@ -22,6 +23,27 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
   const action = useAppointmentAction();
   const name = fullName(appointment.student, language);
   const when = appointmentWhen(appointment, now, t);
+
+  const openChat = useOpenConversation();
+  const message = (
+    <Button
+      key="message"
+      variant="quiet"
+      label={t('chat.message')}
+      accessibilityLabel={t('chat.message_label', { name })}
+      disabled={openChat.isPending}
+      onPress={() =>
+        openChat.mutate(
+          { student_id: appointment.student.user_id },
+          {
+            onSuccess: (conversation) =>
+              router.push(`/conversations/${conversation.conversation_id}`),
+            onError: (error) => toast(t(errorKey(error))),
+          },
+        )
+      }
+    />
+  );
 
   const run = (kind: AppointmentAction) =>
     action.mutate(
@@ -55,6 +77,7 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       <View style={styles.row}>
         {button('approve', 'requests.approve', 'primary')}
         {button('decline', 'requests.decline', 'secondary')}
+        {message}
       </View>
     );
   }
@@ -63,10 +86,11 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       <View style={styles.row}>
         {button('complete', 'requests.complete', 'secondary')}
         {button('no-show', 'requests.no_show', 'secondary')}
+        {message}
       </View>
     );
   }
-  return null;
+  return <View style={styles.row}>{message}</View>;
 }
 
 const styles = StyleSheet.create({

@@ -9,6 +9,8 @@ export const preferenceKeys = {
   language: 'mawjood.language',
   theme: 'mawjood.theme',
   user: 'mawjood.user',
+  textSize: 'mawjood.textSize',
+  notifications: 'mawjood.notifications',
 } as const;
 
 export async function readPreference(key: string): Promise<string | null> {

@@ -215,6 +215,14 @@ Append entries as: date, decision, reason.
 2026-10-05, The "Today" timeline is a bar from the first to the last whole hour of the day's blocks (office hours in the in-office colour, classes in the in-class colour) with a now-marker, followed by the same blocks as text, running in the reading direction, Reason: colour never carries the meaning alone.
 2026-10-05, Professor status tiles are a radio group of four doors; presets are chips; the note is saved with the current status, Reason: one tap changes status; everything else is optional.
 
+2026-10-05, Chat bubbles: yours at the end edge in the primary colour, theirs at the start edge on a bordered plate; one time per burst (5 minutes, same sender), a day separator, and Sending / Sent / Read under your latest message only, Reason: DESIGN.md 7.7; receipts on every bubble would be noise.
+2026-10-05, A message appears at once; if sending fails it stays, marked "Not sent. Tap to try again.", and the error is announced, Reason: never lose what the user typed.
+2026-10-05, Professors get three quick replies above the composer (Come now, Running 10 minutes late, Let's reschedule) that send in one tap, Reason: replying must cost a professor as little as setting the status.
+2026-10-05, Notifications live under a bell on Home (students) and My status (professors), grouped Today / Earlier, each row a sentence that opens its source; a new message from the same person updates one unread notification instead of adding another, Reason: no push (CLAUDE.md Section 3), and a burst of messages should not flood the list.
+2026-10-05, The Messages tab badge counts unread messages and the tab is named "Messages, 2 unread", Reason: screen readers otherwise read the badge number before the tab name.
+2026-10-05, Text size (Default, Large 115%, Larger 130%) multiplies the phone's own text size, still capped at 200% in total; tab labels ignore it and shrink to fit one line, Reason: five tabs at 360 dp leave about 72 dp each.
+2026-10-05, Notification preferences (Appointments, Messages) only filter what the bell shows on this phone; nothing is sent outside the app, Reason: CLAUDE.md Section 3 rules out push, email and SMS.
+
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking
  One clear primary action

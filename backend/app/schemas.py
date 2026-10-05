@@ -188,6 +188,7 @@ class ProfessorDetailOut(ProfessorSummaryOut):
     slot_minutes: int
     open_messages: bool
     today: TodayOut
+    can_message: bool | None = None  # set for students: whether the chat rule allows a message
 
 
 class SlotOut(BaseModel):
@@ -368,3 +369,74 @@ class AdminStudentOut(AccountOut):
     university_no: str
     department: DepartmentOut
     study_year: int
+
+
+# --- chat and notifications (P5) ---------------------------------------------------
+
+
+class ParticipantOut(PersonOut):
+    role: Literal["student", "professor"]
+    honorific: str | None = None  # professors only
+
+
+class MessageOut(BaseModel):
+    message_id: int
+    sender_role: Literal["student", "professor"]
+    mine: bool
+    body: str
+    created_at: UtcDatetime
+    read_at: UtcDatetime | None
+
+
+class LastMessageOut(BaseModel):
+    body: str
+    mine: bool
+    created_at: UtcDatetime
+
+
+class ConversationOut(BaseModel):
+    conversation_id: int
+    other: ParticipantOut
+    last_message: LastMessageOut | None
+    unread_count: int
+    created_at: UtcDatetime
+
+
+class ConversationIn(BaseModel):
+    """Students name the professor, professors the student."""
+
+    professor_id: int | None = None
+    student_id: int | None = None
+
+
+class MessageIn(BaseModel):
+    body: Annotated[str, AfterValidator(str.strip), Field(min_length=1, max_length=1000)]
+
+
+class NotificationOut(BaseModel):
+    notification_id: int
+    type: Literal[
+        "appointment_requested",
+        "appointment_approved",
+        "appointment_declined",
+        "appointment_cancelled",
+        "new_message",
+    ]
+    created_at: UtcDatetime
+    read_at: UtcDatetime | None
+    appointment_id: int | None
+    conversation_id: int | None
+    # The other person (who booked, approved, cancelled or wrote) and, for appointments, when.
+    actor: ParticipantOut | None
+    starts_at: UtcDatetime | None
+
+
+class UnreadOut(BaseModel):
+    notifications: int
+    messages: int
+
+
+class ReadIn(BaseModel):
+    """Mark these notifications read; leave out to mark all of them."""
+
+    ids: list[int] | None = Field(default=None, max_length=100)

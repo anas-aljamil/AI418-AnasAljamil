@@ -22,7 +22,7 @@ interface AppointmentCardProps {
 
 /** "Sunday 10:30" within the two booking weeks, otherwise with the date. */
 export function appointmentWhen(
-  appointment: Appointment,
+  appointment: Pick<Appointment, 'starts_at'>,
   now: Date,
   t: Parameters<typeof whenText>[2],
 ) {

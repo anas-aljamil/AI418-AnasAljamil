@@ -15,7 +15,7 @@ from app.db import get_db
 from app.deps import get_current_user
 from app.models import Appointment, Department, User
 from app.schemas import DaySlotsOut, DepartmentOut, ProfessorDetailOut, ProfessorSummaryOut, SlotOut
-from app.services import directory
+from app.services import chat, directory
 from app.services.booking import ACTIVE
 from app.services.slots import booking_window_end, day_slots
 
@@ -103,7 +103,10 @@ def get_professor(
         raise not_found("Professor")
     pins = directory.pinned_ids(db, user.user_id) if user.role == "student" else None
     override = directory.latest_overrides(db, now, [professor_id]).get(professor_id)
-    return directory.detail(found[0], override, now, pins)
+    out = directory.detail(found[0], override, now, pins)
+    if user.role == "student":
+        out.can_message = chat.can_chat(db, user.user_id, professor_id)
+    return out
 
 
 @router.get(
