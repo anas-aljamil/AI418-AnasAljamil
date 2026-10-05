@@ -4,10 +4,10 @@ This guide takes you from a fresh computer to the app running on your phone. It 
 
 1. **MySQL 8.0** on your computer, holding the Mawjood database.
 2. **The backend API** (Python), which reads MySQL.
-3. **The app** (Expo), served from your computer to **Expo Go** on your phone over the same Wi-Fi. *Available from P3b.*
+3. **The app** (Expo), served from your computer to **Expo Go** on your phone over the same Wi-Fi.
 4. **How the app finds the backend.**
 
-Parts 1, 2 and 4 work today. Part 3 describes the planned commands; it is filled in and tested when the app is delivered (P3b).
+All four parts work today. Until P3c, the app opens on the styleguide screen.
 
 ---
 
