@@ -14,6 +14,7 @@ from __future__ import annotations
 import atexit
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -58,10 +59,25 @@ def load_config() -> Config:
         user=values.get("DB_USER", "root"),
         password=values.get("DB_PASSWORD", ""),
         database=values.get("DB_NAME", "mawjood"),
-        cli=values.get("MYSQL_CLI", "mysql"),
+        cli=find_cli(values.get("MYSQL_CLI", "")),
     )
     check_identifier(config.database)
     return config
+
+
+def find_cli(configured: str) -> str:
+    """MYSQL_CLI if set, else mysql on PATH, else the default Windows install folder."""
+    if configured:
+        return configured
+    if shutil.which("mysql"):
+        return "mysql"
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramW6432")):
+        if base:
+            # MySQL Installer's default location, e.g. C:\Program Files\MySQL\MySQL Server 8.0
+            found = sorted(Path(base, "MySQL").glob("MySQL Server 8.0*/bin/mysql.exe"))
+            if found:
+                return str(found[-1])
+    return "mysql"
 
 
 def check_identifier(name: str) -> str:
@@ -106,7 +122,13 @@ def run(sql: str, config: Config, database: str | None = None,
         command.append("--show-warnings")
     if database:
         command.append(check_identifier(database))
-    result = subprocess.run(command, input=sql, capture_output=True, text=True, encoding="utf-8")
+    try:
+        result = subprocess.run(command, input=sql, capture_output=True, text=True, encoding="utf-8")
+    except FileNotFoundError:
+        raise MySQLError(
+            f"the MySQL client '{config.cli}' was not found. Install MySQL 8.0, then add its bin "
+            "folder to PATH or set MYSQL_CLI in .env (see docs/run-on-phone.md, Section 1)."
+        ) from None
     if result.returncode != 0:
         raise MySQLError(result.stderr.strip() or f"mysql exited with {result.returncode}")
     return [line.split("\t") for line in result.stdout.splitlines()]

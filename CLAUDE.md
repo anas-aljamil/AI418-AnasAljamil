@@ -74,7 +74,7 @@ Client checks: cd app && npm run typecheck && npm run lint && npm run format && 
 Web build + screenshots: cd app && npm run export:web && npx expo serve --port 8081, then in another terminal npm run screenshots   (Playwright at 360/768/1280 into docs/screenshots/; the API on :8000 for the connection card; first time: npx playwright install chromium, or CHROMIUM_PATH=<chrome binary>)
 Real-phone checks: docs/phone-checklist.md
 Backend tests: cd backend && .venv/bin/pytest   (builds and drops a <DB_NAME>_test MySQL database; fixed clock Monday 2026-10-05 10:00 Riyadh)
-DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; reads DB_* from .env; needs the mysql client on PATH or MYSQL_CLI in .env)
+DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; reads DB_* from .env; needs the mysql client: MYSQL_CLI in .env, else PATH, else the default Windows install folder)
 DB checks (constraints, seed rules, charset, reserved words, ER sync): python3 scripts/check_db.py
 DB load by hand: mysql -u root -p < db/create_database.sql, then run db/schema.sql and db/seed.sql in the mawjood database (CLI or MySQL Workbench; see docs/run-on-phone.md)
 Palette check (WCAG contrast + colour-blind separation of status colours): python3 scripts/check_palette.py [palettes.json]

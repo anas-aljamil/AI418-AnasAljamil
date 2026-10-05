@@ -32,6 +32,7 @@ Use **MySQL 8.0**, not MariaDB and not MySQL 9 (the schema is written and tested
    - under **Path**, add `C:\Program Files\MySQL\MySQL Server 8.0\bin`;
    - open a new terminal and check with `mysql --version`.
    - If you can't edit PATH, put `MYSQL_CLI=C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe` in `.env` instead.
+   - The project scripts also look in `C:\Program Files\MySQL\MySQL Server 8.0\bin` on their own. PATH is still needed to type `mysql` in a terminal.
 
 ### macOS (Homebrew)
 ```bash
