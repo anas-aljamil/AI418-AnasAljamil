@@ -9,7 +9,7 @@ This plan says what is tested, at which level, how to run it, and what passed. E
 | Database | `scripts/check_db.py` (63 checks) | The schema rejects bad data with the expected MySQL error (CHECK, UNIQUE, foreign keys, subtype guard, triggers). The seed obeys the business rules. Character set, engine and reserved words are right. The ER diagram matches the schema. | throwaway `<DB_NAME>_check` database |
 | SQL deliverables | `scripts/check_sql.py` (38 checks) | Every statement in `db/queries.sql` runs on MySQL 8. Each table has at least 5 queries and 2 aggregates, and every required clause is used. The views and the trigger demo give the results the seed implies. The data-quality queries return no rows. | throwaway `<DB_NAME>_sql` database |
 | Backend | pytest (123 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
-| App units | Jest + React Native Testing Library (101 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
+| App units | Jest + React Native Testing Library (103 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
 | End to end | Playwright on the Expo web build (37 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
 | Real phone | [phone-checklist.md](phone-checklist.md) (#1-#53) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
 
@@ -87,7 +87,7 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 | `check_db.py` | 63/63 |
 | `check_sql.py` | 38/38 |
 | pytest | 123 passed; ruff clean |
-| Jest | 101 passed; typecheck, lint and format clean |
+| Jest | 103 passed; typecheck, lint and format clean |
 | Playwright | 37 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 8, sign-up 3 |
 | Real phone | #1-#53 not yet run (no phone in the cloud sandbox) |
 

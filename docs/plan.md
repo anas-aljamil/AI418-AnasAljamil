@@ -118,6 +118,13 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - The department list (`GET /api/v1/departments`) is now public, because the form needs it before sign-in.
   - Found on the way: the admin forms showed a generic server error for a taken email or university number. Those codes now have their own messages.
 
+### After P6: bug hunt (owner request, 2026-10-05)
+- Reviewed booking, slots, status, chat, notifications, auth and admin on the API, and the app's data hooks and effects.
+- **Fixed:**
+  - the admin forms showed a generic server error for a taken email or university number;
+  - an open conversation re-sent "mark as read" about 18 times a second after the request ended (success or failure). It now marks once per new message; regression test in `chat.test.tsx`.
+- No other defects found. All suites pass: check_db 63/63, check_sql 38/38, pytest 123, Jest 103, Playwright 37.
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.
