@@ -13,15 +13,16 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date, datetime
-from zoneinfo import ZoneInfo
+from datetime import date, datetime, timedelta, timezone
 
 from mysql_cli import ROOT, Config, MySQLError, check_identifier, load_config, run
 
 DB_DIR = ROOT / "db"
 SQL_FILES = (DB_DIR / "schema.sql", DB_DIR / "seed.sql")
 
-RIYADH = ZoneInfo("Asia/Riyadh")
+# Asia/Riyadh is a fixed UTC+03:00 with no daylight saving, as in backend/app/core/clock.py.
+# A fixed offset also works on Windows, which has no IANA time zone database for zoneinfo.
+RIYADH = timezone(timedelta(hours=3), "Asia/Riyadh")
 # The Sunday that starts the seed's "current" week (see the header of seed.sql).
 SEED_ANCHOR_SUNDAY = date(2026, 10, 4)
 
