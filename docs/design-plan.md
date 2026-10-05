@@ -388,6 +388,24 @@ Preview: [`design-plan/direction-a-lantern-doors.png`](design-plan/direction-a-l
 - **The doors are solid shapes** while the other UI icons (Lucide) are line drawings. The doors are meant to be the one bold element, so the contrast in style is acceptable, but the icon set is less uniform than A's line doors.
 - **Arabic is compact** because the type is Plex, the same as the mix in Section 7.
 
-## 9. What I need from you
-1. **Choose:** A, B, the mix (Section 7), or A with the Lantern doors (Section 8). I will record the choice in DESIGN.md Section 11.
+## 9. Option requested: Direction A with square lit doors
+
+Preview: [`design-plan/direction-a-square-doors.png`](design-plan/direction-a-square-doors.png).
+
+**What it is:** the same as Section 8 (Direction A's palette, IBM Plex type and layout), except the doors are **rectangular** instead of arched. They keep the Lantern style: solid shapes, lit from inside.
+
+**The doors:**
+- **In office:** the lit doorway with the door leaf swung toward the viewer, drawn as a trapezoid on the hinge side so "open" reads at a glance. Light spills onto the floor.
+- **Busy:** almost closed, with a glowing seam at the latch side and a white no-entry bar.
+- **In class:** closed, with an open-book mark.
+- **Away:** closed and dark, with only a knob.
+- **Not confirmed:** a dashed outline on a solid floor line.
+
+**Notes:**
+- **Colors are A's,** so all contrast pairs pass and color-blind separation is at least ΔE 23.5 (Section 4).
+- **Rectangular doors are more neutral and modern than arches,** closer to a real office door and to the nameplate idea, but less distinctive as an app icon.
+- **At 16 px,** "in office" and "busy" both show light, so they are told apart by color, by how much light shows (most of the doorway versus a thin seam), and by the label that always sits beside the icon.
+
+## 10. What I need from you
+1. **Choose:** A, B, the mix (Section 7), A with the Lantern doors (Section 8), or A with square lit doors (Section 9). I will record the choice in DESIGN.md Section 11.
 2. **Approve the Expo client dependency list** in [plan.md](plan.md) so P3b can start. Readex Pro and IBM Plex Sans Arabic are both available as `@expo-google-fonts/*` packages; I used their files for these previews.
