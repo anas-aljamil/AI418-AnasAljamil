@@ -69,13 +69,16 @@ P5: Chat + notifications + settings.
 P6: queries.sql, views, trigger demo, docs, README, test plan, final design QA.
 12. Commands (keep this section updated)
 Backend dev: cd backend && python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]" && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   (API docs at /docs; needs JWT_SECRET in .env)
-Client dev: <fill in once created>
-Tests: cd backend && .venv/bin/pytest   (builds and drops a <DB_NAME>_test MySQL database; fixed clock Monday 2026-10-05 10:00 Riyadh)
+Client dev: cd app && npm install && npx expo start   (scan the QR code with Expo Go; press w for the web build; needs Node 22 LTS; opens on /styleguide until P3c)
+Client checks: cd app && npm run typecheck && npm run lint && npm run format && npm test   (Jest + RNTL, includes the WCAG token check)
+Web build + screenshots: cd app && npm run export:web && npx expo serve --port 8081, then in another terminal npm run screenshots   (Playwright at 360/768/1280 into docs/screenshots/; the API on :8000 for the connection card; first time: npx playwright install chromium, or CHROMIUM_PATH=<chrome binary>)
+Real-phone checks: docs/phone-checklist.md
+Backend tests: cd backend && .venv/bin/pytest   (builds and drops a <DB_NAME>_test MySQL database; fixed clock Monday 2026-10-05 10:00 Riyadh)
 DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; reads DB_* from .env; needs the mysql client on PATH or MYSQL_CLI in .env)
 DB checks (constraints, seed rules, charset, reserved words, ER sync): python3 scripts/check_db.py
 DB load by hand: mysql -u root -p < db/create_database.sql, then run db/schema.sql and db/seed.sql in the mawjood database (CLI or MySQL Workbench; see docs/run-on-phone.md)
 Palette check (WCAG contrast + colour-blind separation of status colours): python3 scripts/check_palette.py [palettes.json]
-Lint/format: cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .
+Backend lint/format: cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 13. Working agreement
 Work in small phases. Never start the next phase without my approval.
 Before coding a phase: state the plan and acceptance criteria. After coding: run the app and tests, fix failures, then report what changed and how to verify.
@@ -95,5 +98,6 @@ Status outside any schedule block = Away; Unknown only when a professor has no s
 Seed: fictional, anchored on the week of Sunday 2026-10-04; demo password Mawjood-Demo-2026 for every seed account. 5-10 rows per table except users (16, supertype = sum of subtypes) and schedule_blocks (32, a realistic weekly timetable).
 Auth: 15-minute JWT access token in memory; refresh token in expo-secure-store (native, body) or an httpOnly SameSite=Strict cookie read only by the refresh endpoint plus a custom header (web, against CSRF).
 Arabic search normalization (diacritics, alef forms, teh marbuta, alef maksura) is done in the API; the collation alone does not fold these letters.
-Approved backend dependencies: uvicorn, argon2-cffi, PyJWT, pydantic-settings, PyMySQL[rsa] (approved 2026-10-05), pytest, httpx (tests), ruff. Proposed, awaiting approval: the client list in docs/plan.md.
+Approved backend dependencies: uvicorn, argon2-cffi, PyJWT, pydantic-settings, PyMySQL[rsa] (approved 2026-10-05), pytest, httpx (tests), ruff. Client dependencies: the list in docs/plan.md (approved 2026-10-05), each installed in the phase that first uses it.
+Client (P3b): Expo SDK 57, routes in app/src/app, @/ = app/src. Reanimated's plugin comes from babel-preset-expo (no babel.config.js). The RTL switch reloads with reloadAppAsync() from expo (no expo-updates). Lint forbids raw hex colours outside src/theme and whole-package lucide imports. In this sandbox, Expo CLI commands need EXPO_OFFLINE=1 (api.expo.dev is blocked). Web bundle: 495 KB gzipped, over the 200 KB target (DESIGN.md Section 11).
 API decisions (P2): bookings are open for this week and next (up to the Riyadh midnight starting the Sunday after next, matching the DESIGN.md 7.5 day strip); only a professor's latest override counts; clearing a status set in the same second deletes that override (the expires_at > created_at CHECK leaves no other way); professor search and filtering run in Python over one query (small directory; Arabic normalization needs Python); appointments belonging to someone else return 404, not 403; login is rate-limited now, messages in P5 (docs/security.md).

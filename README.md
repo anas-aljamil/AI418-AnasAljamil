@@ -56,8 +56,27 @@ Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example 
    pytest                                                     # 92 tests against a throwaway MySQL database
    ```
 
-### Database documentation
+### App (Expo: Android and iOS through Expo Go, plus the web build)
+Needs Node.js 22 LTS and the **Expo Go** app on your phone. The phone and computer must be on the same Wi-Fi.
+```bash
+cd app
+npm install
+npx expo start        # scan the QR code with Expo Go (Android) or the Camera app (iPhone); press w for the web build
+```
+The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). Until P3c it opens on the styleguide, which shows every colour, font, component and door state in Arabic and English, light and dark.
+
+Checks:
+```bash
+npm run typecheck && npm run lint && npm run format && npm test      # TypeScript, ESLint, Prettier, Jest
+npm run export:web && npx expo serve --port 8081                      # web build; then, in a second terminal:
+npm run screenshots                                                   # Playwright at 360/768/1280 px -> docs/screenshots/
+```
+What can only be checked on a real phone (haptics, TalkBack/VoiceOver, 200% text, safe areas, Android back, keyboard): [docs/phone-checklist.md](docs/phone-checklist.md).
+
+### Documentation
 - [ER diagram + Chen-notation description](docs/er-diagram.md) ([PNG](docs/er-diagram.png))
 - [Normalization and MySQL design decisions](docs/normalization.md)
 - [Phase plan and acceptance criteria](docs/plan.md)
 - [Security: sign-in, tokens, CSRF, rate limits](docs/security.md)
+- [Design system](docs/DESIGN.md) and [design plan with the chosen direction](docs/design-plan.md)
+- [Styleguide screenshots](docs/screenshots/p3b/)

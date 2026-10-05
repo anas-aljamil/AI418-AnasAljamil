@@ -113,7 +113,7 @@ P1 adds no dependency: its scripts use only the Python standard library and the 
 
 ### Client (Expo SDK 57; every native module below is included in Expo Go, so no custom build is needed)
 
-Versions are pinned by `npx expo install`, which picks the ones matching SDK 57.
+Versions are pinned by `npx expo install`, which picks the ones matching SDK 57. Each package is installed in the phase that first uses it: P3b installed the app, navigation, SVG, icons, Reanimated, i18n, fonts, haptics, system UI, AsyncStorage and the dev tools; TanStack Query, NetInfo and expo-secure-store come in P3c, gesture-handler with the first draggable sheet in P4.
 
 | Package | Purpose |
 |---|---|
@@ -127,11 +127,10 @@ Versions are pinned by `npx expo install`, which picks the ones matching SDK 57.
 | @tanstack/react-query | Server state, polling, optimistic updates |
 | @tanstack/react-query-persist-client, @tanstack/query-async-storage-persister, @react-native-async-storage/async-storage | Persist last known data for the offline state; remember language and theme |
 | @react-native-community/netinfo | Offline detection and notice |
-| i18next, react-i18next, expo-localization | Arabic/English strings; preselect the device language on first launch |
-| expo-updates | `reloadAsync()` for the clean reload after an RTL/LTR switch |
+| i18next, react-i18next, expo-localization | Arabic/English strings; preselect the device language on first launch. The clean reload after an RTL/LTR switch uses `reloadAppAsync()` from `expo` itself, so expo-updates is not needed (removed in P3b) |
 | expo-secure-store | Refresh token storage on Android/iOS |
 | expo-haptics | Light haptics on status change and booking confirmation |
-| expo-font, expo-splash-screen, and the chosen family's @expo-google-fonts package (Readex Pro or IBM Plex Sans Arabic; decided in P3a) | Bundled fonts; the splash screen stays until fonts load |
+| expo-font, expo-splash-screen, @expo-google-fonts/ibm-plex-sans-arabic and @expo-google-fonts/ibm-plex-sans (chosen in P3a) | Bundled fonts; the splash screen stays until fonts load |
 | expo-system-ui | Root background matches the theme (no white flash in dark mode) |
 | **Dev:** jest, jest-expo, @testing-library/react-native, eslint, eslint-config-expo, prettier, @playwright/test | Tests, lint, format, web screenshots |
 

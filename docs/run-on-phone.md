@@ -128,7 +128,7 @@ pytest
 - **Windows:** the first run shows a Windows Defender Firewall prompt. Allow **Private networks**. If you missed it, allow Python in *Windows Security → Firewall → Allow an app through firewall*.
 - **macOS:** allow incoming connections for Python when asked (*System Settings → Network → Firewall → Options* if you need to change it later).
 
-## 3. The app on your phone (available from P3b)
+## 3. The app on your phone
 
 1. Install **Expo Go** from the Play Store or the App Store.
 2. Connect the phone and the computer to the **same Wi-Fi network**.
@@ -141,7 +141,12 @@ pytest
 4. Scan the QR code:
    - **Android:** with the Expo Go app;
    - **iPhone:** with the Camera app.
-5. The app opens in Expo Go. Press `w` in the terminal to open the web build in a browser too.
+5. The app opens in Expo Go. Until P3c adds the real home screen, it opens on the styleguide (`/styleguide`). Its first card, **Server connection**, shows whether the phone can reach the backend.
+6. Press `w` in the terminal to open the web build in a browser too.
+
+What to try on the phone, step by step: [phone-checklist.md](phone-checklist.md).
+
+The app needs Node.js 22 LTS (22.13 or later; 20.19.4+ and 24.3+ also work, as React Native 0.86 requires): [nodejs.org](https://nodejs.org) on Windows, `brew install node` on macOS.
 
 If the phone can't connect, University and other public Wi-Fi often blocks device-to-device traffic. Try these in order:
 - use your phone's hotspot and connect the computer to it;
