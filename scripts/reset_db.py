@@ -1,45 +1,29 @@
-"""Rebuild the development SQLite database from db/schema.sql and db/seed.sql.
+"""Rebuild the MySQL development database from db/schema.sql and db/seed.sql.
 
 Usage:
-    python3 scripts/reset_db.py              # fresh db/mawjood.db, seed dates as written
+    python3 scripts/reset_db.py              # fresh database, seed dates as written
     python3 scripts/reset_db.py --rebase     # shift seed dates to the current week
-    python3 scripts/reset_db.py --db PATH    # build somewhere else
+    python3 scripts/reset_db.py --db NAME    # build a database with another name
 
-Standard library only. Load order: schema.sql -> dialect/sqlite.sql -> seed.sql.
+Reads DB_* settings from .env (see .env.example) and needs the mysql client.
+The database is dropped and recreated with utf8mb4 / utf8mb4_0900_ai_ci.
 """
 
 from __future__ import annotations
 
 import argparse
-import sqlite3
 import sys
 from datetime import date, datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parent.parent
+from mysql_cli import ROOT, Config, MySQLError, check_identifier, load_config, run
+
 DB_DIR = ROOT / "db"
-DEFAULT_DB_PATH = DB_DIR / "mawjood.db"
-SQL_FILES = (
-    DB_DIR / "schema.sql",
-    DB_DIR / "dialect" / "sqlite.sql",
-    DB_DIR / "seed.sql",
-)
+SQL_FILES = (DB_DIR / "schema.sql", DB_DIR / "seed.sql")
 
 RIYADH = ZoneInfo("Asia/Riyadh")
 # The Sunday that starts the seed's "current" week (see the header of seed.sql).
 SEED_ANCHOR_SUNDAY = date(2026, 10, 4)
-
-
-def connect(path: str | Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(path)
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-def load_sql(conn: sqlite3.Connection) -> None:
-    for sql_file in SQL_FILES:
-        conn.executescript(sql_file.read_text(encoding="utf-8"))
 
 
 def weeks_to_current(today: date | None = None) -> int:
@@ -50,87 +34,103 @@ def weeks_to_current(today: date | None = None) -> int:
     return (current_sunday - SEED_ANCHOR_SUNDAY).days // 7
 
 
-def timestamp_columns(conn: sqlite3.Connection) -> dict[str, list[str]]:
-    """Every TIMESTAMP column per table, read from the live schema."""
-    tables = [row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")]
+def create_database(config: Config, name: str) -> None:
+    name = check_identifier(name)
+    run(f"DROP DATABASE IF EXISTS `{name}`; "
+        f"CREATE DATABASE `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;", config)
+
+
+def load_files(config: Config, name: str) -> list[str]:
+    """Load schema and seed; return any warnings MySQL reported.
+
+    Notes (level "Note", e.g. 1051 from DROP TABLE IF EXISTS on an empty
+    database) are informational and not returned.
+    """
+    warnings = []
+    for sql_file in SQL_FILES:
+        output = run(sql_file.read_text(encoding="utf-8"), config, name, show_warnings=True)
+        warnings += [f"{sql_file.name}: {' '.join(row)}" for row in output
+                     if row and row[0].startswith(("Warning", "Error"))]
+    return warnings
+
+
+def timestamp_columns(config: Config, name: str) -> dict[str, list[str]]:
+    """Every stored DATETIME column per table (generated columns excluded)."""
+    rows = run(
+        "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS "
+        f"WHERE TABLE_SCHEMA = '{check_identifier(name)}' AND DATA_TYPE = 'datetime' "
+        "AND EXTRA NOT LIKE '%GENERATED%' ORDER BY TABLE_NAME, ORDINAL_POSITION", config)
     columns: dict[str, list[str]] = {}
-    for table in tables:
-        cols = [row[1] for row in conn.execute(f"PRAGMA table_info({table})")
-                if row[2].upper() == "TIMESTAMP"]
-        if cols:
-            columns[table] = cols
+    for table, column in rows:
+        columns.setdefault(table, []).append(column)
     return columns
 
 
-def rebase(conn: sqlite3.Connection, weeks: int) -> None:
+def rebase(config: Config, name: str, weeks: int) -> None:
     """Shift every timestamp by whole weeks, keeping weekdays and times.
 
     All timestamp columns of a table move in one UPDATE so row-level CHECKs
-    such as expires_at > created_at hold throughout. Active appointments in the
-    seed never share professor + weekday + time across weeks, so the shift
-    cannot collide with the double-booking index or trigger.
+    such as expires_at > created_at hold throughout. Appointments are visited
+    latest-first when moving forward (earliest-first when moving back), so a
+    moved row can never land on a row that has not moved yet: the unique
+    active-slot index and the overlap trigger never see a false collision.
     """
     if weeks == 0:
         return
-    modifier = f"{weeks * 7:+d} days"
-    for table, cols in timestamp_columns(conn).items():
-        assignments = ", ".join(f"{col} = datetime({col}, :shift)" for col in cols)
-        conn.execute(f"UPDATE {table} SET {assignments}", {"shift": modifier})
-    conn.commit()
+    days = weeks * 7
+    statements = []
+    for table, cols in timestamp_columns(config, name).items():
+        assignments = ", ".join(f"{col} = {col} + INTERVAL {days} DAY" for col in cols)
+        order = f" ORDER BY starts_at {'DESC' if days > 0 else 'ASC'}" if table == "appointments" else ""
+        statements.append(f"UPDATE {table} SET {assignments}{order};")
+    run("\n".join(statements), config, name)
 
 
-def build(conn: sqlite3.Connection, rebase_weeks: int = 0) -> None:
-    load_sql(conn)
-    rebase(conn, rebase_weeks)
+def build(config: Config, name: str, rebase_weeks: int = 0) -> list[str]:
+    """Create, load and optionally rebase a database. Returns load warnings."""
+    create_database(config, name)
+    warnings = load_files(config, name)
+    rebase(config, name, rebase_weeks)
+    return warnings
 
 
-def health_report(conn: sqlite3.Connection) -> list[str]:
-    """Return a list of problems (empty when the database is healthy)."""
-    problems = []
-    integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
-    if integrity != "ok":
-        problems.append(f"integrity_check: {integrity}")
-    for row in conn.execute("PRAGMA foreign_key_check"):
-        problems.append(f"foreign_key_check: {row}")
-    return problems
-
-
-def row_counts(conn: sqlite3.Connection) -> dict[str, int]:
-    tables = [row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' "
-        "ORDER BY name")]
-    return {t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in tables}
+def row_counts(config: Config, name: str) -> dict[str, int]:
+    tables = [row[0] for row in run(
+        "SELECT TABLE_NAME FROM information_schema.TABLES "
+        f"WHERE TABLE_SCHEMA = '{check_identifier(name)}' AND TABLE_TYPE = 'BASE TABLE' "
+        "ORDER BY TABLE_NAME", config)]
+    query = " UNION ALL ".join(f"SELECT '{t}', COUNT(*) FROM {t}" for t in tables)
+    return {t: int(n) for t, n in run(query, config, name)} if tables else {}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH, help="SQLite file to (re)create")
+    parser.add_argument("--db", help="database name (default: DB_NAME from .env)")
     parser.add_argument("--rebase", action="store_true",
                         help="shift seed timestamps so the seed week is the current week")
     args = parser.parse_args()
 
-    args.db.parent.mkdir(parents=True, exist_ok=True)
-    args.db.unlink(missing_ok=True)
-
+    config = load_config()
+    name = check_identifier(args.db or config.database)
     weeks = weeks_to_current() if args.rebase else 0
-    with connect(args.db) as conn:
-        build(conn, weeks)
-        problems = health_report(conn)
-        counts = row_counts(conn)
-    conn.close()
+    try:
+        warnings = build(config, name, weeks)
+        counts = row_counts(config, name)
+    except MySQLError as exc:
+        print(f"FAILED: {exc}")
+        return 1
 
-    print(f"Database: {args.db}")
+    print(f"Database: {name} on {config.host}:{config.port} (utf8mb4_0900_ai_ci)")
     if args.rebase:
         print(f"Rebased seed timestamps by {weeks:+d} week(s).")
     for table, count in counts.items():
         print(f"  {table:<18} {count:>3} rows")
-    if problems:
-        print("FAILED health checks:")
-        for problem in problems:
-            print(f"  {problem}")
+    if warnings:
+        print("Loaded with warnings:")
+        for warning in warnings:
+            print(f"  {warning}")
         return 1
-    print("integrity_check: ok, foreign_key_check: no violations")
+    print("Loaded schema.sql and seed.sql with no errors and no warnings.")
     return 0
 
 

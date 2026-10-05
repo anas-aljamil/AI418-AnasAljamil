@@ -87,7 +87,7 @@ Update this file whenever a decision changes (commands, schema names, assumption
 14. Decisions and assumptions
 Schema (approved 2026-10-05): tables departments, users, offices, students, professors, schedule_blocks, status_overrides, appointments, pins, conversations, messages, notifications (rationale in docs/normalization.md). No MySQL reserved words as identifiers (checked by scripts/check_db.py).
 MySQL (2026-10-05): schema.sql holds tables, indexes and triggers; db/create_database.sql creates the utf8mb4 database. Timestamps are DATETIME UTC with DEFAULT (UTC_TIMESTAMP()); schedule times are TIME on a 15-minute grid; day_of_week 0 = Sunday .. 4 = Thursday; booleans are TINYINT(1).
-Double booking: virtual generated column active_starts_at (non-null only for pending/approved) + UNIQUE (professor_id, active_starts_at), plus BEFORE INSERT/UPDATE overlap triggers using SIGNAL SQLSTATE '45000'; the API also pre-checks.
+Double booking: virtual generated column active_slot (starts_at as text, non-null only for pending/approved; text because of a MySQL 8.0 DATETIME generated-column defect, see docs/normalization.md) + UNIQUE (professor_id, active_slot), plus BEFORE INSERT/UPDATE overlap triggers using SIGNAL SQLSTATE '45000'; the API also pre-checks.
 Subtype guard: students.role / professors.role are stored generated constants in a composite FK to users (user_id, role) ON DELETE CASCADE ON UPDATE RESTRICT.
 Creating triggers with binary logging on needs root (or SUPER), or log_bin_trust_function_creators = 1 for a dedicated user.
 Status outside any schedule block = Away; Unknown only when a professor has no schedule. An override without a return time expires at the end of that Riyadh day.
