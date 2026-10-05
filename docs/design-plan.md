@@ -375,6 +375,19 @@ Preview: [`design-plan/direction-mix.png`](design-plan/direction-mix.png).
 
 **This is now my recommendation:** B's signature with the most compact, legible Arabic.
 
-## 8. What I need from you
-1. **Choose A, B, or a named mix.** I will record the choice in DESIGN.md Section 11.
+## 8. Option requested: Direction A with the Lantern doors
+
+Preview: [`design-plan/direction-a-lantern-doors.png`](design-plan/direction-a-lantern-doors.png).
+
+**What it combines:**
+- **From Direction A:** everything except the doors. That is the cobalt palette (light and dark), IBM Plex Sans Arabic + IBM Plex Sans with A's type scale, the list-first Home with pinned nameplates, and the 2 x 2 status tiles.
+- **From Direction B:** the solid round-arched doors in all five states, lit from inside when open, with B's door animation (the light comes on, then the leaf folds back; closing is light off, then door shut).
+
+**Notes:**
+- **Colors are A's,** so the Section 4 results for A apply unchanged: all contrast pairs pass, and color-blind separation is at least ΔE 23.5.
+- **The doors are solid shapes** while the other UI icons (Lucide) are line drawings. The doors are meant to be the one bold element, so the contrast in style is acceptable, but the icon set is less uniform than A's line doors.
+- **Arabic is compact** because the type is Plex, the same as the mix in Section 7.
+
+## 9. What I need from you
+1. **Choose:** A, B, the mix (Section 7), or A with the Lantern doors (Section 8). I will record the choice in DESIGN.md Section 11.
 2. **Approve the Expo client dependency list** in [plan.md](plan.md) so P3b can start. Readex Pro and IBM Plex Sans Arabic are both available as `@expo-google-fonts/*` packages; I used their files for these previews.
