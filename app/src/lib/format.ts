@@ -41,7 +41,20 @@ export function relativeUpdateKey(
 
 const RIYADH_OFFSET_MS = 3 * 60 * 60 * 1000; // Asia/Riyadh is UTC+03:00 with no daylight saving
 
-/** "HH:MM" in Riyadh time, Western digits, for any UTC instant. */
+/**
+ * What people read: the 12-hour clock with the period in the UI language, "9:30 AM" or
+ * "9:30 ص" (owner decision; Western digits). Takes "HH:MM" or "HH:MM:SS" (24-hour).
+ */
+export function clockText(hhmm: string, t: TFunction): string {
+  const [hours = 0, minutes = 0] = hhmm.split(':').map(Number);
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return t('time.clock', {
+    time: `${hour12}:${String(minutes).padStart(2, '0')}`,
+    period: t(hours < 12 ? 'time.am' : 'time.pm'),
+  });
+}
+
+/** "HH:MM" (24-hour) in Riyadh time for any UTC instant; for logic and keys. Show it with clockText. */
 export function riyadhTime(utc: Date): string {
   const local = new Date(utc.getTime() + RIYADH_OFFSET_MS);
   const hh = String(local.getUTCHours()).padStart(2, '0');
@@ -137,21 +150,21 @@ export function bookingDays(now: Date): BookingDay[] {
   return days;
 }
 
-/** "Today 10:30", "Tomorrow 10:30" or "Sunday 10:30" for an instant, in the UI language. */
+/** "Today 10:30 AM", "Tomorrow 10:30 AM" or "Sunday 10:30 AM" for an instant, in the UI language. */
 export function whenText(start: Date, now: Date, t: TFunction): string {
   const day = appointmentDay(start, now);
-  return t(day.key, { time: day.time, day: t(`weekday.${day.weekday}`) });
+  return t(day.key, { time: clockText(day.time, t), day: t(`weekday.${day.weekday}`) });
 }
 
-/** "Sunday 4/10 10:30": weekday, day/month and Riyadh time, for dates outside the two weeks. */
+/** "Sunday 4/10 10:30 AM": weekday, day/month and Riyadh time, for dates outside the two weeks. */
 export function dateTimeText(start: Date, t: TFunction): string {
   const local = riyadhLocal(start);
-  return `${t(`weekday.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1} ${riyadhTime(start)}`;
+  return `${t(`weekday.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1} ${clockText(riyadhTime(start), t)}`;
 }
 
-/** Short time for lists: "10:30" today, otherwise "Sun 4/10" (weekday short, day/month). */
+/** Short time for lists: "10:30 AM" today, otherwise "Sun 4/10" (weekday short, day/month). */
 export function shortWhen(at: Date, now: Date, t: TFunction): string {
-  if (riyadhDayDifference(at, now) === 0) return riyadhTime(at);
+  if (riyadhDayDifference(at, now) === 0) return clockText(riyadhTime(at), t);
   const local = riyadhLocal(at);
   return `${t(`weekday_short.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1}`;
 }

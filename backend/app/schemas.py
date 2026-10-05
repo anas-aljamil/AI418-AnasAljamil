@@ -75,11 +75,19 @@ class Out(BaseModel):
 # --- reference data ----------------------------------------------------------
 
 
+class CollegeOut(Out):
+    college_id: int
+    code: str
+    name_ar: str
+    name_en: str
+
+
 class DepartmentOut(Out):
     department_id: int
     code: str
     name_ar: str
     name_en: str
+    college: CollegeOut
 
 
 class OfficeOut(Out):
@@ -277,12 +285,14 @@ class BookingIn(BaseModel):
 
 
 class DepartmentIn(BaseModel):
+    college_id: int
     code: str = Field(pattern=r"^[A-Z]{2,10}$")
     name_ar: NameAr
     name_en: NameEn
 
 
 class DepartmentPatch(BaseModel):
+    college_id: int | None = None
     code: str | None = Field(default=None, pattern=r"^[A-Z]{2,10}$")
     name_ar: NameAr | None = None
     name_en: NameEn | None = None
@@ -347,10 +357,6 @@ class AdminStudentPatch(AccountPatch):
     study_year: int | None = Field(default=None, ge=1, le=6)
 
 
-def _strip_upper(value: object) -> object:
-    return value.strip().upper() if isinstance(value, str) else value
-
-
 def _strip_lower(value: object) -> object:
     return value.strip().lower() if isinstance(value, str) else value
 
@@ -364,8 +370,9 @@ class _SignUpBase(AccountIn):
 
 
 class StudentSignUpIn(_SignUpBase):
+    """A student's university email is <university number>@domain; the number is read from it."""
+
     role: Literal["student"]
-    university_no: Annotated[str, BeforeValidator(_strip_upper), Field(pattern=r"^[A-Z0-9]{4,12}$")]
     study_year: int = Field(ge=1, le=6)
 
 

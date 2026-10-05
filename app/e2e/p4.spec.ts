@@ -71,8 +71,9 @@ async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   const days = sheet.getByRole('button', { name: /^\S+ \d+$/ });
   for (let i = 0; i < (await days.count()); i++) {
     await days.nth(i).click();
-    // Taken and past times are named "09:00, unavailable"; free ones are just the time.
-    const free = sheet.getByRole('button', { name: /^\d\d:\d\d$/ });
+    // Taken and past times are named "9:00 AM, unavailable"; free ones are just the time
+    // (Arabic: "9:00 ص" / "1:00 م").
+    const free = sheet.getByRole('button', { name: /^\d{1,2}:\d\d ([AP]M|ص|م)$/ });
     if (
       await free
         .first()
@@ -95,7 +96,7 @@ test('a student books, the professor approves, the student sees Approved', async
   const sheet = await chooseFirstFreeTime(student, /^Book with/); // steps 2-3: day, time
   await sheet.getByRole('button', { name: 'Advising' }).click(); // optional
   await shoot(student, 'en-2-booking-sheet');
-  await sheet.getByRole('button', { name: /^Book \d\d:\d\d$/ }).click(); // step 4
+  await sheet.getByRole('button', { name: /^Book \d{1,2}:\d\d [AP]M$/ }).click(); // step 4
   await expect(student.getByText(/^Booked with Dr\. Noura Al-Harbi, /)).toBeVisible();
   await shoot(student, 'en-3-booked');
   await student.getByRole('button', { name: 'Done' }).click();
@@ -155,6 +156,11 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
 
   const fill = async (label: string, value: string) =>
     admin.getByLabel(label, { exact: true }).fill(value);
+  // The department menu opens over the form; choose under the college heading.
+  const chooseDepartment = async (name: string) => {
+    await admin.getByRole('button', { name: /^Department, / }).click();
+    await admin.getByRole('radio', { name, exact: true }).click();
+  };
   const save = async () => {
     await admin.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(admin.getByText('Saved', { exact: true })).toBeVisible();
@@ -171,6 +177,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
 
   // Departments
   await admin.getByRole('button', { name: 'Add' }).click();
+  await admin.getByRole('button', { name: 'College of Engineering', exact: true }).click();
   await fill('Code (capital English letters)', 'GEO');
   await fill('Name in Arabic', 'الجغرافيا');
   await fill('Name in English', 'Geography');
@@ -208,6 +215,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   await fill('Password (at least 8 characters)', 'Test-pass-2026');
   await fill('Name in Arabic', 'أستاذ تجريبي');
   await fill('Name in English', 'Test Professor');
+  await chooseDepartment('Software Engineering');
   await save();
   expect(sql("SELECT role FROM users WHERE email = 'test.professor@university.example'")).toBe(
     'professor',
@@ -235,6 +243,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   await fill('Name in Arabic', 'طالب تجريبي');
   await fill('Name in English', 'Test Student');
   await fill('University number', 'S9999');
+  await chooseDepartment('Artificial Intelligence');
   await save();
   expect(
     sql(

@@ -14,6 +14,7 @@ import type {
   Appointment,
   Block,
   DaySlots,
+  College,
   Department,
   ManualStatus,
   MyStatus,
@@ -34,6 +35,7 @@ export const queryKeys = {
   professor: (id: number) => ['professor', id] as const,
   slots: (id: number, date: string) => ['professor', id, 'slots', date] as const,
   departments: ['departments'] as const,
+  colleges: ['colleges'] as const,
   appointments: ['appointments'] as const,
   appointmentList: (scope: 'upcoming' | 'past') => ['appointments', 'list', scope] as const,
   nextAppointment: ['appointments', 'next'] as const,
@@ -104,6 +106,14 @@ export function useDepartments() {
   return useQuery({
     queryKey: queryKeys.departments,
     queryFn: () => api<Page<Department>>('/departments?limit=100').then((page) => page.items),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useColleges() {
+  return useQuery({
+    queryKey: queryKeys.colleges,
+    queryFn: () => api<Page<College>>('/colleges?limit=100').then((page) => page.items),
     staleTime: 10 * 60_000,
   });
 }

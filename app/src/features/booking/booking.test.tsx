@@ -7,18 +7,13 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 
 import { api, ApiError } from '@/api/client';
 import type { ProfessorDetail } from '@/api/types';
-import { renderWithProviders } from '@/test-utils';
+import { renderWithProviders, testDepartment } from '@/test-utils';
 import { BookingSheet } from './BookingSheet';
 
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: jest.fn() }));
 const mockApi = api as jest.MockedFunction<typeof api>;
 
-const department = {
-  department_id: 1,
-  code: 'CS',
-  name_ar: 'علوم الحاسب',
-  name_en: 'Computer Science',
-};
+const department = testDepartment(1, 'SE', 'هندسة البرمجيات', 'Software Engineering');
 const noura = {
   professor_id: 1,
   full_name_ar: 'نورة الحربي',
@@ -75,11 +70,11 @@ function serve(onBook: () => unknown) {
 
 async function chooseTimeAndTopic() {
   await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
-  await fireEvent.press(await screen.findByRole('button', { name: '10:15, unavailable' }));
+  await fireEvent.press(await screen.findByRole('button', { name: '10:15 AM, unavailable' }));
   expect(screen.getByText('This time is already booked. Choose another.')).toBeTruthy();
-  await fireEvent.press(screen.getByRole('button', { name: '10:00' }));
+  await fireEvent.press(screen.getByRole('button', { name: '10:00 AM' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Advising' }));
-  await fireEvent.press(screen.getByRole('button', { name: 'Book 10:00' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Book 10:00 AM' }));
 }
 
 beforeEach(() => mockApi.mockReset());
@@ -94,7 +89,7 @@ it('keeps the time, topic and note when the API refuses the booking', async () =
       'You already have 2 upcoming appointments with this professor. Cancel one to book another.',
     ),
   ).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Book 10:00' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Book 10:00 AM' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Advising' })).toBeSelected();
 });
 

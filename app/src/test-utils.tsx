@@ -53,3 +53,19 @@ export async function renderWithProviders(ui: React.ReactElement, language: Lang
     </SafeAreaProvider>,
   );
 }
+
+/** Departments as the API returns them (each with its college), for mocked responses. */
+export const testCollege = {
+  college_id: 1,
+  code: 'CCS',
+  name_ar: 'كلية علوم الحاسب والأمن السيبراني',
+  name_en: 'College of Computer and Cyber Sciences',
+};
+export function testDepartment(
+  department_id: number,
+  code: string,
+  name_ar: string,
+  name_en: string,
+) {
+  return { department_id, code, name_ar, name_en, college: testCollege };
+}

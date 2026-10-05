@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Block } from '@/api/types';
 import { insetStart } from '@/lib/direction';
-import { minutesOfDay } from '@/lib/format';
+import { clockText, minutesOfDay } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space } from '@/theme/tokens';
 import { Text } from './Text';
@@ -70,22 +70,22 @@ export function TodayTimeline({ blocks, now }: TodayTimelineProps) {
         importantForAccessibility="no-hide-descendants"
       >
         <Text variant="caption" color="muted">
-          {`${String(from / 60).padStart(2, '0')}:00`}
+          {clockText(`${from / 60}:00`, t)}
         </Text>
         <Text variant="caption" color="muted">
-          {`${String(to / 60).padStart(2, '0')}:00`}
+          {clockText(`${to / 60}:00`, t)}
         </Text>
       </View>
       {showNow ? (
         <Text variant="caption" weight="semibold">
-          {t('prof.now', { time: now })}
+          {t('prof.now', { time: clockText(now, t) })}
         </Text>
       ) : null}
       {blocks.map((block) => (
         <Text key={block.block_id}>
           {t('prof.block_line', {
-            start: block.start_time,
-            end: block.end_time,
+            start: clockText(block.start_time, t),
+            end: clockText(block.end_time, t),
             kind: block.kind === 'office_hours' ? t('prof.office_hours') : t('prof.class'),
           })}
           {block.label ? ` (${block.label})` : ''}

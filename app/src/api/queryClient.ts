@@ -44,7 +44,9 @@ export const persister = createAsyncStoragePersister({ storage: AsyncStorage, ke
 export const persistOptions = {
   persister,
   maxAge: DAY_MS,
-  buster: 'p3c',
+  // Change this whenever an API response changes shape, so data saved by an older app version
+  // is dropped instead of read (departments gained their college in 'colleges').
+  buster: 'colleges',
   dehydrateOptions: {
     // Keep what the home screen shows; search results are not worth keeping.
     shouldDehydrateQuery: (query: Query) =>

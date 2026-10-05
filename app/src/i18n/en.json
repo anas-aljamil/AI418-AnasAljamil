@@ -28,7 +28,10 @@
     "days_few": "updated {{count}} days ago",
     "days_many": "updated {{count}} days ago",
     "days_other": "updated {{count}} days ago",
-    "from_schedule": "from the schedule"
+    "from_schedule": "from the schedule",
+    "clock": "{{time}} {{period}}",
+    "am": "AM",
+    "pm": "PM"
   },
   "settings": {
     "language": "Language",
@@ -187,9 +190,7 @@
     "role": "I am a",
     "student": "Student",
     "professor": "Professor",
-    "email_helper": "Your university address, in lowercase letters.",
     "department": "Department",
-    "university_no_helper": "As on your student card, for example S1234.",
     "study_year": "Study year",
     "year": "Year {{year}}",
     "choose": "Choose one.",
@@ -200,7 +201,12 @@
     "pending_title": "Request sent",
     "pending_body": "An administrator will check and activate your account. Then sign in with {{email}}.",
     "back_to_sign_in": "Back to sign in",
-    "have_account": "Already have an account? Sign in"
+    "have_account": "Already have an account? Sign in",
+    "email_helper_student": "Your university number, then @{{domain}} (for example 4510440@{{domain}}).",
+    "email_helper_professor": "Your university email, ending in @{{domain}}.",
+    "number_found": "University number: {{number}}",
+    "email_domain": "Use your university email, ending in @{{domain}}.",
+    "email_student": "Students use their university number as the email, for example 4510440@{{domain}}."
   },
   "errors": {
     "INVALID_CREDENTIALS": "The email or password is incorrect.",
@@ -224,9 +230,10 @@
     "NOT_FOUND": "This was not found. It may have been deleted.",
     "FORBIDDEN": "Your account can't do this.",
     "EMAIL_TAKEN": "An account with this email already exists. Sign in instead, or use another email.",
-    "UNIVERSITY_NO_TAKEN": "Another account already uses this university number. Check the number.",
-    "EMAIL_DOMAIN": "Only university email addresses can create an account.",
-    "INVALID_REFERENCE": "That department or office no longer exists. Choose another one."
+    "UNIVERSITY_NO_TAKEN": "Another account already uses this university number.",
+    "EMAIL_DOMAIN": "Only university email addresses (@upm.edu.sa) can create an account.",
+    "INVALID_REFERENCE": "That department or office no longer exists. Choose another one.",
+    "STUDENT_EMAIL": "Students sign up with their university number as the email, for example 4510440@upm.edu.sa."
   },
   "home": {
     "search_label": "Search professors",
@@ -411,11 +418,11 @@
     "empty_day": "Nothing on this day",
     "kind": "Type",
     "day": "Day",
-    "start": "Start, for example 10:00",
-    "end": "End, for example 12:00",
+    "start": "Start",
+    "end": "End",
     "label": "Label (optional)",
     "label_helper": "For example a course code",
-    "time_invalid": "Use a time like 10:00 or 10:15 (every 15 minutes).",
+    "time_invalid": "Choose a time.",
     "end_before_start": "The end must be after the start.",
     "save": "Save block",
     "delete": "Delete block",
@@ -475,7 +482,8 @@
     "confirm_delete_person": "Their appointments, messages and schedule are deleted too. To keep them, deactivate the account instead.",
     "saved": "Saved",
     "deleted": "Deleted",
-    "person_line": "{{department}}, {{email}}"
+    "person_line": "{{department}}, {{email}}",
+    "college": "College"
   },
   "chat": {
     "title": "Messages",
@@ -519,5 +527,15 @@
     "appointment_declined": "{{name}} declined your request for {{when}}",
     "appointment_cancelled": "Appointment with {{name}} cancelled, {{when}}",
     "new_message": "New message from {{name}}"
+  },
+  "time_picker": {
+    "hour_label": "{{field}}, hour {{hour}}",
+    "minute_label": "{{field}}, {{minute}} minutes",
+    "period_label": "{{field}}, {{period}}"
+  },
+  "department_picker": {
+    "choose": "Choose a department",
+    "hint": "Opens the list of departments by college",
+    "all": "All departments"
   }
 }

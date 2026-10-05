@@ -25,7 +25,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { insetEnd } from '@/lib/direction';
 import { errorKey } from '@/lib/errors';
-import { bookingDays, whenText } from '@/lib/format';
+import { bookingDays, clockText, whenText } from '@/lib/format';
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
@@ -152,14 +152,14 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
               {slots.data.slots.map((option) => (
                 <Chip
                   key={option.starts_at}
-                  label={option.local_time}
+                  label={clockText(option.local_time, t)}
                   selected={slot?.starts_at === option.starts_at}
                   dimmed={!option.available}
                   // Said out loud too: the web build drops aria-disabled on a tappable chip.
                   accessibilityLabel={
                     option.available
                       ? undefined
-                      : t('booking.unavailable_label', { time: option.local_time })
+                      : t('booking.unavailable_label', { time: clockText(option.local_time, t) })
                   }
                   onPress={() => chooseSlot(option)}
                 />
@@ -208,7 +208,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
               book.isPending
                 ? t('booking.booking')
                 : slot
-                  ? t('booking.confirm', { time: slot.local_time })
+                  ? t('booking.confirm', { time: clockText(slot.local_time, t) })
                   : t('booking.choose_time')
             }
             onPress={confirm}

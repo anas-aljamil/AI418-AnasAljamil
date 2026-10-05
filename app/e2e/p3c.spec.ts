@@ -109,7 +109,9 @@ test('"Is Dr. X in?" is answered within 3 s of opening the app, with no taps', a
 
   // Server unreachable: the last known statuses stay, with a notice and their time.
   await page.route('**/api/v1/**', (route) => route.abort());
-  const notice = page.getByText(/Can't reach the server\. These statuses are from \d\d:\d\d\./);
+  const notice = page.getByText(
+    /Can't reach the server\. These statuses are from \d{1,2}:\d\d [AP]M\./,
+  );
   // Move the clock past the next poll and its retries until the notice shows.
   await expect(async () => {
     await page.clock.runFor(5_000);

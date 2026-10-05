@@ -38,14 +38,14 @@ def test_search_folds_arabic_letter_variants_and_diacritics(client, auth):
 def test_search_matches_english_names_and_departments_case_insensitively(client, auth):
     headers = auth(SAAD)
     assert names(client.get("/api/v1/professors?q=MARSH", headers=headers).json()) == ["Helen Marsh"]
-    mathematics = client.get("/api/v1/professors", params={"q": "الرياضيات", "lang": "en"}, headers=headers)
-    assert names(mathematics.json()) == ["Reem Al-Dosari", "Faisal Al-Zahrani"]  # Reem is in office
+    civil = client.get("/api/v1/professors", params={"q": "الهندسة المدنية", "lang": "en"}, headers=headers)
+    assert names(civil.json()) == ["Reem Al-Dosari", "Faisal Al-Zahrani"]  # Reem is in office
 
 
 def test_filters_by_department_status_and_office_hours_today(client, auth):
     headers = auth(SAAD)
-    cs = client.get("/api/v1/professors?department_id=1&lang=en", headers=headers).json()
-    assert names(cs) == ["Khalid Al-Otaibi", "Noura Al-Harbi"]
+    software = client.get("/api/v1/professors?department_id=1&lang=en", headers=headers).json()
+    assert names(software) == ["Khalid Al-Otaibi", "Noura Al-Harbi"]
     in_office = client.get("/api/v1/professors?status=in_office&status=busy", headers=headers).json()
     assert in_office["total"] == 3
     today = client.get("/api/v1/professors?has_office_hours_today=true", headers=headers).json()
@@ -90,4 +90,5 @@ def test_slots_outside_this_week_and_next_are_refused(client, auth):
 
 def test_departments_list(client, auth):
     page = client.get("/api/v1/departments", headers=auth(SAAD)).json()
-    assert page["total"] == 6 and page["items"][0]["code"] == "BUS"
+    assert page["total"] == 12 and page["items"][0]["code"] == "ACC"
+    assert page["items"][0]["college"]["name_en"] == "College of Business and Tourism"

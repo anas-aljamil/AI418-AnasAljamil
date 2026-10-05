@@ -1,7 +1,7 @@
 /** Field rules and display for each admin table (mirroring backend/app/schemas.py). */
 import type { TFunction } from 'i18next';
 
-import type { AdminProfessor, AdminStudent, Department, Office } from '@/api/types';
+import type { AdminProfessor, AdminStudent, College, Department, Office } from '@/api/types';
 import { departmentName, fullName, officeFull } from '@/lib/names';
 import { patterns } from '@/lib/validation';
 import type { Language } from '@/theme/tokens';
@@ -12,14 +12,26 @@ const matches = (pattern: RegExp, key: string) => (value: string) =>
 const minLength = (n: number, key: string) => (value: string) =>
   required(value) ?? (value.trim().length >= n ? null : key);
 
-export function departmentsConfig(t: TFunction, language: Language): AdminConfig<'departments'> {
+export function departmentsConfig(
+  t: TFunction,
+  language: Language,
+  colleges: College[],
+): AdminConfig<'departments'> {
+  const collegeName = (c: College) => (language === 'ar' ? c.name_ar : c.name_en);
   return {
     resource: 'departments',
     title: t('tabs.departments'),
     idOf: (d) => d.department_id,
     titleOf: (d) => departmentName(d, language),
-    subtitleOf: (d) => d.code,
+    subtitleOf: (d) => `${d.code}, ${collegeName(d.college)}`,
     fields: [
+      {
+        type: 'choice',
+        key: 'college_id',
+        label: t('admin.college'),
+        required: true,
+        options: colleges.map((c) => ({ value: String(c.college_id), label: collegeName(c) })),
+      },
       {
         type: 'text',
         key: 'code',
@@ -44,11 +56,13 @@ export function departmentsConfig(t: TFunction, language: Language): AdminConfig
       },
     ],
     valuesOf: (d: Department | null) => ({
+      college_id: d ? String(d.college.college_id) : '', // a new department chooses one
       code: d?.code ?? '',
       name_ar: d?.name_ar ?? '',
       name_en: d?.name_en ?? '',
     }),
     bodyOf: (v) => ({
+      college_id: Number(v.college_id),
       code: v.code!.trim(),
       name_ar: v.name_ar!.trim(),
       name_en: v.name_en!.trim(),
@@ -182,13 +196,6 @@ function accountBody(v: Record<string, string>, editing: boolean) {
   };
 }
 
-function departmentOptions(departments: Department[], language: Language) {
-  return departments.map((d) => ({
-    value: String(d.department_id),
-    label: departmentName(d, language),
-  }));
-}
-
 export function professorsConfig(
   t: TFunction,
   language: Language,
@@ -210,10 +217,10 @@ export function professorsConfig(
     fields: [
       ...accountFields(t),
       {
-        type: 'choice',
+        type: 'department',
         key: 'department_id',
         label: t('admin.department'),
-        options: departmentOptions(departments, language),
+        departments,
       },
       {
         type: 'choice',
@@ -258,7 +265,7 @@ export function professorsConfig(
       full_name_ar: p?.full_name_ar ?? '',
       full_name_en: p?.full_name_en ?? '',
       preferred_locale: p?.preferred_locale ?? 'ar',
-      department_id: String(p?.department.department_id ?? departments[0]?.department_id ?? ''),
+      department_id: p ? String(p.department.department_id) : '', // a new account chooses one
       office_id: p?.office ? String(p.office.office_id) : '',
       honorific: p?.honorific ?? 'dr',
       academic_rank: p?.academic_rank ?? 'assistant_professor',
@@ -304,10 +311,10 @@ export function studentsConfig(
         validate: matches(patterns.universityNo, 'admin.university_no_format'),
       },
       {
-        type: 'choice',
+        type: 'department',
         key: 'department_id',
         label: t('admin.department'),
-        options: departmentOptions(departments, language),
+        departments,
       },
       {
         type: 'choice',
@@ -324,7 +331,7 @@ export function studentsConfig(
       full_name_en: s?.full_name_en ?? '',
       preferred_locale: s?.preferred_locale ?? 'ar',
       university_no: s?.university_no ?? '',
-      department_id: String(s?.department.department_id ?? departments[0]?.department_id ?? ''),
+      department_id: s ? String(s.department.department_id) : '', // a new account chooses one
       study_year: String(s?.study_year ?? 1),
       is_active: String(s?.is_active ?? true),
     }),

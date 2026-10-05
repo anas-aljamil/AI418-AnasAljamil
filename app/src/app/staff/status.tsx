@@ -32,7 +32,7 @@ import { TodayTimeline } from '@/components/TodayTimeline';
 import { useToast } from '@/components/Toast';
 import { AppointmentCard } from '@/features/appointments/AppointmentCard';
 import { RequestActions } from '@/features/appointments/RequestActions';
-import { minutesOfDay, riyadhTime } from '@/lib/format';
+import { clockText, minutesOfDay, riyadhTime } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -145,7 +145,9 @@ export default function StatusScreen() {
                     [
                       t('status_screen.manual', { updated: described.updated }),
                       current.until
-                        ? t('prof.until', { time: riyadhTime(new Date(current.until)) })
+                        ? t('prof.until', {
+                            time: clockText(riyadhTime(new Date(current.until)), t),
+                          })
                         : null,
                     ],
                     t,
@@ -178,7 +180,7 @@ export default function StatusScreen() {
               />
               {officeEnd && today ? (
                 <Chip
-                  label={t('status_screen.in_office_until', { time: officeEnd })}
+                  label={t('status_screen.in_office_until', { time: clockText(officeEnd, t) })}
                   onPress={() =>
                     apply(
                       withNote({

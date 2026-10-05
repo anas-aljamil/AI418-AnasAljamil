@@ -1,3 +1,6 @@
+import en from '@/i18n/en.json';
+import ar from '@/i18n/ar.json';
+import { isUniversityEmail, universityNumberOf } from '@/lib/validation';
 import {
   appointmentDay,
   bookingDays,
@@ -7,6 +10,7 @@ import {
   relativeUpdateKey,
   riyadhDayDifference,
   riyadhTime,
+  clockText,
 } from './format';
 
 describe('Arabic plural categories (CLDR)', () => {
@@ -140,5 +144,42 @@ describe('booking days (this week and next, Sunday to Thursday)', () => {
 
   it('uses the Riyadh date: 22:00 UTC on Thursday is already Friday', () => {
     expect(dates('2026-10-08T22:00:00Z')[0]).toBe('2026-10-11');
+  });
+});
+
+describe('12-hour clock (owner decision)', () => {
+  // A minimal t() over the real string files, enough for the clock keys.
+  const tFor = (strings: typeof en) =>
+    ((key: string, values?: Record<string, string>) => {
+      const template = key
+        .split('.')
+        .reduce<unknown>((o, k) => (o as Record<string, unknown>)[k], strings);
+      return String(template).replace(/{{(\w+)}}/g, (_, name: string) => values?.[name] ?? '');
+    }) as unknown as Parameters<typeof clockText>[1];
+
+  it.each([
+    ['00:15', '12:15 AM', '12:15 ص'],
+    ['09:30', '9:30 AM', '9:30 ص'],
+    ['12:00', '12:00 PM', '12:00 م'],
+    ['13:45:00', '1:45 PM', '1:45 م'],
+    ['23:00', '11:00 PM', '11:00 م'],
+  ])('%s reads %s / %s', (hhmm, english, arabic) => {
+    expect(clockText(hhmm, tFor(en))).toBe(english);
+    expect(clockText(hhmm, tFor(ar))).toBe(arabic);
+  });
+});
+
+describe('university email', () => {
+  it('reads the university number from a student address', () => {
+    expect(universityNumberOf('4510440@upm.edu.sa')).toBe('4510440');
+    expect(universityNumberOf('r.alqahtani@upm.edu.sa')).toBeNull();
+    expect(universityNumberOf('4510440@gmail.com')).toBeNull();
+    expect(universityNumberOf('4510440@evil.upm.edu.sa')).toBeNull();
+  });
+
+  it('accepts only the university domain', () => {
+    expect(isUniversityEmail('m.alfaraj@upm.edu.sa')).toBe(true);
+    expect(isUniversityEmail('m.alfaraj@upm.edu.sa.evil.com')).toBe(false);
+    expect(isUniversityEmail('m.alfaraj@evil-upm.edu.sa')).toBe(false);
   });
 });

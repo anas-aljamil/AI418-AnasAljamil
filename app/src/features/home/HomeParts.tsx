@@ -9,7 +9,7 @@ import { Door } from '@/components/Door';
 import { describeStatus } from '@/components/StatusLabel';
 import { Card, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
-import { appointmentDay, countdownKey, riyadhTime } from '@/lib/format';
+import { appointmentDay, clockText, countdownKey, riyadhTime } from '@/lib/format';
 import { officeText, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, type Language } from '@/theme/tokens';
@@ -66,7 +66,7 @@ export function NextAppointmentCard({ appointment, now }: { appointment: Appoint
   const language = useLanguage();
   const start = new Date(appointment.starts_at);
   const day = appointmentDay(start, now);
-  const when = t(day.key, { time: day.time, day: t(`weekday.${day.weekday}`) });
+  const when = t(day.key, { time: clockText(day.time, t), day: t(`weekday.${day.weekday}`) });
   const countdown = countdownKey(language, start, now);
   const approved = appointment.status === 'approved';
   const state = t(approved ? 'home.appointment_approved' : 'home.appointment_pending');
@@ -100,7 +100,9 @@ export function NextAppointmentCard({ appointment, now }: { appointment: Appoint
 export function ConnectionNotice({ offline, since }: { offline: boolean; since: Date }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const message = t(offline ? 'home.offline' : 'home.unreachable', { time: riyadhTime(since) });
+  const message = t(offline ? 'home.offline' : 'home.unreachable', {
+    time: clockText(riyadhTime(since), t),
+  });
   return (
     <View
       style={[styles.notice, { borderColor: colors.line, backgroundColor: colors.surface }]}

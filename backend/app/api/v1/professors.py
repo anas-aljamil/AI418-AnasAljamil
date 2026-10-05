@@ -13,8 +13,15 @@ from app.core.errors import AppError, not_found
 from app.core.pagination import Page, PageParams, page_params, paginate
 from app.db import get_db
 from app.deps import get_current_user
-from app.models import Appointment, Department, User
-from app.schemas import DaySlotsOut, DepartmentOut, ProfessorDetailOut, ProfessorSummaryOut, SlotOut
+from app.models import Appointment, College, Department, User
+from app.schemas import (
+    CollegeOut,
+    DaySlotsOut,
+    DepartmentOut,
+    ProfessorDetailOut,
+    ProfessorSummaryOut,
+    SlotOut,
+)
 from app.services import chat, directory
 from app.services.booking import ACTIVE
 from app.services.slots import booking_window_end, day_slots
@@ -22,6 +29,19 @@ from app.services.slots import booking_window_end, day_slots
 router = APIRouter(tags=["professors"])
 
 StatusFilter = Literal["in_office", "in_class", "busy", "away", "unknown"]
+
+
+@router.get(
+    "/colleges",
+    response_model=Page[CollegeOut],
+    summary="List colleges (public, like departments: forms group departments by college)",
+)
+def list_colleges(
+    page: PageParams = Depends(page_params),
+    db: Session = Depends(get_db),
+) -> Page[CollegeOut]:
+    rows = db.scalars(select(College).order_by(College.code)).all()
+    return paginate([CollegeOut.model_validate(r) for r in rows], page)
 
 
 @router.get(

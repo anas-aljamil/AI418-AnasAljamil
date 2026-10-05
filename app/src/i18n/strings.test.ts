@@ -39,8 +39,13 @@ describe('translation files', () => {
   it('actually translate the Arabic file (no untranslated Latin words)', () => {
     for (const [key, text] of Object.entries(arabic)) {
       if (key === 'settings.language_en') continue; // the English name is written in English
-      // Latin letters are allowed only in placeholders and codes like "A" in "مبنى A".
-      const words = text.replace(/{{\w+}}/g, '').match(/[A-Za-z]{2,}/g) ?? [];
+      // Latin letters are allowed only in placeholders, email addresses (they cannot be
+      // translated) and codes like "A" in "مبنى A".
+      const words =
+        text
+          .replace(/{{\w+}}/g, '')
+          .replace(/[\w.]*@[\w.]+/g, '')
+          .match(/[A-Za-z]{2,}/g) ?? [];
       expect({ key, untranslated: words }).toEqual({ key, untranslated: [] });
     }
   });

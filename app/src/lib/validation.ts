@@ -13,3 +13,17 @@ export const patterns = {
   email: /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/,
   universityNo: /^[A-Z0-9]{4,12}$/,
 };
+
+/**
+ * The university's email domain. Sign-up accepts only these addresses; the API checks the same
+ * (SIGNUP_EMAIL_DOMAIN in .env, same default). A student's address is their university number.
+ */
+export const UNIVERSITY_DOMAIN = 'upm.edu.sa';
+
+export const isUniversityEmail = (address: string) => address.endsWith(`@${UNIVERSITY_DOMAIN}`);
+
+/** "4510440" for "4510440@upm.edu.sa"; null when the address is not a student's. */
+export function universityNumberOf(address: string): string | null {
+  const match = /^([0-9]{4,12})@(.+)$/.exec(address);
+  return match && match[2] === UNIVERSITY_DOMAIN ? match[1]! : null;
+}

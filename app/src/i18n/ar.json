@@ -28,7 +28,10 @@
     "days_few": "آخر تحديث قبل {{count}} أيام",
     "days_many": "آخر تحديث قبل {{count}} يومًا",
     "days_other": "آخر تحديث قبل {{count}} يوم",
-    "from_schedule": "حسب الجدول"
+    "from_schedule": "حسب الجدول",
+    "clock": "{{time}} {{period}}",
+    "am": "ص",
+    "pm": "م"
   },
   "settings": {
     "language": "اللغة",
@@ -187,9 +190,7 @@
     "role": "أنا",
     "student": "طالب",
     "professor": "عضو هيئة تدريس",
-    "email_helper": "عنوانك الجامعي بأحرف صغيرة.",
     "department": "القسم",
-    "university_no_helper": "كما في بطاقتك الجامعية، مثل S1234.",
     "study_year": "السنة الدراسية",
     "year": "السنة {{year}}",
     "choose": "اختر واحدًا.",
@@ -200,7 +201,12 @@
     "pending_title": "أُرسل الطلب",
     "pending_body": "سيتحقق مسؤول النظام من حسابك ويفعّله. بعدها سجّل الدخول بالبريد {{email}}.",
     "back_to_sign_in": "العودة إلى تسجيل الدخول",
-    "have_account": "لديك حساب؟ سجّل الدخول"
+    "have_account": "لديك حساب؟ سجّل الدخول",
+    "email_helper_student": "رقمك الجامعي ثم @{{domain}} (مثل 4510440@{{domain}}).",
+    "email_helper_professor": "بريدك الجامعي المنتهي بـ @{{domain}}.",
+    "number_found": "الرقم الجامعي: {{number}}",
+    "email_domain": "استخدم بريدك الجامعي المنتهي بـ @{{domain}}.",
+    "email_student": "يستخدم الطلاب رقمهم الجامعي بريدًا، مثل 4510440@{{domain}}."
   },
   "errors": {
     "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -224,9 +230,10 @@
     "NOT_FOUND": "لم يُعثر عليه، وربما حُذف.",
     "FORBIDDEN": "لا يملك حسابك صلاحية ذلك.",
     "EMAIL_TAKEN": "يوجد حساب بهذا البريد. سجّل الدخول أو استخدم بريدًا آخر.",
-    "UNIVERSITY_NO_TAKEN": "رقم جامعي مستخدم في حساب آخر. تحقّق من الرقم.",
-    "EMAIL_DOMAIN": "يمكن إنشاء حساب بالبريد الجامعي فقط.",
-    "INVALID_REFERENCE": "هذا القسم أو المكتب لم يعد موجودًا. اختر غيره."
+    "UNIVERSITY_NO_TAKEN": "الرقم الجامعي مستخدم في حساب آخر.",
+    "EMAIL_DOMAIN": "يمكن إنشاء حساب بالبريد الجامعي فقط (@upm.edu.sa).",
+    "INVALID_REFERENCE": "هذا القسم أو المكتب لم يعد موجودًا. اختر غيره.",
+    "STUDENT_EMAIL": "يسجّل الطلاب برقمهم الجامعي بريدًا، مثل 4510440@upm.edu.sa."
   },
   "home": {
     "search_label": "ابحث عن أستاذ",
@@ -411,11 +418,11 @@
     "empty_day": "لا شيء في هذا اليوم",
     "kind": "النوع",
     "day": "اليوم",
-    "start": "البداية، مثل 10:00",
-    "end": "النهاية، مثل 12:00",
+    "start": "البداية",
+    "end": "النهاية",
     "label": "التسمية (اختيارية)",
     "label_helper": "مثل رمز المقرر",
-    "time_invalid": "اكتب وقتًا مثل 10:00 أو 10:15 (كل 15 دقيقة).",
+    "time_invalid": "اختر وقتًا.",
     "end_before_start": "يجب أن تكون النهاية بعد البداية.",
     "save": "احفظ الفترة",
     "delete": "احذف الفترة",
@@ -475,7 +482,8 @@
     "confirm_delete_person": "ستُحذف مواعيده ورسائله وجدوله أيضًا. لإبقائها، أوقف الحساب بدلًا من حذفه.",
     "saved": "حُفظ",
     "deleted": "حُذف",
-    "person_line": "{{department}}، {{email}}"
+    "person_line": "{{department}}، {{email}}",
+    "college": "الكلية"
   },
   "chat": {
     "title": "الرسائل",
@@ -519,5 +527,15 @@
     "appointment_declined": "لم تتم الموافقة على طلبك مع {{name}}: {{when}}",
     "appointment_cancelled": "أُلغي الموعد مع {{name}}: {{when}}",
     "new_message": "رسالة جديدة من {{name}}"
+  },
+  "time_picker": {
+    "hour_label": "{{field}}، الساعة {{hour}}",
+    "minute_label": "{{field}}، الدقيقة {{minute}}",
+    "period_label": "{{field}}، {{period}}"
+  },
+  "department_picker": {
+    "choose": "اختر القسم",
+    "hint": "يفتح قائمة الأقسام حسب الكلية",
+    "all": "كل الأقسام"
   }
 }

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     login_attempts_per_minute: int = 5
     signups_per_minute: int = 5
     # Self sign-up accepts only addresses at this domain (there is no email verification).
-    signup_email_domain: str = "university.example"
+    signup_email_domain: str = "upm.edu.sa"
     messages_per_minute: int = 20
 
     # Freeze the API clock for screenshots and demos, e.g. 2026-10-05T07:00:00Z. Empty = real time.

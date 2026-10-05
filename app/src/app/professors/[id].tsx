@@ -25,7 +25,7 @@ import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
-import { riyadhTime } from '@/lib/format';
+import { clockText, riyadhTime } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -131,7 +131,9 @@ export default function ProfessorProfile() {
                   ? spokenList(
                       [
                         status.updated,
-                        t('prof.until', { time: riyadhTime(new Date(data.status.until)) }),
+                        t('prof.until', {
+                          time: clockText(riyadhTime(new Date(data.status.until)), t),
+                        }),
                       ],
                       t,
                     )

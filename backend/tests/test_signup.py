@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.api.v1.auth import signup_limiter
 from app.models import Professor, Student, User
-from tests.conftest import ADMIN_EMAIL, EMAILS, SAAD
+from tests.conftest import ADMIN_EMAIL, SAAD
 
 SIGNUP = "/api/v1/auth/signup"
 LOGIN = "/api/v1/auth/login"
@@ -21,13 +21,12 @@ def fresh_limit():
 def student(**changes) -> dict:
     body = {
         "role": "student",
-        "email": "r.alqahtani@university.example",
+        "email": "4519001@upm.edu.sa",
         "password": "a-long-password",
         "full_name_ar": "رنا القحطاني",
         "full_name_en": "Rana Al-Qahtani",
         "preferred_locale": "ar",
         "department_id": 2,
-        "university_no": "S2001",
         "study_year": 1,
     }
     return body | changes
@@ -36,7 +35,7 @@ def student(**changes) -> dict:
 def professor(**changes) -> dict:
     body = {
         "role": "professor",
-        "email": "m.alfaraj@university.example",
+        "email": "m.alfaraj@upm.edu.sa",
         "password": "a-long-password",
         "full_name_ar": "منصور الفرج",
         "full_name_en": "Mansour Al-Faraj",
@@ -52,17 +51,17 @@ def code(response) -> str:
 
 
 def test_a_student_signs_up_and_is_signed_in_at_once(client, db):
-    response = client.post(
-        SIGNUP, json=student(email="  R.AlQahtani@University.Example ", university_no="s2001")
-    )
+    response = client.post(SIGNUP, json=student(email="  4519001@UPM.edu.sa "))
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["access_token"] and body["refresh_token"]
-    assert body["user"]["email"] == "r.alqahtani@university.example"
-    assert body["user"]["student"]["university_no"] == "S2001"
-    assert body["user"]["student"]["department"]["code"] == "IS"
+    assert body["user"]["email"] == "4519001@upm.edu.sa"
+    # The university number is the email's local part.
+    assert body["user"]["student"]["university_no"] == "4519001"
+    department = body["user"]["student"]["department"]
+    assert (department["code"], department["college"]["code"]) == ("CYB", "CCS")
 
-    user = db.scalar(select(User).where(User.email == "r.alqahtani@university.example"))
+    user = db.scalar(select(User).where(User.email == "4519001@upm.edu.sa"))
     assert (user.role, user.is_active) == ("student", True)
     assert db.get(Student, user.user_id).study_year == 1
     login = client.post(LOGIN, json={"email": user.email, "password": "a-long-password"})
@@ -80,10 +79,10 @@ def test_web_sign_up_sets_the_refresh_cookie_instead(client):
 def test_a_professor_signs_up_and_waits_for_an_admin(client, auth, db):
     response = client.post(SIGNUP, json=professor())
     assert response.status_code == 202, response.text
-    assert response.json() == {"pending": True, "email": "m.alfaraj@university.example"}
+    assert response.json() == {"pending": True, "email": "m.alfaraj@upm.edu.sa"}
     assert "set-cookie" not in response.headers
 
-    user = db.scalar(select(User).where(User.email == "m.alfaraj@university.example"))
+    user = db.scalar(select(User).where(User.email == "m.alfaraj@upm.edu.sa"))
     assert (user.role, user.is_active) == ("professor", False)
     assert db.get(Professor, user.user_id).office_id is None
 
@@ -102,9 +101,10 @@ def test_a_professor_signs_up_and_waits_for_an_admin(client, auth, db):
 
 def test_only_the_university_domain_may_sign_up(client):
     for email in (
-        "rana@gmail.com",
-        "rana@evil.university.example",
-        "rana@university.example.evil.com",
+        "4519001@gmail.com",
+        "4519001@evil.upm.edu.sa",
+        "4519001@upm.edu.sa.evil.com",
+        "4519001@university.example",
     ):
         response = client.post(SIGNUP, json=student(email=email))
         assert (response.status_code, code(response)) == (422, "EMAIL_DOMAIN"), email
@@ -115,10 +115,22 @@ def test_nobody_can_sign_up_as_an_admin(client):
     assert (response.status_code, code(response)) == (422, "VALIDATION_ERROR")
 
 
-def test_taken_email_and_university_number_are_refused(client):
-    taken_email = client.post(SIGNUP, json=student(email=EMAILS[SAAD]))
+def test_a_student_email_must_be_the_university_number(client):
+    for email in ("r.alqahtani@upm.edu.sa", "451@upm.edu.sa", "45190011234567@upm.edu.sa"):
+        response = client.post(SIGNUP, json=student(email=email))
+        assert (response.status_code, code(response)) == (422, "STUDENT_EMAIL"), email
+    # Professors may use a name.
+    assert client.post(SIGNUP, json=professor()).status_code == 202
+
+
+def test_taken_email_and_university_number_are_refused(client, db):
+    assert client.post(SIGNUP, json=student()).status_code == 201
+    taken_email = client.post(SIGNUP, json=student())
     assert (taken_email.status_code, code(taken_email)) == (409, "EMAIL_TAKEN")
-    taken_number = client.post(SIGNUP, json=student(university_no="S1001"))
+    # A university number already held by another student (here, created by an admin).
+    db.get(Student, 9).university_no = "4519002"
+    db.flush()
+    taken_number = client.post(SIGNUP, json=student(email="4519002@upm.edu.sa"))
     assert (taken_number.status_code, code(taken_number)) == (409, "UNIVERSITY_NO_TAKEN")
 
 
@@ -127,9 +139,8 @@ def test_taken_email_and_university_number_are_refused(client):
     [
         {"password": "short"},
         {"full_name_en": "R"},
-        {"university_no": "S-1"},
         {"study_year": 7},
-        {"university_no": None},
+        {"study_year": None},
     ],
 )
 def test_sign_up_input_is_validated(client, changes):
@@ -144,7 +155,7 @@ def test_an_unknown_department_is_refused(client):
 
 def test_sign_up_is_rate_limited(client):
     for n in range(5):
-        client.post(SIGNUP, json=student(email=f"bad{n}@gmail.com"))
+        client.post(SIGNUP, json=student(email=f"45190{n}@gmail.com"))
     limited = client.post(SIGNUP, json=student())
     assert (limited.status_code, code(limited)) == (429, "RATE_LIMITED")
 
@@ -152,4 +163,7 @@ def test_sign_up_is_rate_limited(client):
 def test_departments_are_listed_without_signing_in(client):
     response = client.get("/api/v1/departments")
     assert response.status_code == 200
-    assert response.json()["total"] == 6
+    assert response.json()["total"] == 12
+    assert response.json()["items"][0]["college"]["name_en"]
+    colleges = client.get("/api/v1/colleges").json()
+    assert [c["code"] for c in colleges["items"]] == ["CBT", "CCS", "ENG"]

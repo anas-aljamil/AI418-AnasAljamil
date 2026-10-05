@@ -10,9 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAdminList, useAdminSave, type AdminResource, type AdminRows } from '@/api/queries';
+import type { Department } from '@/api/types';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { DepartmentPicker } from '@/components/DepartmentPicker';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ListRow, Pill } from '@/components/Surfaces';
@@ -46,9 +48,17 @@ export interface TextFieldSpec extends BaseField {
 export interface ChoiceFieldSpec extends BaseField {
   type: 'choice';
   options: { value: string; label: string }[];
+  /** No default: the admin must pick one (e.g. a department's college). */
+  required?: boolean;
 }
 
-export type FieldSpec = TextFieldSpec | ChoiceFieldSpec;
+/** A department, chosen from the menu grouped by college. */
+export interface DepartmentFieldSpec extends BaseField {
+  type: 'department';
+  departments: Department[];
+}
+
+export type FieldSpec = TextFieldSpec | ChoiceFieldSpec | DepartmentFieldSpec;
 
 export interface AdminConfig<R extends AdminResource> {
   resource: R;
@@ -172,7 +182,9 @@ function AdminForm<R extends AdminResource>({
       field.key,
       field.type === 'text' && field.validate
         ? field.validate(values[field.key] ?? '', editing)
-        : null,
+        : field.type === 'department' || (field.type === 'choice' && field.required)
+          ? required(values[field.key] ?? '')
+          : null,
     ]),
   );
   const valid = Object.values(errors).every((e) => e === null);
@@ -236,6 +248,17 @@ function AdminForm<R extends AdminResource>({
               autoCorrect={false}
               maxLength={field.maxLength}
             />
+          ) : field.type === 'department' ? (
+            <DepartmentPicker
+              key={field.key}
+              label={field.label}
+              departments={field.departments}
+              value={values[field.key] ? Number(values[field.key]) : null}
+              onChange={(id) =>
+                setValues((current) => ({ ...current, [field.key]: id === null ? '' : String(id) }))
+              }
+              error={showErrors && errors[field.key] ? t(errors[field.key]!) : undefined}
+            />
           ) : (
             <View key={field.key} style={styles.choice} role="radiogroup">
               <Text variant="label">{field.label}</Text>
@@ -251,6 +274,11 @@ function AdminForm<R extends AdminResource>({
                   />
                 ))}
               </View>
+              {showErrors && errors[field.key] ? (
+                <Text variant="caption" color="danger">
+                  {t(errors[field.key]!)}
+                </Text>
+              ) : null}
             </View>
           ),
         )}

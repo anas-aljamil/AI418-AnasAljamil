@@ -1,10 +1,11 @@
 /**
  * Search and browse (DESIGN.md 7.3): Arabic-aware search by name or department, with filter
- * chips for status, office hours today and department. Results are flat rows, in office first;
- * a row opens the professor's profile (one tap) and has its own pin button.
+ * chips for status and office hours today and a department menu grouped by college. Results
+ * are flat rows, in office first; a row opens the professor's profile (one tap) and has its
+ * own pin button.
  */
 import { useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { useDepartments, useProfessorSearch } from '@/api/queries';
 import type { ProfessorSummary } from '@/api/types';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { DepartmentPicker } from '@/components/DepartmentPicker';
 import { SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
 import { Text } from '@/components/Text';
@@ -21,7 +23,6 @@ import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
 import { useDebounced, useNow } from '@/lib/hooks';
-import { departmentName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 
@@ -95,25 +96,13 @@ export default function SearchScreen() {
         </View>
       </View>
       {departments.data?.length ? (
-        <View style={styles.group}>
-          <Text variant="label" role="heading">
-            {t('search.department_filter')}
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.row}>
-              {departments.data.map((department) => (
-                <Chip
-                  key={department.department_id}
-                  label={departmentName(department, language)}
-                  selected={departmentIds.includes(department.department_id)}
-                  onPress={() =>
-                    setDepartmentIds((current) => toggle(current, department.department_id))
-                  }
-                />
-              ))}
-            </View>
-          </ScrollView>
-        </View>
+        <DepartmentPicker
+          label={t('search.department_filter')}
+          departments={departments.data}
+          value={departmentIds[0] ?? null}
+          onChange={(id) => setDepartmentIds(id === null ? [] : [id])}
+          allLabel={t('department_picker.all')}
+        />
       ) : null}
       {active ? (
         <View style={styles.clear}>

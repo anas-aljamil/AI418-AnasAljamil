@@ -7,9 +7,12 @@ SameSite=Strict cookie scoped to /api/v1/auth. Cookie-based calls must also send
 X-Requested-With: mawjood, which a cross-site form cannot do (see docs/security.md).
 
 Sign-up needs an address at the university domain (SIGNUP_EMAIL_DOMAIN). A
-student is signed in at once; a professor's account is created inactive and
+student's address is their university number (4510440@upm.edu.sa), so the
+number is read from it. A student is signed in at once; a professor's account is created inactive and
 waits for an admin to activate it, so nobody can make themselves a professor.
 """
+
+import re
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
@@ -43,6 +46,7 @@ COOKIE_PATH = "/api/v1/auth"
 CSRF_HEADER, CSRF_VALUE = "X-Requested-With", "mawjood"
 login_limiter = RateLimiter(get_settings().login_attempts_per_minute, 60)
 signup_limiter = RateLimiter(get_settings().signups_per_minute, 60)
+STUDENT_NUMBER = re.compile(r"[0-9]{4,12}")  # the local part of a student's university email
 
 
 def me_out(db: Session, user: User) -> MeOut:
@@ -131,12 +135,20 @@ def signup(
     accounts.ensure_exists(db, body.department_id)
     now = clock.now()
     if isinstance(body, StudentSignUpIn):
-        accounts.ensure_university_no_free(db, body.university_no)
+        university_no = body.email.split("@")[0]
+        if not STUDENT_NUMBER.fullmatch(university_no):
+            raise AppError(
+                422,
+                "STUDENT_EMAIL",
+                f"Students sign up with their university email: university number@{domain}.",
+            )
+        accounts.ensure_email_free(db, body.email)  # same address again: say so, not "number taken"
+        accounts.ensure_university_no_free(db, university_no)
         user = accounts.create_user(db, body, "student", now)
         db.add(
             Student(
                 student_id=user.user_id,
-                university_no=body.university_no,
+                university_no=university_no,
                 department_id=body.department_id,
                 study_year=body.study_year,
             )

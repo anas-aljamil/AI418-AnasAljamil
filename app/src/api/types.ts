@@ -10,11 +10,19 @@ export interface Page<T> {
   offset: number;
 }
 
+export interface College {
+  college_id: number;
+  code: string;
+  name_ar: string;
+  name_en: string;
+}
+
 export interface Department {
   department_id: number;
   code: string;
   name_ar: string;
   name_en: string;
+  college: College;
 }
 
 export interface Office {
@@ -61,7 +69,7 @@ interface SignUpAccount {
   department_id: number;
 }
 export type SignUpBody =
-  | (SignUpAccount & { role: 'student'; university_no: string; study_year: number })
+  | (SignUpAccount & { role: 'student'; study_year: number })
   | (SignUpAccount & { role: 'professor'; honorific: Honorific; academic_rank: Rank });
 
 export interface ProfessorStatus {

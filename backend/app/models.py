@@ -15,13 +15,25 @@ class Base(DeclarativeBase):
     pass
 
 
-class Department(Base):
-    __tablename__ = "departments"
-    department_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+class College(Base):
+    __tablename__ = "colleges"
+    college_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     code: Mapped[str] = mapped_column(String(10))
     name_ar: Mapped[str] = mapped_column(String(100))
     name_en: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default="(UTC_TIMESTAMP())")
+
+
+class Department(Base):
+    __tablename__ = "departments"
+    department_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    college_id: Mapped[int] = mapped_column(ForeignKey("colleges.college_id"))
+    code: Mapped[str] = mapped_column(String(10))
+    name_ar: Mapped[str] = mapped_column(String(100))
+    name_en: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default="(UTC_TIMESTAMP())")
+    # Always loaded with the department: every department in the API carries its college.
+    college: Mapped[College] = relationship(lazy="joined")
 
 
 class User(Base):

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
 from app.core.security import hash_password
-from app.models import Department, Office, Student, User
+from app.models import College, Department, Office, Student, User
 from app.schemas import AccountIn
 
 
@@ -20,6 +20,11 @@ def ensure_email_free(db: Session, email: str, except_user_id: int | None = None
 def ensure_university_no_free(db: Session, university_no: str) -> None:
     if db.scalar(select(Student.student_id).where(Student.university_no == university_no)):
         raise AppError(409, "UNIVERSITY_NO_TAKEN", "Another student already has this university number.")
+
+
+def ensure_college_exists(db: Session, college_id: int | None) -> None:
+    if college_id is not None and db.get(College, college_id) is None:
+        raise AppError(422, "INVALID_REFERENCE", "The college does not exist.")
 
 
 def ensure_exists(db: Session, department_id: int | None, office_id: int | None = None) -> None:

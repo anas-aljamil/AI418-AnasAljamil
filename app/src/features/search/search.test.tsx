@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { api } from '@/api/client';
 import SearchScreen from '@/app/(student)/search';
-import { renderWithProviders } from '@/test-utils';
+import { renderWithProviders, testDepartment } from '@/test-utils';
 
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: jest.fn() }));
 const mockApi = api as jest.MockedFunction<typeof api>;
@@ -14,7 +14,12 @@ beforeEach(() => {
   mockApi.mockImplementation(async (path: string) => {
     if (path.startsWith('/departments')) {
       return page([
-        { department_id: 3, code: 'IS', name_ar: 'نظم المعلومات', name_en: 'Information Systems' },
+        testDepartment(
+          3,
+          'CYB',
+          'الأمن السيبراني والحوسبة الجنائية',
+          'Cybersecurity and Forensic Computing',
+        ),
       ]);
     }
     if (path.startsWith('/professors?')) return page([]);
@@ -32,7 +37,10 @@ it('sends the status, office-hours and department filters to the API', async () 
   await renderWithProviders(<SearchScreen />);
   await fireEvent.press(screen.getByRole('button', { name: 'In office' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Office hours today' }));
-  await fireEvent.press(await screen.findByRole('button', { name: 'Information Systems' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Department, All departments' }));
+  await fireEvent.press(
+    screen.getByRole('radio', { name: 'Cybersecurity and Forensic Computing' }),
+  );
   await waitFor(() =>
     expect(mockApi).toHaveBeenCalledWith(
       '/professors?lang=en&limit=50&department_id=3&status=in_office&has_office_hours_today=true',

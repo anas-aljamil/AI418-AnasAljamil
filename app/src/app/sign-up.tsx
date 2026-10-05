@@ -17,19 +17,23 @@ import type { Honorific, Rank, SignUpBody } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { DepartmentPicker } from '@/components/DepartmentPicker';
 import { Door } from '@/components/Door';
 import { Segmented } from '@/components/Segmented';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { errorKey } from '@/lib/errors';
-import { departmentName } from '@/lib/names';
-import { patterns } from '@/lib/validation';
+import {
+  isUniversityEmail,
+  patterns,
+  UNIVERSITY_DOMAIN,
+  universityNumberOf,
+} from '@/lib/validation';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 
 type Role = 'student' | 'professor';
-type Field =
-  'full_name_ar' | 'full_name_en' | 'email' | 'password' | 'department' | 'university_no';
+type Field = 'full_name_ar' | 'full_name_en' | 'email' | 'password' | 'department';
 
 const HONORIFICS: Honorific[] = ['dr', 'prof', 'mr', 'ms', 'eng'];
 const RANKS: Rank[] = ['lecturer', 'assistant_professor', 'associate_professor', 'professor'];
@@ -38,7 +42,8 @@ const YEARS = [1, 2, 3, 4, 5, 6];
 const FIELD_OF_ERROR: Record<string, Field> = {
   EMAIL_TAKEN: 'email',
   EMAIL_DOMAIN: 'email',
-  UNIVERSITY_NO_TAKEN: 'university_no',
+  STUDENT_EMAIL: 'email',
+  UNIVERSITY_NO_TAKEN: 'email', // the number is the email's first part
 };
 
 export default function SignUpScreen() {
@@ -56,7 +61,6 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [departmentId, setDepartmentId] = useState<number | null>(null);
-  const [universityNo, setUniversityNo] = useState('');
   const [studyYear, setStudyYear] = useState(1);
   const [honorific, setHonorific] = useState<Honorific>('dr');
   const [rank, setRank] = useState<Rank>('assistant_professor');
@@ -67,16 +71,21 @@ export default function SignUpScreen() {
 
   if (state.status === 'signedIn') return <Redirect href="/" />;
 
+  const number = universityNumberOf(email.trim().toLowerCase());
+
   const check = (): Partial<Record<Field, string>> => {
     const found: Partial<Record<Field, string>> = {};
     if (nameAr.trim().length < 2) found.full_name_ar = t('admin.name_short');
     if (nameEn.trim().length < 2) found.full_name_en = t('admin.name_short');
-    if (!patterns.email.test(email.trim().toLowerCase())) found.email = t('admin.email_format');
+    const address = email.trim().toLowerCase();
+    if (!patterns.email.test(address)) found.email = t('admin.email_format');
+    else if (!isUniversityEmail(address))
+      found.email = t('signup.email_domain', { domain: UNIVERSITY_DOMAIN });
+    else if (role === 'student' && universityNumberOf(address) === null) {
+      found.email = t('signup.email_student', { domain: UNIVERSITY_DOMAIN });
+    }
     if (password.length < 8) found.password = t('admin.password_short');
     if (departmentId === null) found.department = t('signup.choose');
-    if (role === 'student' && !patterns.universityNo.test(universityNo.trim().toUpperCase())) {
-      found.university_no = t('admin.university_no_format');
-    }
     return found;
   };
 
@@ -98,12 +107,7 @@ export default function SignUpScreen() {
     };
     const body: SignUpBody =
       role === 'student'
-        ? {
-            ...account,
-            role,
-            university_no: universityNo.trim().toUpperCase(),
-            study_year: studyYear,
-          }
+        ? { ...account, role, study_year: studyYear }
         : { ...account, role, honorific, academic_rank: rank };
     setBusy(true);
     setSummary(null);
@@ -194,7 +198,13 @@ export default function SignUpScreen() {
           />
           <TextField
             label={t('signin.email')}
-            helper={t('signup.email_helper')}
+            helper={
+              role === 'student'
+                ? number
+                  ? t('signup.number_found', { number })
+                  : t('signup.email_helper_student', { domain: UNIVERSITY_DOMAIN })
+                : t('signup.email_helper_professor', { domain: UNIVERSITY_DOMAIN })
+            }
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -224,29 +234,16 @@ export default function SignUpScreen() {
             />
           </View>
 
-          <ChoiceGroup label={t('signup.department')} error={errors.department}>
-            {(departments.data ?? []).map((d) => (
-              <Chip
-                key={d.department_id}
-                label={departmentName(d, language)}
-                selected={departmentId === d.department_id}
-                onPress={() => setDepartmentId(d.department_id)}
-              />
-            ))}
-          </ChoiceGroup>
+          <DepartmentPicker
+            label={t('signup.department')}
+            departments={departments.data ?? []}
+            value={departmentId}
+            onChange={setDepartmentId}
+            error={errors.department}
+          />
 
           {role === 'student' ? (
             <>
-              <TextField
-                label={t('admin.university_no')}
-                helper={t('signup.university_no_helper')}
-                value={universityNo}
-                onChangeText={setUniversityNo}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={12}
-                error={errors.university_no}
-              />
               <ChoiceGroup label={t('signup.study_year')}>
                 {YEARS.map((year) => (
                   <Chip

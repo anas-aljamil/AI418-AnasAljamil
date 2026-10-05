@@ -37,7 +37,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
-import { riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
+import { clockText, riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { participantName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -147,7 +147,7 @@ export default function ConversationScreen() {
     } else if (item.message.message_id === latestMine && outbox.length === 0) {
       receipt = item.message.read_at ? t('chat.read') : t('chat.sent');
     }
-    const meta = spokenList([showTime ? riyadhTime(at) : null, receipt], t);
+    const meta = spokenList([showTime ? clockText(riyadhTime(at), t) : null, receipt], t);
     const failed = item.kind === 'outgoing' && item.message.state === 'failed';
     return (
       <View>

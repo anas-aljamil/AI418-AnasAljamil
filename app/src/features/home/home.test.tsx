@@ -7,21 +7,16 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { api, ApiError } from '@/api/client';
 import type { Appointment, Me, ProfessorSummary } from '@/api/types';
 import HomeScreen from '@/app/(student)/home';
-import { renderWithProviders } from '@/test-utils';
+import { renderWithProviders, testDepartment } from '@/test-utils';
 
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: jest.fn() }));
-const computerScience = {
-  department_id: 1,
-  code: 'CS',
-  name_ar: 'علوم الحاسب',
-  name_en: 'Computer Science',
-};
+const softwareEngineering = testDepartment(1, 'SE', 'هندسة البرمجيات', 'Software Engineering');
 const mockUser = {
   user_id: 9,
   role: 'student',
   full_name_ar: 'سعد المطيري',
   full_name_en: 'Saad Al-Mutairi',
-  student: { university_no: 'S1001', study_year: 3, department: computerScience },
+  student: { university_no: 'S1001', study_year: 3, department: softwareEngineering },
 } as Me;
 jest.mock('@/auth/AuthProvider', () => ({
   useUser: () => mockUser,
@@ -42,7 +37,7 @@ function professor(
     full_name_ar: name,
     full_name_en: name,
     honorific: 'dr',
-    department: computerScience,
+    department: softwareEngineering,
     office: { office_id: 1, building_code: 'A', floor: 2, room_number: '214' },
     status: {
       status,
@@ -107,7 +102,9 @@ it('shows pinned statuses, the next appointment and the department with no taps'
   expect(await screen.findByText('Waiting for approval')).toBeTruthy();
   expect(screen.getByText('Building A, room 214')).toBeTruthy();
   expect(
-    await screen.findByLabelText('Dr. Khalid Al-Otaibi, Computer Science, Away, updated 3 min ago'),
+    await screen.findByLabelText(
+      'Dr. Khalid Al-Otaibi, Software Engineering, Away, updated 3 min ago',
+    ),
   ).toBeTruthy();
 });
 

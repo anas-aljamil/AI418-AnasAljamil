@@ -79,9 +79,11 @@ def list_departments(
 def create_department(
     body: DepartmentIn, db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
 ) -> DepartmentOut:
+    accounts.ensure_college_exists(db, body.college_id)
     department = Department(**body.model_dump(), created_at=clock.now())
     db.add(department)
     db.commit()
+    db.refresh(department)
     return DepartmentOut.model_validate(department)
 
 
@@ -90,9 +92,12 @@ def update_department(
     department_id: int, body: DepartmentPatch, db: Session = Depends(get_db)
 ) -> DepartmentOut:
     department = _get(db, Department, department_id, "Department")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    accounts.ensure_college_exists(db, changes.get("college_id"))
+    for field, value in changes.items():
         setattr(department, field, value)
     db.commit()
+    db.refresh(department)  # reloads the college when it changed
     return DepartmentOut.model_validate(department)
 
 

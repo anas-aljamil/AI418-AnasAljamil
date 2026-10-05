@@ -130,3 +130,20 @@ test('professor pushed screens fit 320 px: notifications and a conversation', as
   await page.screenshot({ path: `${SHOTS}/ar-light-professor-thread-320.png` });
   expect(problems).toEqual([]);
 });
+
+test('the schedule time picker fits 320 px and reads on the 12-hour clock', async ({ page }) => {
+  await signIn(page, ROLES.professor.email, 'en', 'light');
+  await page.getByRole('tab', { name: 'Schedule' }).click();
+  await expect(page.getByText(/^10:00 AM–12:00 PM Office hours/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Add a block' }).click();
+  const sheet = page.getByRole('dialog', { name: 'New block' });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('button', { name: 'End, PM', exact: true }).click();
+  await sheet.getByRole('button', { name: 'End, hour 1', exact: true }).click();
+  await sheet.getByRole('button', { name: 'End, 30 minutes', exact: true }).click();
+  await expect(sheet.getByText('1:30 PM', { exact: true })).toBeVisible();
+  await page.waitForTimeout(800); // the sheet slides up; measure it in place
+  const problems = (await overflowing(page)).map((p) => `schedule sheet: ${p}`);
+  await page.screenshot({ path: `${SHOTS}/en-light-professor-time-picker-320.png` });
+  expect(problems).toEqual([]);
+});

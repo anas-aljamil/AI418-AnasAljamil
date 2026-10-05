@@ -12,7 +12,7 @@ def test_department_crud(client, auth):
     headers = auth(ADMIN_EMAIL)
     created = client.post(
         f"{ADMIN}/departments",
-        json={"code": "PHYS", "name_ar": "الفيزياء", "name_en": "Physics"},
+        json={"college_id": 2, "code": "PHYS", "name_ar": "الفيزياء", "name_en": "Physics"},
         headers=headers,
     )
     assert created.status_code == 201
@@ -21,6 +21,8 @@ def test_department_crud(client, auth):
         f"{ADMIN}/departments/{department_id}", json={"name_en": "Applied Physics"}, headers=headers
     )
     assert renamed.json()["name_en"] == "Applied Physics"
+    moved = client.patch(f"{ADMIN}/departments/{department_id}", json={"college_id": 1}, headers=headers)
+    assert moved.json()["college"]["code"] == "CCS"
     assert client.delete(f"{ADMIN}/departments/{department_id}", headers=headers).status_code == 204
     assert client.patch(f"{ADMIN}/departments/{department_id}", json={}, headers=headers).status_code == 404
 
@@ -34,14 +36,22 @@ def test_department_input_is_validated(client, auth):
     headers = auth(ADMIN_EMAIL)
     lower = client.post(
         f"{ADMIN}/departments",
-        json={"code": "phys", "name_ar": "الفيزياء", "name_en": "Physics"},
+        json={"college_id": 2, "code": "phys", "name_ar": "الفيزياء", "name_en": "Physics"},
         headers=headers,
     )
     assert lower.json()["error"]["code"] == "VALIDATION_ERROR"
     duplicate = client.post(
-        f"{ADMIN}/departments", json={"code": "CS", "name_ar": "جديد", "name_en": "New"}, headers=headers
+        f"{ADMIN}/departments",
+        json={"college_id": 1, "code": "SE", "name_ar": "جديد", "name_en": "New"},
+        headers=headers,
     )
     assert (duplicate.status_code, duplicate.json()["error"]["code"]) == (409, "CONFLICT")
+    unknown = client.post(
+        f"{ADMIN}/departments",
+        json={"college_id": 99, "code": "PHYS", "name_ar": "الفيزياء", "name_en": "Physics"},
+        headers=headers,
+    )
+    assert (unknown.status_code, unknown.json()["error"]["code"]) == (422, "INVALID_REFERENCE")
 
 
 def test_office_crud_and_deleting_an_office_unassigns_its_professors(client, auth, db):
@@ -120,7 +130,7 @@ def test_student_account_lifecycle(client, auth):
         json={"department_id": 1, "password": "Another-pass-2"},
         headers=headers,
     )
-    assert moved.json()["department"]["code"] == "CS"
+    assert moved.json()["department"]["code"] == "SE"
     assert (
         client.post(
             "/api/v1/auth/login", json={"email": new["email"], "password": "Another-pass-2"}

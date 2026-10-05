@@ -40,6 +40,17 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
+/** Opens the department menu (a sheet listing departments under their college). */
+async function openDepartmentMenu(page: Page) {
+  await page.getByRole('button', { name: /^Department, / }).click();
+  await expect(page.getByRole('dialog', { name: 'Department' })).toBeVisible();
+}
+
+async function shoot(page: Page, name: string) {
+  await page.waitForTimeout(600); // let the sheet finish sliding up
+  await page.screenshot({ path: `${SHOTS}/${name}.png` });
+}
+
 async function fillAccount(page: Page, who: { ar: string; en: string; email: string }) {
   await page.getByLabel('Name in Arabic').fill(who.ar);
   await page.getByLabel('Name in English').fill(who.en);
@@ -54,10 +65,12 @@ test('a student creates an account and lands on Home', async ({ browser }) => {
   await fillAccount(page, {
     ar: 'رنا القحطاني',
     en: 'Rana Al-Qahtani',
-    email: 'r.alqahtani@university.example',
+    email: '4519001@upm.edu.sa',
   });
-  await page.getByRole('button', { name: 'Information Systems' }).click();
-  await page.getByLabel('University number').fill('s2001');
+  await expect(page.getByText('University number: 4519001')).toBeVisible();
+  await openDepartmentMenu(page);
+  await shoot(page, 'en-1-department-menu');
+  await page.getByRole('radio', { name: 'Cybersecurity and Forensic Computing' }).click();
   await page.getByRole('button', { name: 'Year 2' }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
 
@@ -66,9 +79,9 @@ test('a student creates an account and lands on Home', async ({ browser }) => {
   expect(
     sql(
       "SELECT CONCAT(u.role, '/', u.is_active, '/', s.university_no, '/', s.study_year) FROM users u " +
-        "JOIN students s ON s.student_id = u.user_id WHERE u.email = 'r.alqahtani@university.example'",
+        "JOIN students s ON s.student_id = u.user_id WHERE u.email = '4519001@upm.edu.sa'",
     ),
-  ).toBe('student/1/S2001/2');
+  ).toBe('student/1/4519001/2');
 });
 
 test('a professor asks for an account; it works once the admin activates it', async ({
@@ -80,20 +93,19 @@ test('a professor asks for an account; it works once the admin activates it', as
   await fillAccount(page, {
     ar: 'منصور الفرج',
     en: 'Mansour Al-Faraj',
-    email: 'm.alfaraj@university.example',
+    email: 'm.alfaraj@upm.edu.sa',
   });
-  await page.getByRole('button', { name: 'Computer Science' }).click();
+  await openDepartmentMenu(page);
+  await page.getByRole('radio', { name: 'Software Engineering' }).click();
   await page.getByRole('button', { name: 'Send request' }).click();
   await expect(page.getByText('Request sent', { exact: true })).toBeVisible();
   expect(
-    sql(
-      "SELECT CONCAT(role, '/', is_active) FROM users WHERE email = 'm.alfaraj@university.example'",
-    ),
+    sql("SELECT CONCAT(role, '/', is_active) FROM users WHERE email = 'm.alfaraj@upm.edu.sa'"),
   ).toBe('professor/0');
 
   // Before activation, signing in explains why it does not work.
   await page.getByRole('button', { name: 'Back to sign in' }).click();
-  await signIn(page, 'm.alfaraj@university.example', 'a-long-password');
+  await signIn(page, 'm.alfaraj@upm.edu.sa', 'a-long-password');
   await expect(page.getByText(/^This account is not active yet/)).toBeVisible();
 
   // The admin finds the request marked "Not active" and activates it.
@@ -105,9 +117,9 @@ test('a professor asks for an account; it works once the admin activates it', as
   await admin.getByRole('button', { name: 'Account active', exact: true }).click();
   await admin.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(admin.getByText('Saved', { exact: true })).toBeVisible();
-  expect(sql("SELECT is_active FROM users WHERE email = 'm.alfaraj@university.example'")).toBe('1');
+  expect(sql("SELECT is_active FROM users WHERE email = 'm.alfaraj@upm.edu.sa'")).toBe('1');
 
-  await signIn(page, 'm.alfaraj@university.example', 'a-long-password');
+  await signIn(page, 'm.alfaraj@upm.edu.sa', 'a-long-password');
   await expect(page).toHaveURL(/\/staff\/status$/);
 });
 
@@ -115,16 +127,17 @@ test('Arabic sign-up form, and the domain rule', async ({ browser }) => {
   const page = await fresh(browser, 'ar');
   await page.getByRole('button', { name: 'جديد في موجود؟ أنشئ حسابًا' }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await field(page, 'البريد الجامعي').fill('rana@gmail.com');
+  await field(page, 'البريد الجامعي').fill('4519002@gmail.com');
   await page.setViewportSize({ width: 360, height: 1500 }); // the whole form in one picture
   await page.screenshot({ path: `${SHOTS}/ar-sign-up.png` });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.getByLabel('الاسم بالعربية').fill('رنا');
   await page.getByLabel('الاسم بالإنجليزية').fill('Rana');
   await page.getByLabel('كلمة المرور (8 أحرف على الأقل)').fill('a-long-password');
-  await page.getByRole('button', { name: 'نظم المعلومات' }).click();
-  await page.getByLabel('الرقم الجامعي').fill('S2002');
+  await page.getByRole('button', { name: /^القسم، / }).click();
+  await page.getByRole('radio', { name: 'الأمن السيبراني والحوسبة الجنائية' }).click();
   await page.getByRole('button', { name: 'إنشاء الحساب' }).click();
-  await expect(page.getByText('يمكن إنشاء حساب بالبريد الجامعي فقط.').first()).toBeVisible();
-  expect(sql("SELECT COUNT(*) FROM users WHERE email = 'rana@gmail.com'")).toBe('0');
+  // Caught before sending, next to the email field.
+  await expect(page.getByText('استخدم بريدك الجامعي المنتهي بـ @upm.edu.sa.')).toBeVisible();
+  expect(sql("SELECT COUNT(*) FROM users WHERE email = '4519002@gmail.com'")).toBe('0');
 });

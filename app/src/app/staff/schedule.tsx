@@ -1,7 +1,8 @@
 /**
  * Weekly schedule editor: the professor's office hours and classes for Sunday to Thursday,
  * added, edited and deleted in a sheet, plus the appointment length (15 or 30 minutes).
- * Times are Riyadh times on a 15-minute grid; overlaps are refused by the API.
+ * Times are Riyadh times on a 15-minute grid, picked on the 12-hour clock (hour, minutes,
+ * AM/PM); overlaps are refused by the API.
  */
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -25,10 +26,11 @@ import { SkeletonRow } from '@/components/Placeholders';
 import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
-import { minutesOfDay } from '@/lib/format';
+import { clockText, minutesOfDay } from '@/lib/format';
 import { isQuarterHour } from '@/lib/validation';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
@@ -37,8 +39,9 @@ const DAYS = [0, 1, 2, 3, 4];
 const EMPTY: BlockInput = {
   kind: 'office_hours',
   day_of_week: 0,
-  start_time: '',
-  end_time: '',
+  // A sensible first guess; the pickers change it in a tap or two.
+  start_time: '10:00',
+  end_time: '11:00',
   label: null,
 };
 
@@ -55,8 +58,8 @@ export default function ScheduleScreen() {
 
   const line = (block: BlockInput) =>
     t('prof.block_line', {
-      start: block.start_time,
-      end: block.end_time,
+      start: clockText(block.start_time, t),
+      end: clockText(block.end_time, t),
       kind: block.kind === 'office_hours' ? t('prof.office_hours') : t('prof.class'),
     }) + (block.label ? ` (${block.label})` : '');
 
@@ -234,21 +237,17 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
             />
           ))}
         </View>
-        <TextField
+        <TimePicker
           label={t('schedule.start')}
           value={block.start_time}
-          onChangeText={(value) => update({ start_time: value.trim() })}
+          onChange={(value) => update({ start_time: value })}
           error={showErrors ? (startError ?? undefined) : undefined}
-          keyboardType="numbers-and-punctuation"
-          maxLength={5}
         />
-        <TextField
+        <TimePicker
           label={t('schedule.end')}
           value={block.end_time}
-          onChangeText={(value) => update({ end_time: value.trim() })}
+          onChange={(value) => update({ end_time: value })}
           error={showErrors ? (endError ?? undefined) : undefined}
-          keyboardType="numbers-and-punctuation"
-          maxLength={5}
         />
         <TextField
           label={t('schedule.label')}
