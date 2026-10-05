@@ -8,6 +8,7 @@
  */
 import { useRef, useState } from 'react';
 import { FlatList, Platform, ScrollView, StyleSheet, View, type TextInput } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,7 +17,6 @@ import {
   useDepartmentProfessors,
   useNextAppointment,
   usePins,
-  usePinToggle,
   useProfessorSearch,
 } from '@/api/queries';
 import type { ProfessorSummary } from '@/api/types';
@@ -26,7 +26,6 @@ import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { useToast } from '@/components/Toast';
 import {
   ConnectionNotice,
   NextAppointmentCard,
@@ -34,10 +33,11 @@ import {
   SectionError,
 } from '@/features/home/HomeParts';
 import { useStatusAnnouncement } from '@/features/home/useStatusAnnouncement';
+import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
 import { greetingKey } from '@/lib/format';
 import { useDebounced, useNow, useOnline } from '@/lib/hooks';
-import { departmentName, firstName, professorName } from '@/lib/names';
+import { departmentName, firstName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 
@@ -62,7 +62,6 @@ export default function HomeScreen() {
   const user = useUser();
   const now = useNow();
   const online = useOnline();
-  const toast = useToast();
   const searchRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const searchText = useDebounced(query);
@@ -72,20 +71,12 @@ export default function HomeScreen() {
   const pins = usePins();
   const departmentList = useDepartmentProfessors(department?.department_id ?? 0, language);
   const next = useNextAppointment();
-  const search = useProfessorSearch(searchText, language);
-  const pinToggle = usePinToggle();
+  const search = useProfessorSearch({ query: searchText }, language);
   const announcement = useStatusAnnouncement(pins.data);
 
-  const togglePin = (professor: ProfessorSummary, pin: boolean) => {
-    const name = professorName(professor, language, t);
-    pinToggle.mutate(
-      { professor, pin },
-      {
-        onSuccess: () => toast(t(pin ? 'home.pinned' : 'home.unpinned', { name })),
-        onError: () => toast(t('home.pin_failed')),
-      },
-    );
-  };
+  const togglePin = usePinWithToast();
+  const openProfessor = (professor: ProfessorSummary) =>
+    router.push(`/professors/${professor.professor_id}`);
 
   // The last known data stays visible offline, labelled with when it was fetched.
   const lastUpdated = Math.max(pins.dataUpdatedAt, departmentList.dataUpdatedAt);
@@ -143,7 +134,12 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.pinnedRow}
               >
                 {pins.data.map((professor) => (
-                  <PinnedCard key={professor.professor_id} professor={professor} now={now} />
+                  <PinnedCard
+                    key={professor.professor_id}
+                    professor={professor}
+                    now={now}
+                    onPress={openProfessor}
+                  />
                 ))}
               </ScrollView>
             ) : (
@@ -207,7 +203,9 @@ export default function HomeScreen() {
       contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
       data={rows}
       keyExtractor={(professor) => String(professor.professor_id)}
-      renderItem={({ item }) => <ProfessorRow professor={item} now={now} onTogglePin={togglePin} />}
+      renderItem={({ item }) => (
+        <ProfessorRow professor={item} now={now} onPress={openProfessor} onTogglePin={togglePin} />
+      )}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       keyboardShouldPersistTaps="handled"

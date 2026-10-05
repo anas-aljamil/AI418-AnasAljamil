@@ -46,7 +46,7 @@ export function SkeletonRow() {
 
 interface EmptyStateProps {
   title: string;
-  body: string;
+  body?: string;
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -83,9 +83,11 @@ export function EmptyState({ title, body, actionLabel, onAction }: EmptyStatePro
       <Text variant="title" style={styles.center}>
         {title}
       </Text>
-      <Text color="muted" style={styles.center}>
-        {body}
-      </Text>
+      {body ? (
+        <Text color="muted" style={styles.center}>
+          {body}
+        </Text>
+      ) : null}
       {actionLabel && onAction ? <Button label={actionLabel} onPress={onAction} /> : null}
     </View>
   );

@@ -8,5 +8,10 @@ export default function Index() {
   const { state } = useAuth();
   if (!isLanguageChosen()) return <Redirect href="/language" />;
   if (state.status !== 'signedIn') return <Redirect href="/sign-in" />;
-  return <Redirect href={state.user.role === 'student' ? '/home' : '/staff'} />;
+  const home = {
+    student: '/home',
+    professor: '/staff/status',
+    admin: '/admin/departments',
+  } as const;
+  return <Redirect href={home[state.user.role]} />;
 }

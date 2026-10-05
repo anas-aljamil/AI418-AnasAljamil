@@ -32,7 +32,14 @@ export interface Me {
   full_name_en: string;
   preferred_locale: string;
   student?: { university_no: string; study_year: number; department: Department } | null;
-  professor?: { honorific: Honorific; department: Department; office: Office | null } | null;
+  professor?: {
+    honorific: Honorific;
+    academic_rank: Rank;
+    slot_minutes: 15 | 30;
+    open_messages: boolean;
+    department: Department;
+    office: Office | null;
+  } | null;
 }
 
 export interface TokenResponse {
@@ -70,17 +77,86 @@ export interface ProfessorSummary {
 export type AppointmentStatus =
   'pending' | 'approved' | 'declined' | 'cancelled' | 'completed' | 'no_show';
 
+export interface Person {
+  user_id: number;
+  full_name_ar: string;
+  full_name_en: string;
+}
+
 export interface Appointment {
   appointment_id: number;
   status: AppointmentStatus;
   starts_at: string;
   ends_at: string;
-  topic: string | null;
-  professor: {
-    user_id: number;
-    full_name_ar: string;
-    full_name_en: string;
-    honorific: Honorific;
-    office: Office | null;
-  };
+  /** Cancellation closes at this instant (1 hour before the start). */
+  cancel_deadline: string;
+  topic: Topic | null;
+  note: string | null;
+  student: Person;
+  professor: Person & { honorific: Honorific; office: Office | null };
+}
+
+export type Topic = 'assignment' | 'exam_review' | 'advising' | 'other';
+export type Rank = 'lecturer' | 'assistant_professor' | 'associate_professor' | 'professor';
+export type ManualStatus = 'in_office' | 'in_class' | 'busy' | 'away';
+
+export interface Block {
+  block_id: number;
+  kind: 'office_hours' | 'class';
+  day_of_week: number; // 0 = Sunday ... 4 = Thursday
+  start_time: string; // "HH:MM", Riyadh
+  end_time: string;
+  label: string | null;
+}
+
+export interface ProfessorDetail extends ProfessorSummary {
+  academic_rank: Rank;
+  slot_minutes: 15 | 30;
+  open_messages: boolean;
+  today: { date: string; day_of_week: number; now_local_time: string; blocks: Block[] };
+}
+
+export interface Slot {
+  starts_at: string;
+  ends_at: string;
+  local_time: string;
+  available: boolean;
+  reason: 'past' | 'taken' | null;
+}
+
+export interface DaySlots {
+  professor_id: number;
+  date: string;
+  slot_minutes: number;
+  slots: Slot[];
+}
+
+/** GET/POST /me/status: the professor's own effective status. */
+export interface MyStatus extends ProfessorStatus {
+  schedule_status: StatusKey;
+}
+
+interface Account {
+  user_id: number;
+  email: string;
+  full_name_ar: string;
+  full_name_en: string;
+  preferred_locale: 'ar' | 'en';
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminProfessor extends Account {
+  department: Department;
+  office: Office | null;
+  honorific: Honorific;
+  academic_rank: Rank;
+  slot_minutes: 15 | 30;
+  open_messages: boolean;
+}
+
+export interface AdminStudent extends Account {
+  university_no: string;
+  department: Department;
+  study_year: number;
 }

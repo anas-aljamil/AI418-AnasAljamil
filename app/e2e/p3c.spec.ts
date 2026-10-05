@@ -105,6 +105,7 @@ test('"Is Dr. X in?" is answered within 3 s of opening the app, with no taps', a
   await page.reload();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole('heading', { name: strings.en.greeting })).toBeVisible();
+  await expect(page.getByLabel(strings.en.khalid).first()).toBeVisible();
 
   // Server unreachable: the last known statuses stay, with a notice and their time.
   await page.route('**/api/v1/**', (route) => route.abort());
@@ -141,13 +142,11 @@ test('a wrong password says what happened', async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
-test('a professor account lands on the notice until the professor screens arrive', async ({
-  page,
-}) => {
+test('a professor account lands on their status screen', async ({ page }) => {
   await start(page);
   await page.addInitScript(() => localStorage.setItem('mawjood.language', 'ar'));
   await page.goto('/sign-in');
   await signIn(page, 'ar', 'n.alharbi@university.example');
-  await expect(page).toHaveURL(/\/staff$/);
-  await expect(page.getByText('شاشاتك قادمة قريبًا')).toBeVisible();
+  await expect(page).toHaveURL(/\/staff\/status$/);
+  await expect(page.getByRole('heading', { name: 'حالتي' })).toBeVisible();
 });

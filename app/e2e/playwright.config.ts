@@ -7,6 +7,8 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: '.',
+  // The tests share one seeded database (bookings, statuses), so they run one at a time.
+  workers: 1,
   timeout: 60_000,
   reporter: 'list',
   use: {

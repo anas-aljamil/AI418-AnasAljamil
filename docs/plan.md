@@ -66,6 +66,12 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - professor taps a status → the student view updates within one poll.
 - Jest tests for the booking flow (selection kept on error), cancel-window logic and Arabic normalization. Section 12 checklist per screen.
 
+- **Result (2026-10-05):** met on the web build against the real API and MySQL (`app/e2e/p4.spec.ts`):
+  - booking takes 4 steps (Book, day, time, confirm); a student books, the professor approves, and the student's list shows Approved at the next poll;
+  - a professor's one-tap status change reaches the student's open profile within one poll (20 s);
+  - the admin creates, edits and deletes a department, an office, a professor and a student, each checked in MySQL.
+  - **Admin area:** phone screens instead of a desktop web layout (product focus). Jest covers the booking sheet (selection kept on error), the cancel window, search filters and admin validation. Section 12 report: [design-qa.md](design-qa.md); phone checks #27-#40 in [phone-checklist.md](phone-checklist.md).
+
 ### P5: Chat, notifications, settings
 - Conversations and messages:
   - eligibility rule;

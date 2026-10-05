@@ -75,3 +75,24 @@ def test_connections_use_utc_and_utf8mb4(db):
         text("SELECT @@session.time_zone, @@character_set_connection, @@collation_connection")
     ).one()
     assert (zone, charset, collation) == ("+00:00", "utf8mb4", "utf8mb4_0900_ai_ci")
+
+
+def test_optional_text_fields_accept_an_explicit_null(client, auth):
+    """Clients send "note": null for an empty optional field; that is not a server error."""
+    from tests.conftest import KHALID, LAMA, NORA
+
+    booked = client.post(
+        "/api/v1/appointments",
+        json={"professor_id": NORA, "starts_at": "2026-10-11T10:15:00+03:00", "topic": None, "note": None},
+        headers=auth(LAMA),
+    )
+    assert booked.status_code == 201, booked.text
+    assert booked.json()["note"] is None
+    status = client.post("/api/v1/me/status", json={"status": "busy", "note": None}, headers=auth(KHALID))
+    assert status.status_code == 200, status.text
+    block = client.post(
+        "/api/v1/me/schedule",
+        json={"day_of_week": 4, "start_time": "15:00", "end_time": "16:00", "label": None},
+        headers=auth(KHALID),
+    )
+    assert block.status_code == 201, block.text

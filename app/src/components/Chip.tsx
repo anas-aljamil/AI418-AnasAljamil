@@ -9,17 +9,31 @@ interface ChipProps {
   selected?: boolean;
   onPress?: () => void;
   disabled?: boolean;
+  /**
+   * Looks and is announced as unavailable but still reacts to a tap, so the screen can say
+   * why (DESIGN.md 7.5: unavailable times stay visible and explain themselves).
+   */
+  dimmed?: boolean;
+  accessibilityLabel?: string;
 }
 
 /** Fully rounded choice chip (topics, filters, presets). The hit area is at least 48 high. */
-export function Chip({ label, selected = false, onPress, disabled }: ChipProps) {
+export function Chip({
+  label,
+  selected = false,
+  onPress,
+  disabled,
+  dimmed,
+  accessibilityLabel,
+}: ChipProps) {
   const { colors } = useTheme();
   const visualHeight = 40;
   return (
     <Pressable
       accessibilityRole="button"
       aria-selected={selected}
-      aria-disabled={!!disabled}
+      aria-disabled={!!disabled || !!dimmed}
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       disabled={disabled}
       hitSlop={(touchTarget - visualHeight) / 2}
@@ -29,7 +43,7 @@ export function Chip({ label, selected = false, onPress, disabled }: ChipProps) 
           minHeight: visualHeight,
           backgroundColor: selected ? colors.primary : colors.surface,
           borderColor: selected ? colors.primary : colors.line,
-          opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+          opacity: disabled || dimmed ? 0.45 : pressed ? 0.85 : 1,
         },
       ]}
     >

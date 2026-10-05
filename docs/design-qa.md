@@ -18,3 +18,20 @@ Each item is marked **verified** (with how) or **needs a real phone** (with the 
 | Motion purposeful, reduced motion | **Verified** by review: the only motion is the door (status change) and press feedback, both honour reduced motion (P3b tests). |
 | All copy from i18n; buttons name their action | **Verified**: `strings.test.ts` (same keys, placeholders and no English words in the Arabic file); button labels such as "Pin Dr. Khalid Al-Otaibi", "Try again", "Sign out". |
 | Lighthouse | Not run: the web build is only the test harness now (product focus, DESIGN.md Section 11). |
+
+## P4: search, profile, booking, appointments, professor and admin screens (2026-10-05)
+
+| Section 12 item | Result |
+|---|---|
+| Answers its main question within 3 s | **Verified** on the web build: the profile shows the status at the top; Search shows statuses in each row; My status shows the current tile selected. On a phone: needs a real phone (#27, #35). |
+| One clear primary action | **Verified** by review: Book (profile), Book HH:MM (sheet), Cancel appointment (appointments), the status tiles (My status), Approve (requests), Add a block (schedule), Add (admin). |
+| Loading, empty, error and offline states | **Verified**: skeletons while loading; empty states for no search results, no appointments, no requests, nothing on a schedule day; a retry on every list error (Jest for search, booking and admin; Playwright for the flows). Offline: the same query layer as Home (P3c), so the last known data stays; needs a real phone (#20). |
+| Arabic (RTL) and English (LTR), no clipped Arabic | **Verified** on the web build: `docs/screenshots/p4/ar-*` and `en-*`. The timeline and the check badge now follow the reading direction on the web build too (`insetStart` / `insetEnd`). Phones: needs a real phone (#24, #28). |
+| Light and dark pass contrast | **Verified**: only theme tokens are used (lint); the timeline uses the status colours, which pass 3:1 on the surface. |
+| Nothing from Section 3 | **Verified** by review: cards only for appointments and the nameplate; flat rows elsewhere; no arrows in button text; no decorative motion beyond the door. |
+| 320 width and 200% text | Not measured at 320 px for the P4 screens (screenshots are at 360 px); by review, chips wrap and sheets scroll. 200% text: needs a real phone (#40). |
+| Screen reader; keyboard on web | **Verified**: roles and names on every control (Jest queries by role); request buttons name the student and time; unavailable times say "unavailable"; tiles are a radio group. TalkBack/VoiceOver: needs a real phone (#30, #35). |
+| Safe areas, Android back, keyboard | The profile's Book bar sits above the home indicator; sheets scroll with the keyboard. Needs a real phone (#28, #31). |
+| Motion purposeful, reduced motion | **Verified** by review: the booking moment (door opens, check) and the door on status changes are the only motion; reduced motion swaps instantly (Door component). Haptics only on status change and booking confirmed. |
+| All copy from i18n; buttons name their action | **Verified**: `strings.test.ts`; labels such as "Book 10:30", "Cancel appointment", "Approve: Lama Al-Shehri, Tomorrow 10:00". |
+| Lighthouse | Not run (web build is the test harness only). |

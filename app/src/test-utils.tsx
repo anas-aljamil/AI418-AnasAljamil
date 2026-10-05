@@ -34,7 +34,13 @@ export async function renderWithProviders(ui: React.ReactElement, language: Lang
         <ThemeProvider>
           <QueryClientProvider
             client={
-              new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+              new QueryClient({
+                defaultOptions: {
+                  // No retries, and no cache-cleanup timers left running after a test.
+                  queries: { retry: false, gcTime: Infinity },
+                  mutations: { gcTime: Infinity },
+                },
+              })
             }
           >
             <ToastProvider>{ui}</ToastProvider>

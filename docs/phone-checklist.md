@@ -49,13 +49,31 @@ Start from a fresh install of the app's data: in Expo Go, long-press the project
 | 25 | Tab bar | Look at the tab bar with the largest system text size | Labels are readable and not cut off; the bar sits above the home indicator or navigation bar | needs a real phone | needs a real phone |
 | 26 | Sign out | Profile → Sign out, then close and reopen the app | Sign-in screen; reopening does not sign you back in | needs a real phone | needs a real phone |
 
+## P4: search, profile, booking, appointments, professor and admin screens
+
+Sign in as the account named in each check (password `Mawjood-Demo-2026`). `l.alshehri@university.example` can book Dr. Noura; `s.almutairi@university.example` already has the maximum of 2 bookings with her.
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 27 | Profile in 1 tap | As Lama, tap Dr. Noura on Home | Her profile opens: door, name, rank, office, status, today's timeline | needs a real phone | needs a real phone |
+| 28 | Back | On the profile, use the back arrow, then the Android back gesture or button | Both return to Home; the arrow points toward the start edge (right in Arabic) | needs a real phone | needs a real phone |
+| 29 | Booking in 4 steps | Book, pick a day, pick a time, tap "Book HH:MM" | The door opens with a check, "Booked with ...", and a success vibration | needs a real phone | needs a real phone |
+| 30 | Unavailable times | In the booking sheet, tap a greyed-out time; with TalkBack/VoiceOver, swipe over it | It says why (taken or passed); the reader says "HH:MM, unavailable" | needs a real phone | needs a real phone |
+| 31 | Booking sheet and keyboard | Type in "Note for the professor" | The field stays above the keyboard; the sheet scrolls; Android back closes the keyboard first, then the sheet | needs a real phone | needs a real phone |
+| 32 | Booking limit | As Saad, try to book Dr. Noura | The limit message appears and the chosen day, time and topic stay selected | needs a real phone | needs a real phone |
+| 33 | Cancel | Appointments, Cancel appointment, then Cancel appointment again in the sheet | The appointment shows Cancelled; "Keep it" closes without cancelling | needs a real phone | needs a real phone |
+| 34 | Search filters | Search tab: tap In office, then a department | Results match; "Clear search and filters" resets everything | needs a real phone | needs a real phone |
+| 35 | One-tap status | As `k.alotaibi@university.example`, tap Busy; on another phone, Saad has Dr. Khalid's profile open | A light vibration; the tile is selected at once; Saad's screen shows Busy within about 20 s, and a screen reader announces it on Home | needs a real phone | needs a real phone |
+| 36 | Presets and note | Tap "Back in 15 min"; type a note and Save note | The status shows Away until the return time; students see the note on the profile | needs a real phone | needs a real phone |
+| 37 | Requests | As Dr. Noura after #29, open Requests, tap Approve | A toast confirms; Lama's Appointments shows Approved within about 20 s | needs a real phone | needs a real phone |
+| 38 | Schedule editor | Schedule, Add a block, enter 15:00 and 16:00 on Thursday, Save; open it again and Delete | The block appears and disappears; a wrong time such as 15:10 shows an error next to the field | needs a real phone | needs a real phone |
+| 39 | Admin forms | As `admin@university.example`, add a department with an invalid code, then a valid one; delete it | Errors show next to the fields and above Save; delete asks first | needs a real phone | needs a real phone |
+| 40 | Five tabs at 200% text | With the largest text size, look at the admin tab bar | All five labels readable, none clipped | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
-- **P4:**
-  - booking haptic;
-  - the professor's one-tap status change with haptic;
-  - Android back on every stack screen.
 - **P5:**
   - the chat composer stays above the keyboard;
-  - message bubbles in both directions.
+  - message bubbles in both directions;
+  - notification badges.
 - **P6:** a final pass of everything above.

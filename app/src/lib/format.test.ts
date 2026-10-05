@@ -1,5 +1,6 @@
 import {
   appointmentDay,
+  bookingDays,
   countdownKey,
   greetingKey,
   pluralCategory,
@@ -107,5 +108,37 @@ describe('Riyadh days, greetings and countdowns', () => {
       key: 'countdown.days_few',
       count: 6,
     });
+  });
+});
+
+describe('booking days (this week and next, Sunday to Thursday)', () => {
+  const dates = (now: string) => bookingDays(new Date(now)).map((d) => d.date);
+
+  it('on a Monday: the rest of this week, then all of next week', () => {
+    expect(dates('2026-10-05T07:00:00Z')).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-11',
+      '2026-10-12',
+      '2026-10-13',
+      '2026-10-14',
+      '2026-10-15',
+    ]);
+  });
+
+  it('on a Friday: next week only', () => {
+    expect(dates('2026-10-09T07:00:00Z')).toEqual([
+      '2026-10-11',
+      '2026-10-12',
+      '2026-10-13',
+      '2026-10-14',
+      '2026-10-15',
+    ]);
+  });
+
+  it('uses the Riyadh date: 22:00 UTC on Thursday is already Friday', () => {
+    expect(dates('2026-10-08T22:00:00Z')[0]).toBe('2026-10-11');
   });
 });

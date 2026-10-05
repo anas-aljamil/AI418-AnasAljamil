@@ -2,6 +2,8 @@
  * Language-aware formatting that does not depend on the device's Intl support
  * (Hermes on Android, iOS and browsers differ). Digits are always Western 0-9.
  */
+import type { TFunction } from 'i18next';
+
 import type { Language } from '@/theme/tokens';
 
 export type PluralCategory = 'one' | 'two' | 'few' | 'many' | 'other';
@@ -90,4 +92,59 @@ export function countdownKey(
     return { key: `countdown.minutes_${pluralCategory(language, minutes)}`, count: minutes };
   const hours = Math.floor(minutes / 60);
   return { key: `countdown.hours_${pluralCategory(language, hours)}`, count: hours };
+}
+
+/** "2026-10-11": the Riyadh calendar date of an instant (the API's `date` parameter). */
+export function riyadhDateKey(utc: Date): string {
+  return riyadhLocal(utc).toISOString().slice(0, 10);
+}
+
+/** Minutes since Riyadh midnight for an instant, or for an "HH:MM" schedule time. */
+export function minutesOfDay(at: Date | string): number {
+  if (typeof at === 'string') {
+    const [h = '0', m = '0'] = at.split(':');
+    return Number(h) * 60 + Number(m);
+  }
+  const local = riyadhLocal(at);
+  return local.getUTCHours() * 60 + local.getUTCMinutes();
+}
+
+export interface BookingDay {
+  date: string; // YYYY-MM-DD in Riyadh
+  weekday: number; // 0 = Sunday
+  dayOfMonth: number;
+}
+
+/**
+ * The days a student can book (DESIGN.md 7.5, CLAUDE.md Section 14): working days
+ * (Sunday-Thursday) from today until the Riyadh midnight that starts the Sunday after next.
+ */
+export function bookingDays(now: Date): BookingDay[] {
+  const today = riyadhLocal(now);
+  const start = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const weekStart = start - today.getUTCDay() * 86_400_000;
+  const days: BookingDay[] = [];
+  for (let at = start; at < weekStart + 14 * 86_400_000; at += 86_400_000) {
+    const day = new Date(at);
+    if (day.getUTCDay() <= 4) {
+      days.push({
+        date: day.toISOString().slice(0, 10),
+        weekday: day.getUTCDay(),
+        dayOfMonth: day.getUTCDate(),
+      });
+    }
+  }
+  return days;
+}
+
+/** "Today 10:30", "Tomorrow 10:30" or "Sunday 10:30" for an instant, in the UI language. */
+export function whenText(start: Date, now: Date, t: TFunction): string {
+  const day = appointmentDay(start, now);
+  return t(day.key, { time: day.time, day: t(`weekday.${day.weekday}`) });
+}
+
+/** "Sunday 4/10 10:30": weekday, day/month and Riyadh time, for dates outside the two weeks. */
+export function dateTimeText(start: Date, t: TFunction): string {
+  const local = riyadhLocal(start);
+  return `${t(`weekday.${local.getUTCDay()}`)} ${local.getUTCDate()}/${local.getUTCMonth() + 1} ${riyadhTime(start)}`;
 }

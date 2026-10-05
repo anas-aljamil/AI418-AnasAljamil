@@ -41,8 +41,19 @@ def _on_quarter_hour(value: time) -> time:
     return value
 
 
-OptionalText60 = Annotated[str | None, AfterValidator(_strip_or_none), Field(default=None, max_length=60)]
-OptionalText200 = Annotated[str | None, AfterValidator(_strip_or_none), Field(default=None, max_length=200)]
+def _optional_text(max_length: int):
+    """Optional free text: null or blank becomes None, and the length limit applies to the
+    string only (a limit on the whole `str | None` would be applied to None and crash)."""
+    return Annotated[
+        Annotated[str, Field(max_length=max_length)] | None,
+        AfterValidator(_strip_or_none),
+        Field(default=None),
+    ]
+
+
+OptionalText40 = _optional_text(40)
+OptionalText60 = _optional_text(60)
+OptionalText200 = _optional_text(200)
 QuarterHour = Annotated[time, AfterValidator(_on_quarter_hour)]
 Email = Annotated[str, Field(max_length=254, pattern=r"^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$")]
 Password = Annotated[str, Field(min_length=8, max_length=128)]
@@ -206,7 +217,7 @@ class BlockIn(BaseModel):
     day_of_week: int = Field(ge=0, le=4, description="0 = Sunday ... 4 = Thursday")
     start_time: QuarterHour
     end_time: QuarterHour
-    label: Annotated[str | None, AfterValidator(_strip_or_none), Field(default=None, max_length=40)]
+    label: OptionalText40
 
     @field_validator("end_time")
     @classmethod

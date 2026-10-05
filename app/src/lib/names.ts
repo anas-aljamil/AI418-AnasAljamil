@@ -41,3 +41,14 @@ export function officeText(office: Office | null, t: TFunction): string {
 export function spokenList(parts: (string | null | undefined)[], t: TFunction): string {
   return parts.filter(Boolean).join(t('common.separator'));
 }
+
+/** "Building A, floor 2, room 214" / "مبنى A، الطابق 2، غرفة 214". */
+export function officeFull(office: Office | null, t: TFunction): string {
+  return office
+    ? t('prof.office_full', {
+        building: office.building_code,
+        floor: office.floor,
+        room: office.room_number,
+      })
+    : t('office.none');
+}

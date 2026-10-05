@@ -208,6 +208,13 @@ Append entries as: date, decision, reason.
 2026-10-05, Screen-reader labels join their parts with the language's comma (", " / "، "), Reason: Arabic labels should not contain English punctuation.
 2026-10-05, Status changes of pinned professors are announced politely: AccessibilityInfo on Android and iOS, an aria-live region on the web build (React Native Web's announce does nothing), Reason: Section 5 live updates.
 
+2026-10-05, Admin area is phone screens (list, search, Add, a form sheet for create and edit, delete with confirmation), not a desktop layout, Reason: product focus on the phone app; the five tables fit one tab each.
+2026-10-05, Destructive actions (cancel an appointment, delete a block or a row) confirm in a bottom sheet with a danger button and a "keep" button, Reason: looks the same everywhere and works on the web build, where React Native's Alert does nothing.
+2026-10-05, Unavailable booking times stay visible, dimmed, named "09:00, unavailable" for screen readers, and explain why when tapped, Reason: DESIGN.md 7.5; the web build drops aria-disabled on a chip that still reacts to taps.
+2026-10-05, The booking day strip starts on today; the signature moment mounts the door closed, then opens it with a check badge and "Booked with Dr. X, Sunday 10:30", plus "the professor will approve or decline", Reason: bookings start as requests (pending), so the message says what happens next.
+2026-10-05, The "Today" timeline is a bar from the first to the last whole hour of the day's blocks (office hours in the in-office colour, classes in the in-class colour) with a now-marker, followed by the same blocks as text, running in the reading direction, Reason: colour never carries the meaning alone.
+2026-10-05, Professor status tiles are a radio group of four doors; presets are chips; the note is saved with the current status, Reason: one tap changes status; everything else is optional.
+
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking
  One clear primary action

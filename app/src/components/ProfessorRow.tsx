@@ -17,10 +17,12 @@ import { IconButton, ListRow } from './Surfaces';
 interface ProfessorRowProps {
   professor: ProfessorSummary;
   now: Date;
+  /** Opens the professor's profile (one tap from Home or Search). */
+  onPress?: (professor: ProfessorSummary) => void;
   onTogglePin?: (professor: ProfessorSummary, pin: boolean) => void;
 }
 
-export function ProfessorRow({ professor, now, onTogglePin }: ProfessorRowProps) {
+export function ProfessorRow({ professor, now, onPress, onTogglePin }: ProfessorRowProps) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
@@ -50,6 +52,7 @@ export function ProfessorRow({ professor, now, onTogglePin }: ProfessorRowProps)
           now={now}
         />
       }
+      onPress={onPress ? () => onPress(professor) : undefined}
       accessibilityLabel={spokenList([name, department, label, updated], t)}
       after={
         onTogglePin ? (

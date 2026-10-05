@@ -6,7 +6,16 @@
  * A visible Close button is always present; there is no gesture-only dismissal.
  */
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -37,6 +46,7 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
   const { colors, shadow } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   // Stays true while the closing animation runs; set during render when the sheet opens
   // (React's "adjust state while rendering" pattern) and cleared when the animation ends.
@@ -97,6 +107,7 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
                 backgroundColor: colors.surface,
                 boxShadow: shadow,
                 paddingBottom: insets.bottom + space.md,
+                maxHeight: height * 0.92,
               },
               sheetStyle,
             ]}
@@ -105,7 +116,14 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
             <Text variant="title" accessibilityRole="header">
               {title}
             </Text>
-            {children}
+            {/* Long content (the booking sheet) scrolls; the title and Close stay in place. */}
+            <ScrollView
+              style={styles.body}
+              contentContainerStyle={styles.bodyContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {children}
+            </ScrollView>
             <Button label={t('common.close')} variant="quiet" onPress={onClose} />
           </Animated.View>
         </KeyboardAvoidingView>
@@ -126,6 +144,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  body: { flexShrink: 1 },
+  bodyContent: { gap: space.sm },
   grabber: {
     width: 40,
     height: 4,

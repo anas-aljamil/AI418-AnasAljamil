@@ -1,5 +1,5 @@
 /** The pieces of the student home screen (DESIGN.md 7.2, design plan Direction A). */
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import CloudOff from 'lucide-react-native/icons/cloud-off';
 
@@ -20,7 +20,15 @@ function useLanguage(): Language {
 }
 
 /** A pinned professor as a small nameplate card in the sideways "My professors" row. */
-export function PinnedCard({ professor, now }: { professor: ProfessorSummary; now: Date }) {
+export function PinnedCard({
+  professor,
+  now,
+  onPress,
+}: {
+  professor: ProfessorSummary;
+  now: Date;
+  onPress: (professor: ProfessorSummary) => void;
+}) {
   const { t } = useTranslation();
   const language = useLanguage();
   const name = professorName(professor, language, t);
@@ -33,20 +41,22 @@ export function PinnedCard({ professor, now }: { professor: ProfessorSummary; no
     t,
   );
   return (
-    <Card
-      style={styles.pinned}
-      accessible
+    <Pressable
+      onPress={() => onPress(professor)}
+      accessibilityRole="button"
       accessibilityLabel={spokenList([name, label, updated], t)}
     >
-      <Door status={door} size={40} />
-      <Text variant="label" weight="semibold" numberOfLines={2}>
-        {name}
-      </Text>
-      <Text variant="label">{label}</Text>
-      <Text variant="caption" color="muted">
-        {updated}
-      </Text>
-    </Card>
+      <Card style={styles.pinned}>
+        <Door status={door} size={40} />
+        <Text variant="label" weight="semibold" numberOfLines={2}>
+          {name}
+        </Text>
+        <Text variant="label">{label}</Text>
+        <Text variant="caption" color="muted">
+          {updated}
+        </Text>
+      </Card>
+    </Pressable>
   );
 }
 

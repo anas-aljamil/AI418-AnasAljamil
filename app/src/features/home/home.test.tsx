@@ -62,7 +62,10 @@ const appointment: Appointment = {
   status: 'pending',
   starts_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
   ends_at: new Date(Date.now() + 2 * 86_400_000 + 900_000).toISOString(),
+  cancel_deadline: new Date(Date.now() + 2 * 86_400_000 - 3_600_000).toISOString(),
   topic: null,
+  note: null,
+  student: { user_id: 9, full_name_ar: 'سعد المطيري', full_name_en: 'Saad Al-Mutairi' },
   professor: {
     user_id: 1,
     full_name_ar: 'نورة الحربي',
@@ -136,14 +139,12 @@ it('says what went wrong when a section cannot load, and retries', async () => {
 it('searches as you type and pins from the results', async () => {
   serve({
     ...standard,
-    'GET /professors?q=khalid': page([khalid]),
+    'GET /professors?lang=en&limit=50&q=khalid': page([khalid]),
     'PUT /me/pins/2': undefined,
   });
   await renderWithProviders(<HomeScreen />);
   await fireEvent.changeText(screen.getByLabelText('Search professors'), 'khalid');
-  await waitFor(() =>
-    expect(mockApi).toHaveBeenCalledWith(expect.stringContaining('/professors?q=khalid')),
-  );
+  await waitFor(() => expect(mockApi).toHaveBeenCalledWith(expect.stringContaining('q=khalid')));
   expect(screen.getByText('Results')).toBeTruthy();
   await fireEvent.press(await screen.findByRole('button', { name: 'Pin Dr. Khalid Al-Otaibi' }));
   await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/me/pins/2', 'PUT'));
@@ -151,7 +152,7 @@ it('searches as you type and pins from the results', async () => {
 });
 
 it('says so when no professor matches', async () => {
-  serve({ ...standard, 'GET /professors?q=zzz': page([]) });
+  serve({ ...standard, 'GET /professors?lang=en&limit=50&q=zzz': page([]) });
   await renderWithProviders(<HomeScreen />);
   await fireEvent.changeText(screen.getByLabelText('Search professors'), 'zzz');
   expect(await screen.findByText(/No professor matches “zzz”/)).toBeTruthy();
