@@ -1,4 +1,4 @@
-# AI 418 Project — [not yet]
+# AI 418 Project — Mawjood (موجود): is the professor in?
  
 ## Team
 | Name | Student ID | Role this milestone |
@@ -11,11 +11,12 @@
 
  
 ## The problem
-One paragraph. A real task that real people do badly today.
-Not “we will build an app for X.”
+Students walk to a professor's office during the posted office hours and find it empty: the professor is in a meeting, running late, or has moved the hours, and nothing told the student before the trip. Office hours on a door or a syllabus say when a professor should be in, not whether they are in right now. Any fix also has to cost professors almost nothing. A status that needs constant updating will not be kept up to date, so it must take one tap, or none at all when the weekly timetable is right.
  
 ## Who this is for
-Who specifically. Not “everyone” or “users.”
+- **Students first:** undergraduates at a Saudi university (the app is Arabic first, with English), who want to know before they walk over whether a professor is in the office, then book a slot or send a short message.
+- **Professors:** faculty who hold weekly office hours and want to tell students where they are with one tap, or not at all (the timetable answers for them), and who approve or decline booking requests.
+- **Department administrators:** they keep departments, offices and accounts up to date.
  
 ## Milestones
 - [ ] M1 (Week 5) — Understand: interviews, personas, storyboard, requirements
