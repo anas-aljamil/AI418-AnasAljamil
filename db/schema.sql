@@ -39,17 +39,42 @@ DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS offices;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS departments;
+DROP TABLE IF EXISTS colleges;
+
+-- -----------------------------------------------------------------------------
+-- colleges: the university's colleges; every department belongs to one. The
+-- college name lives here, not on departments, so it is stored once (3NF).
+-- -----------------------------------------------------------------------------
+CREATE TABLE colleges (
+    college_id  INT          NOT NULL AUTO_INCREMENT,
+    code        VARCHAR(10)  NOT NULL,
+    name_ar     VARCHAR(100) NOT NULL,
+    name_en     VARCHAR(100) NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
+    PRIMARY KEY (college_id),
+    CONSTRAINT uq_colleges_code    UNIQUE (code),
+    CONSTRAINT uq_colleges_name_ar UNIQUE (name_ar),
+    CONSTRAINT uq_colleges_name_en UNIQUE (name_en),
+    CONSTRAINT ck_colleges_code    CHECK (REGEXP_LIKE(code, '^[A-Z]{2,10}$', 'c')),
+    CONSTRAINT ck_colleges_name_ar CHECK (CHAR_LENGTH(name_ar) >= 2),
+    CONSTRAINT ck_colleges_name_en CHECK (CHAR_LENGTH(name_en) >= 2)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
 -- departments: academic departments that professors and students belong to.
+-- A college with departments cannot be deleted (RESTRICT).
 -- -----------------------------------------------------------------------------
 CREATE TABLE departments (
     department_id  INT          NOT NULL AUTO_INCREMENT,
+    college_id     INT          NOT NULL,
     code           VARCHAR(10)  NOT NULL,
     name_ar        VARCHAR(100) NOT NULL,
     name_en        VARCHAR(100) NOT NULL,
     created_at     DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     PRIMARY KEY (department_id),
+    KEY ix_departments_college (college_id),
+    CONSTRAINT fk_departments_college FOREIGN KEY (college_id)
+        REFERENCES colleges (college_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT uq_departments_code    UNIQUE (code),
     CONSTRAINT uq_departments_name_ar UNIQUE (name_ar),
     CONSTRAINT uq_departments_name_en UNIQUE (name_en),

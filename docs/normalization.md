@@ -21,6 +21,7 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 | New `offices` table | Storing building, floor and room on `professors` creates the transitive dependency `professor_id -> (building, room) -> floor`. Shared offices would also repeat the same location on several rows (an update anomaly). |
 | `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class"), not only when they hold office hours. Individual bookable slots are not stored: they are fully determined by a block plus `slot_minutes`, so storing them would be redundant. |
 | New `conversations` table; `messages.sender_role` replaces sender/recipient ids | Storing both `sender_id` and `recipient_id` on each message repeats the pair on every row, and allows a message whose participants contradict its thread. With a conversation row, the pair is stored once, and `sender_role` identifies the sender among exactly two participants. |
+| New `colleges` table (added 2026-10-05) | Departments are grouped by college. Putting the college name on `departments` would create `department_id -> college -> college name` and repeat each name for every department of the college. |
 | New `pins` table | Needed by the student home screen ("My professors"). It is an M:N relationship, so it gets its own table. |
 | Admin has no subtype table | Admins have no attributes beyond `users`. |
 
@@ -28,9 +29,15 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 
 Surrogate keys (`*_id`) are written in **bold** where they are the primary key. Every FD below has a candidate key on its left-hand side, which is what makes each table BCNF.
 
+### colleges
+- Candidate keys: **college_id**, `code`, `name_ar`, `name_en` (all `UNIQUE`).
+- FDs: `college_id -> code, name_ar, name_en, created_at`. Each alternate key also determines the row.
+- Every determinant is a candidate key, so the table is in **BCNF**.
+
 ### departments
 - Candidate keys: **department_id**, `code`, `name_ar`, `name_en` (all `UNIQUE`).
-- FDs: `department_id -> code, name_ar, name_en, created_at`. Each alternate key also determines the row.
+- FDs: `department_id -> college_id, code, name_ar, name_en, created_at`. Each alternate key also determines the row.
+- The college *name* is not stored here; it is reached through `college_id`. Storing it would create `department_id -> college_id -> college name`, a transitive dependency (and the name would repeat for every department of the college). That is why colleges got their own table when departments were grouped by college.
 - Every determinant is a candidate key, so the table is in **BCNF**.
 
 ### users
@@ -61,7 +68,7 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 - Candidate keys: **block_id**, `(professor_id, day_of_week, start_time)`.
 - FDs: `block_id -> professor_id, kind, day_of_week, start_time, end_time, label`.
 - 1NF: the weekly timetable is one row per block, not repeating columns such as `sun_start` or `mon_start`.
-- `label` (a course code such as `CS 211`) has no dependent attributes. If course titles were ever needed, a `courses` table would be added rather than storing titles here.
+- `label` (a course code such as `SE 211`) has no dependent attributes. If course titles were ever needed, a `courses` table would be added rather than storing titles here.
 - **BCNF**.
 
 ### status_overrides
@@ -139,7 +146,7 @@ Storing any of these would introduce update anomalies: the stored copy would dis
 ## 7. Anomalies the design prevents (examples)
 
 - **Update anomaly**: a department is renamed in one place, `departments.name_en`, and every professor and student shows the new name. A professor moves office by changing one `office_id`, and the floor follows automatically.
-- **Insertion anomaly**: a new office or department can be recorded before anyone is assigned to it (office 7 and the BUS department demonstrate this in the seed).
+- **Insertion anomaly**: a new office or department can be recorded before anyone is assigned to it (office 7 and departments 7-12 demonstrate this in the seed).
 - **Deletion anomaly**: deleting a professor's last appointment does not lose the professor's schedule or office. Deleting a department that still has people is refused (`ON DELETE RESTRICT`) rather than silently orphaning or deleting them.
 
 ## 8. MySQL-specific decisions

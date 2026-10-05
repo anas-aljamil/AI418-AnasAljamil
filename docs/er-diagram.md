@@ -13,6 +13,7 @@ A rendered export of the Mermaid diagram is in [`er-diagram.png`](er-diagram.png
 
 ```mermaid
 erDiagram
+    COLLEGES ||--|{ DEPARTMENTS : contains
     DEPARTMENTS ||--o{ PROFESSORS : employs
     DEPARTMENTS ||--o{ STUDENTS : "majors in"
     USERS ||--o| STUDENTS : "is a"
@@ -31,8 +32,16 @@ erDiagram
     APPOINTMENTS |o--o{ NOTIFICATIONS : "is about"
     CONVERSATIONS |o--o{ NOTIFICATIONS : "is about"
 
+    COLLEGES {
+        int college_id PK
+        varchar code UK "upper case, 2-10 letters"
+        varchar name_ar UK
+        varchar name_en UK
+        datetime created_at "default UTC now"
+    }
     DEPARTMENTS {
         int department_id PK
+        int college_id FK
         varchar code UK "upper case, 2-10 letters"
         varchar name_ar UK
         varchar name_en UK
@@ -81,7 +90,7 @@ erDiagram
         tinyint day_of_week "0 Sun - 4 Thu"
         time start_time "Riyadh, 15-min grid"
         time end_time "after start_time"
-        varchar label "nullable, e.g. CS 211"
+        varchar label "nullable, e.g. SE 211"
     }
     STATUS_OVERRIDES {
         int override_id PK
@@ -142,7 +151,8 @@ erDiagram
 |---|---|---|---|
 | User **is a** Student | 1 : 0..1 | Student total; User partial | `students (student_id, role)` FK to `users (user_id, role)`; `role` is generated as `'student'` |
 | User **is a** Professor | 1 : 0..1 | Professor total; User partial | Same pattern with `'professor'`; the fixed role values make the subtypes disjoint |
-| Department **employs** Professor | 1 : 0..N | Professor total; Department partial (BUS has none) | `professors.department_id NOT NULL`, `ON DELETE RESTRICT` |
+| College **contains** Department | 1 : 1..N | Department total; College total (every college has departments; the seed checks it) | `departments.college_id NOT NULL`, `ON DELETE RESTRICT` |
+| Department **employs** Professor | 1 : 0..N | Professor total; Department partial (BM and departments 7-12 have none) | `professors.department_id NOT NULL`, `ON DELETE RESTRICT` |
 | Department **has major** Student | 1 : 0..N | Student total; Department partial | `students.department_id NOT NULL`, `ON DELETE RESTRICT` |
 | Office **houses** Professor | 0..1 : 0..N | Both partial (office 7 is empty; a professor may have no office) | `professors.office_id` nullable, `ON DELETE SET NULL` |
 | Professor **defines** ScheduleBlock | 1 : 0..N | Block total; Professor partial | `NOT NULL` FK, `ON DELETE CASCADE` |
@@ -170,6 +180,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 
 | Entity | Attributes (primary key underlined) | Derived attributes (dashed ellipse) |
 |---|---|---|
+| COLLEGE | <ins>college_id</ins>, code, name_ar, name_en, created_at | none |
 | DEPARTMENT | <ins>department_id</ins>, code, name_ar, name_en, created_at | none |
 | USER | <ins>user_id</ins>, email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at | none |
 | STUDENT (subclass of USER) | inherits <ins>user_id</ins>; university_no, study_year | none |
@@ -183,6 +194,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | NOTIFICATION | <ins>notification_id</ins>, type, created_at, read_at | text (rendered in the reader's language) |
 
 Alternate keys (also unique, but not underlined):
+- COLLEGE: code, name_ar, name_en
 - DEPARTMENT: code, name_ar, name_en
 - USER: email
 - STUDENT: university_no
@@ -205,6 +217,7 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 
 | Relationship | Entity A (cardinality) | Entity B (cardinality) | Participation of A | Participation of B | Relationship attributes |
 |---|---|---|---|---|---|
+| CONTAINS_DEPT | COLLEGE (1) | DEPARTMENT (N) | **total** (every college has departments) | **total** (every department has one college) | none |
 | EMPLOYS | DEPARTMENT (1) | PROFESSOR (N) | partial (a department may have no professors) | **total** (every professor has one department) | none |
 | MAJORS_IN | DEPARTMENT (1) | STUDENT (N) | partial | **total** | none |
 | HOUSES | OFFICE (1) | PROFESSOR (N) | partial (an office may be empty) | partial (a professor may have no office) | none |

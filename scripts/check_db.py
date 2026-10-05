@@ -55,7 +55,13 @@ MUST_FAIL = [
      GENERATED_VALUE),
     ("professors: slot length must be 15 or 30", "UPDATE professors SET slot_minutes = 20 WHERE professor_id = 1", CHECK_FAILED),
     ("departments: code must be upper case",
-     "INSERT INTO departments (code, name_ar, name_en) VALUES ('phys', 'الفيزياء', 'Physics')", CHECK_FAILED),
+     "INSERT INTO departments (college_id, code, name_ar, name_en) VALUES (1, 'phys', 'الفيزياء', 'Physics')",
+     CHECK_FAILED),
+    ("departments: must belong to an existing college",
+     "INSERT INTO departments (college_id, code, name_ar, name_en) VALUES (99, 'PHYS', 'الفيزياء', 'Physics')",
+     FK_CHILD),
+    ("colleges: cannot delete a college that has departments (RESTRICT)",
+     "DELETE FROM colleges WHERE college_id = 1", FK_PARENT),
     ("departments: cannot delete a department that has professors (RESTRICT)",
      "DELETE FROM departments WHERE department_id = 1", FK_PARENT),
     ("offices: (building, room) is unique",
@@ -161,10 +167,11 @@ MUST_SUCCEED = [
      "u.created_at IS NOT NULL) FROM users u JOIN students s ON s.student_id = u.user_id WHERE u.user_id = 100",
      "student/ar/1/1/1"),
     ("defaults: created_at is UTC even when the session time zone is Riyadh",
-     "SET time_zone = '+03:00'; INSERT INTO departments (code, name_ar, name_en) VALUES ('PHYS', 'الفيزياء', 'Physics')",
+     "SET time_zone = '+03:00'; INSERT INTO departments (college_id, code, name_ar, name_en) VALUES (1, 'PHYS', 'الفيزياء', 'Physics')",
      "SELECT ABS(TIMESTAMPDIFF(SECOND, created_at, UTC_TIMESTAMP())) < 5 FROM departments WHERE code = 'PHYS'", "1"),
     ("arabic: text round-trips unchanged and lengths count characters, not bytes",
-     "INSERT INTO departments (code, name_ar, name_en) VALUES ('ARB', 'قسمُ اللغةِ العربيةِ وآدابِها', 'Arabic')",
+     "INSERT INTO departments (college_id, code, name_ar, name_en) "
+     "VALUES (3, 'ARB', 'قسمُ اللغةِ العربيةِ وآدابِها', 'Arabic')",
      "SELECT CONCAT(name_ar = 'قسمُ اللغةِ العربيةِ وآدابِها' COLLATE utf8mb4_0900_bin, '/', "
      "CHAR_LENGTH(name_ar), '/', LENGTH(name_ar)) FROM departments WHERE code = 'ARB'", "1/29/55"),
 ]
@@ -310,10 +317,12 @@ def run_seed_invariants() -> list[tuple[bool, str, str]]:
           "WHERE s.professor_id = p.professor_id AND s.kind = 'office_hours')"),
         "every professor has weekly office hours")
 
-    # Seed size: 5-10 rows per table, except the two documented exceptions.
+    # Seed size: 5-10 rows per table, except the documented exceptions (seed.sql headers):
+    # users and schedule_blocks (more, by design), colleges and departments (the real list).
     sizes = reset_db.row_counts(CONFIG, CHECK_DB)
-    off = {t: n for t, n in sizes.items() if t not in {"users", "schedule_blocks"} and not 5 <= n <= 10}
-    results.append((not off, "5-10 seed rows per table (users, schedule_blocks documented exceptions)",
+    exceptions = {"users", "schedule_blocks", "colleges", "departments"}
+    off = {t: n for t, n in sizes.items() if t not in exceptions and not 5 <= n <= 10}
+    results.append((not off, "5-10 seed rows per table (users, schedule_blocks, colleges, departments excepted)",
                     f"out of range: {off}" if off else ", ".join(f"{t}={n}" for t, n in sizes.items())))
     return results
 

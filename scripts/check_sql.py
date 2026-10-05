@@ -31,6 +31,7 @@ CONFIG = load_config()
 SQL_DB = f"{CONFIG.database}_sql"
 QUERIES = ROOT / "db" / "queries.sql"
 TABLES = [
+    "colleges",
     "departments", "users", "offices", "students", "professors", "schedule_blocks",
     "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
 ]

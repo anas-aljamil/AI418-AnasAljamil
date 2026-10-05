@@ -162,13 +162,67 @@ ORDER BY confirmed DESC, full_name_en;
 
 
 -- =============================================================================
--- 2. departments
+-- 2. colleges
 -- =============================================================================
 
--- D1. All departments in English alphabetical order. App: admin Departments tab.
-SELECT department_id, code, name_en, name_ar
-FROM departments
-ORDER BY name_en;
+-- CO1. Aggregate: each college with its departments in one line. App: the
+-- headings of the department menu.
+SELECT c.code, c.name_en,
+       COUNT(d.department_id) AS departments,
+       GROUP_CONCAT(d.name_en ORDER BY d.name_en SEPARATOR ', ') AS department_names
+FROM colleges AS c
+LEFT JOIN departments AS d ON d.college_id = c.college_id
+GROUP BY c.college_id, c.code, c.name_en
+ORDER BY c.name_en;
+
+-- CO2. Aggregate: departments, professors and students per college (outer joins
+-- keep colleges and departments that have nobody yet).
+SELECT c.code,
+       COUNT(DISTINCT d.department_id) AS departments,
+       COUNT(DISTINCT p.professor_id)  AS professors,
+       COUNT(DISTINCT s.student_id)    AS students
+FROM colleges AS c
+LEFT JOIN departments AS d ON d.college_id = c.college_id
+LEFT JOIN professors AS p  ON p.department_id = d.department_id
+LEFT JOIN students AS s    ON s.department_id = d.department_id
+GROUP BY c.college_id, c.code
+ORDER BY professors DESC, c.code;
+
+-- CO3. Find a college by code or by part of its name, in either language.
+SELECT college_id, code, name_en, name_ar
+FROM colleges
+WHERE code IN ('ENG', 'CCS')
+   OR name_en LIKE '%business%'
+   OR name_ar LIKE '%الهندسة%'
+ORDER BY code;
+
+-- CO4. Aggregate: colleges with more than three departments (GROUP BY + HAVING).
+SELECT c.name_en, COUNT(*) AS departments
+FROM colleges AS c
+INNER JOIN departments AS d ON d.college_id = c.college_id
+GROUP BY c.college_id, c.name_en
+HAVING COUNT(*) > 3
+ORDER BY departments DESC;
+
+-- CO5. Colleges that have no professor in the app yet (to invite them).
+SELECT c.name_en
+FROM colleges AS c
+WHERE NOT EXISTS (SELECT 1
+                  FROM departments AS d
+                  INNER JOIN professors AS p ON p.department_id = d.department_id
+                  WHERE d.college_id = c.college_id);
+
+
+-- =============================================================================
+-- 3. departments
+-- =============================================================================
+
+-- D1. The department menu: every department under its college, both in English
+-- alphabetical order. App: sign-up, admin forms and the Search filter.
+SELECT c.name_en AS college, d.department_id, d.code, d.name_en, d.name_ar
+FROM departments AS d
+INNER JOIN colleges AS c ON c.college_id = d.college_id
+ORDER BY c.name_en, d.name_en;
 
 -- D2. Search departments by code or by part of either name. App: admin search.
 SELECT code, name_en, name_ar
@@ -215,7 +269,7 @@ ORDER BY student_department;
 
 
 -- =============================================================================
--- 3. users
+-- 4. users
 -- =============================================================================
 
 -- U1. Active accounts by role, then name. App: who can sign in.
@@ -264,7 +318,7 @@ WHERE (u.role = 'student' AND s.student_id IS NULL)
 
 
 -- =============================================================================
--- 4. offices
+-- 5. offices
 -- =============================================================================
 
 -- O1. All offices by building and room. App: admin Offices tab.
@@ -311,24 +365,24 @@ ORDER BY o.building_code, o.room_number;
 
 
 -- =============================================================================
--- 5. students
+-- 6. students
 -- =============================================================================
 
--- S1. Computer Science students by study year. App: admin Students tab.
+-- S1. Software Engineering students by study year. App: admin Students tab.
 SELECT s.university_no, u.full_name_en, s.study_year
 FROM students AS s
 INNER JOIN users AS u       ON u.user_id = s.student_id
 INNER JOIN departments AS d ON d.department_id = s.department_id
-WHERE d.code = 'CS'
+WHERE d.code = 'SE'
 ORDER BY s.study_year, u.full_name_en;
 
--- S2. First- and second-year students of Computer Science or Software Engineering.
+-- S2. First- and second-year students of Software Engineering or Artificial Intelligence.
 SELECT s.university_no, u.full_name_en, d.code, s.study_year
 FROM students AS s
 INNER JOIN users AS u       ON u.user_id = s.student_id
 INNER JOIN departments AS d ON d.department_id = s.department_id
 WHERE s.study_year BETWEEN 1 AND 2
-  AND d.code IN ('CS', 'SWE')
+  AND d.code IN ('SE', 'AI')
 ORDER BY s.university_no;
 
 -- S3. Aggregate: students and average study year per department.
@@ -365,7 +419,7 @@ WHERE NOT EXISTS (SELECT 1 FROM appointments AS a WHERE a.student_id = s.student
 
 
 -- =============================================================================
--- 6. professors
+-- 7. professors
 -- =============================================================================
 
 -- P1. Professor directory: rank, department and office (an office is optional).
@@ -416,11 +470,11 @@ FROM professors AS p
 INNER JOIN users AS u       ON u.user_id = p.professor_id
 INNER JOIN departments AS d ON d.department_id = p.department_id
 WHERE u.full_name_en LIKE '%al-%'
-  AND d.name_en LIKE '%science%';
+  AND d.name_en LIKE '%engineering%';
 
 
 -- =============================================================================
--- 7. schedule_blocks
+-- 8. schedule_blocks
 -- =============================================================================
 
 -- B1. Dr. Noura's weekly timetable in Riyadh time. App: profile timeline, Schedule tab.
@@ -456,12 +510,12 @@ FROM schedule_blocks
 GROUP BY day_of_week
 ORDER BY day_of_week;
 
--- B5. Classes of Computer Science courses (label starts with "CS ").
+-- B5. Classes of Software Engineering courses (label starts with "SE ").
 SELECT DISTINCT b.label, u.full_name_en
 FROM schedule_blocks AS b
 INNER JOIN users AS u ON u.user_id = b.professor_id
 WHERE b.kind = 'class'
-  AND b.label LIKE 'CS %'
+  AND b.label LIKE 'SE %'
 ORDER BY b.label;
 
 -- B6. Blocks happening right now in Riyadh (what the timetable alone says).
@@ -474,7 +528,7 @@ WHERE b.day_of_week = DAYOFWEEK(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00'))
 
 
 -- =============================================================================
--- 8. status_overrides
+-- 9. status_overrides
 -- =============================================================================
 
 -- SO1. Dr. Noura's manual status history, newest first.
@@ -520,7 +574,7 @@ WHERE created_at BETWEEN '2026-09-27 00:00:00' AND '2026-10-01 23:59:59'
 
 
 -- =============================================================================
--- 9. appointments
+-- 10. appointments
 -- =============================================================================
 
 -- A1. Saad's upcoming appointments, soonest first (view V3). App: Appointments.
@@ -587,7 +641,7 @@ HAVING COUNT(*) > 1;
 
 
 -- =============================================================================
--- 10. pins
+-- 11. pins
 -- =============================================================================
 
 -- PN1. Saad's pinned professors with their live status (view V1). App: Home.
@@ -636,7 +690,7 @@ WHERE pn.professor_id IS NULL;
 
 
 -- =============================================================================
--- 11. conversations
+-- 12. conversations
 -- =============================================================================
 
 -- C1. Dr. Noura's conversations, latest activity first, with the unread count.
@@ -694,7 +748,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 12. messages
+-- 13. messages
 -- =============================================================================
 
 -- M1. One thread in order, with the sender's name (the sender is the
@@ -750,7 +804,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 13. notifications
+-- 14. notifications
 -- =============================================================================
 
 -- N1. Dr. Noura's notifications, newest first, with the sentence the app shows
@@ -814,7 +868,7 @@ WHERE n.user_id NOT IN (COALESCE(a.student_id, c.student_id), COALESCE(a.profess
 
 
 -- =============================================================================
--- 14. across tables
+-- 15. across tables
 -- =============================================================================
 
 -- X1. Saad's activity in one timeline: appointments booked, messages sent and
@@ -855,7 +909,7 @@ ORDER BY student_id, professor_id;
 
 
 -- =============================================================================
--- 15. double-booking trigger demo
+-- 16. double-booking trigger demo
 -- =============================================================================
 
 -- T1. Remove a demo procedure left over from an interrupted run, if any.
