@@ -74,6 +74,7 @@ Tests: cd backend && .venv/bin/pytest   (builds and drops a <DB_NAME>_test MySQL
 DB reset + seed: python3 scripts/reset_db.py   (add --rebase to move seed dates to the current week; reads DB_* from .env; needs the mysql client on PATH or MYSQL_CLI in .env)
 DB checks (constraints, seed rules, charset, reserved words, ER sync): python3 scripts/check_db.py
 DB load by hand: mysql -u root -p < db/create_database.sql, then run db/schema.sql and db/seed.sql in the mawjood database (CLI or MySQL Workbench; see docs/run-on-phone.md)
+Palette check (WCAG contrast + colour-blind separation of status colours): python3 scripts/check_palette.py [palettes.json]
 Lint/format: cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 13. Working agreement
 Work in small phases. Never start the next phase without my approval.
