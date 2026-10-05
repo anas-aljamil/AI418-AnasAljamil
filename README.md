@@ -42,6 +42,7 @@ Full step-by-step guide (Windows and macOS, including the phone): [docs/run-on-p
    - copy `.env.example` to `.env` and set `DB_PASSWORD`;
    - run `python3 scripts/reset_db.py`;
    - run `python3 scripts/check_db.py`.
+4. The graded SQL is in [`db/queries.sql`](db/queries.sql): 85 queries, three views and a double-booking trigger demo. It runs in the mawjood database with no errors and changes no data: `mysql -u root -p mawjood < db/queries.sql`, or open it in Workbench and run it all. `python3 scripts/check_sql.py` runs it on a throwaway copy and prints the coverage per table.
 
 Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example `s.almutairi@university.example` (student), `n.alharbi@university.example` (professor) and `admin@university.example` (admin).
 
@@ -53,7 +54,7 @@ Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example 
    python3.12 -m venv .venv && source .venv/bin/activate   # Windows: py -3.12 -m venv .venv && .venv\Scripts\activate
    pip install -e ".[dev]"
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # API docs: http://localhost:8000/docs
-   pytest                                                     # 92 tests against a throwaway MySQL database
+   pytest                                                     # 109 tests against a throwaway MySQL database
    ```
 
 ### App (Expo: Android and iOS through Expo Go, plus the web build)
@@ -63,7 +64,16 @@ cd app
 npm install
 npx expo start        # scan the QR code with Expo Go (Android) or the Camera app (iPhone); press w for the web build
 ```
-The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The first launch asks for the language, then you sign in with a demo account (below). Students land on Home: pinned professors with their live door status, the next appointment, search, and their department, refreshed every 20 seconds and still readable offline.
+The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The first launch asks for the language, then you sign in with a demo account (below). What each role gets:
+- **Students:**
+  - Home: pinned professors with their live door status, the next appointment and their department; refreshed every 20 seconds and still readable offline;
+  - Search, professor profiles and booking in 4 steps;
+  - Appointments, Messages and notifications.
+- **Professors:**
+  - My status: one tap, with presets and a note;
+  - Requests, Schedule, Messages with quick replies, and notifications.
+- **Admins:** departments, offices, professors and students (create, edit, delete).
+- **Settings for everyone:** language, theme and text size.
 
 Checks:
 ```bash
@@ -79,4 +89,10 @@ What can only be checked on a real phone (haptics, TalkBack/VoiceOver, 200% text
 - [Phase plan and acceptance criteria](docs/plan.md)
 - [Security: sign-in, tokens, CSRF, rate limits](docs/security.md)
 - [Design system](docs/DESIGN.md) and [design plan with the chosen direction](docs/design-plan.md)
-- Screenshots: [styleguide](docs/screenshots/p3b/), [language, sign-in and home](docs/screenshots/p3c/)
+- [Test plan, traceability and results](docs/test-plan.md); [design QA per screen](docs/design-qa.md); [real-phone checklist](docs/phone-checklist.md)
+- Screenshots:
+  - [styleguide](docs/screenshots/p3b/);
+  - [language, sign-in and home](docs/screenshots/p3c/);
+  - [search, profile, booking, appointments, professor and admin screens](docs/screenshots/p4/);
+  - [chat, notifications and settings](docs/screenshots/p5/);
+  - [final QA at 320 px, dark theme](docs/screenshots/final/).

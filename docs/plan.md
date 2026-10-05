@@ -95,6 +95,16 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
 - `scripts/check_sql.py` runs every statement against MySQL 8 only and prints per-table coverage (queries, aggregates, joins, GROUP BY…HAVING, UNION, LIKE, BETWEEN, IN, IS NULL, DISTINCT).
 - README with setup and demo accounts; `docs/test-plan.md`; final design QA with screenshots; Lighthouse on the web build if available; final real-phone checklist results.
 
+- **Result (2026-10-05):** met, except the real-phone results, which need you.
+  - **`db/queries.sql`:**
+    - 85 queries and views in 93 statements, at least 5 queries and 2 aggregates for each of the 12 tables;
+    - views `v_professor_current_status`, `v_professors_in_office_now` and `v_upcoming_appointments`;
+    - a trigger demo that runs five booking attempts in a rolled-back transaction: three rejected with SLOT_TAKEN, two accepted.
+  - **`scripts/check_sql.py`:** 38/38. It runs every statement on MySQL 8.0.46, checks the coverage and checks the results at the demo moment.
+  - **`test_sql_views.py`:** the status view agrees with the API's status logic every 15 minutes for a whole week, overrides included. A deliberately broken staleness rule makes it fail.
+  - **Final design QA:** every tab of every role, plus the profile, the booking sheet, notifications and a conversation, fits 320 px in Arabic (light) and English (dark). Playwright `e2e/final.spec.ts`; screenshots in `docs/screenshots/final/`.
+  - **Test plan with traceability:** [test-plan.md](test-plan.md). Lighthouse was not run (web build is the test harness only).
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.

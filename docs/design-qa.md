@@ -53,3 +53,20 @@ Each item is marked **verified** (with how) or **needs a real phone** (with the 
 | All copy from i18n; buttons name their action | **Verified**: `strings.test.ts`; labels such as "Send", "Come now", "Message Dr. Noura Al-Harbi", "Mark all as read". |
 | Lighthouse | Not run (web build is the test harness only). |
 
+## P6: final pass over all screens (2026-10-05)
+
+| Section 12 item | Result |
+|---|---|
+| Answers its main question within 3 s | **Verified** on the web build for every role's first tab: Home (P3c, timed), My status, Departments. On a phone: needs a real phone (#19). |
+| One clear primary action | **Verified** by review of every screen in `docs/screenshots/` (P3c, P4, P5 and final). |
+| Loading, empty, error and offline states | **Verified** per screen in the P3c to P5 rows above (Jest and Playwright). Offline on a phone: needs a real phone (#20, #21, #44). |
+| Arabic (RTL) and English (LTR), no clipped Arabic | **Verified** on the web build: every tab of every role in Arabic, and the pushed screens (profile, booking sheet, notifications, conversation). Phones: needs a real phone (#24, #42). |
+| Light and dark pass contrast | **Verified**: token contrast in `tokens.test.ts`; every tab of every role rendered in the dark theme (`docs/screenshots/final/en-dark-*`). |
+| Nothing from Section 3 | **Verified** by review of the final screenshots. |
+| 320 width and 200% text | **Verified at 320 px**, closing the gap noted in P4: `e2e/final.spec.ts` finds no element past either screen edge on any tab of any role (Arabic light, English dark), on the profile with its booking sheet, on notifications or on a conversation. Content inside horizontal scrollers is allowed. At 320 px the web build shortens long tab labels ("Appoin..."); on phones they shrink to fit instead (DESIGN.md Section 11). 200% text: needs a real phone (#8, #25, #40, #49). |
+| Screen reader; keyboard on web | **Verified**: roles and names on every control (Jest, and every Playwright query uses role and name). TalkBack/VoiceOver: needs a real phone. |
+| Safe areas, Android back, keyboard | Needs a real phone (#10, #16, #28, #31, #41). |
+| Motion purposeful, reduced motion | **Verified** by review: the door, the booking moment and press feedback only; reduced motion tested in the styleguide spec. |
+| All copy from i18n; buttons name their action | **Verified**: `strings.test.ts` (same keys, placeholders, no untranslated Arabic). |
+| Lighthouse | Not run: the web build is only the test harness (product focus). |
+

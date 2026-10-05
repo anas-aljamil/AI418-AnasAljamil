@@ -89,4 +89,4 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 
 ## Later phases (added when the feature exists)
 
-- **P6:** a final pass of everything above.
+- **P6:** a final pass of everything above. Record each result in the Android and iOS columns ("pass", or what went wrong). Until then every row stays "needs a real phone". The automated evidence for each area is listed in [test-plan.md](test-plan.md).

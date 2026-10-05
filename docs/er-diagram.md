@@ -233,3 +233,12 @@ Constraints to note beside the diagram:
   - a student row can only point at an account whose role is `student`;
   - `ON UPDATE RESTRICT` stops that role from changing while the subtype row exists.
 - **Partial**: admin accounts (`role = 'admin'`) have no subtype row.
+
+## 5. Views (derived, not entities)
+
+The three views in `db/queries.sql` store nothing. They are computed from the tables above whenever they are read, so they add no entities or relationships to the diagram and cannot break 3NF.
+
+- **`v_professor_current_status`:** each professor's effective status right now. Sources: `professors`, `schedule_blocks`, `status_overrides`.
+- **`v_professors_in_office_now`:** the professors in their office now, with their room. Sources: the status view, `users`, `departments`, `offices`.
+- **`v_upcoming_appointments`:** pending and approved appointments that have not started. Sources: `appointments`, `users`.
+
