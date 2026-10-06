@@ -1,13 +1,14 @@
 Mawjood: Design Brief and Design System
 0. How to use this document
 
-This file is authoritative for all UI work. Read it fully before any frontend task. If something is not covered, choose the option most consistent with Sections 1 to 3, then record it in Section 11 (Design decisions log). "Remove one accessory": before finishing any screen, look for one decorative element that does not serve the user and remove it.
+This file is authoritative for all UI work. Read it fully before any client task. The client is one Expo (React Native) codebase that runs on Android and iOS and as an Expo web build; where a rule differs by platform, the native rule and the web rule are both stated. If something is not covered, choose the option most consistent with Sections 1 to 3, then record it in Section 11 (Design decisions log). "Remove one accessory": before finishing any screen, look for one decorative element that does not serve the user and remove it.
 
 1. The brief
 Product: Mawjood (موجود, "present, here"). It tells students whether a professor is in their office right now, and lets them book a slot and send a message.
 Audience:
 Students (primary): mostly on phones, between classes, impatient, Arabic-first with mixed English.
-Professors (secondary): all ages and comfort levels with technology, often on a desktop between tasks, with little patience for admin work.
+Professors (secondary): all ages and comfort levels with technology, often on a desktop between tasks (they use the web build there and the phone app elsewhere), with little patience for admin work.
+Platforms: Android and iOS phones (primary, through Expo Go), the Expo web build on desktop browsers (professors, admin, projector demos).
 Design for the least tech-comfortable professor and the most impatient student at the same time.
 Primary job of the interface: answer "Is Dr. X there right now, and can I trust that?" in under 3 seconds.
 Personality: calm, warm, trustworthy, quietly alive. A well-run department corridor, not a corporate dashboard and not a game.
@@ -17,15 +18,15 @@ Must not feel: corporate, gimmicky, cluttered, childish, boring.
 
 Spend the boldness here. Keep everything around it quiet and disciplined.
 
-Every professor's status is shown with a small custom SVG door icon plus a text label:
+Every professor's status is shown with a small custom SVG door icon (drawn with react-native-svg so the same component renders on native and web) plus a text label:
 In office: door open, warm light spilling out.
 In class: door closed, small board/book mark.
 Busy: door ajar, small "do not disturb" mark.
 Away: door closed, light off.
 Not confirmed / Unknown: dashed-outline door.
 The professor profile header is a modern, subtle take on the office nameplate beside a real office door: name, title, department, building and room. No wood or metal textures, no skeuomorphism.
-When a status changes, the door animates (opens, closes, light fades in or out) in 300 to 400 ms. This is the app's one recognizable motion.
-The logo and favicon come from the same idea (for example, a door shape with a dot of light). It must stay legible at 16 px.
+When a status changes, the door animates (opens, closes, light fades in or out) in 300 to 400 ms, using Reanimated on the UI thread. This is the app's one recognizable motion.
+The logo, app icon (including the Android adaptive icon and its monochrome layer) and web favicon come from the same idea (for example, a door shape with a dot of light). It must stay legible at 16 px.
 3. Avoid templated defaults
 
 Do not ship any of the following unless I explicitly ask for it:
@@ -35,15 +36,15 @@ Indigo or violet gradients, glassmorphism everywhere, neon accents on black.
 Cream background with serif display and terracotta accent; near-black background with acid-green accent.
 Tracked ALL-CAPS labels above headings; meta strings joined with middle dots; arrows appended to button text; monospace for small labels; numbered 01/02/03 markers on content that is not a sequence.
 Highlighting a single word in a headline with a different color or weight.
-Fade-and-slide-up on every section, hover effects on every card, decorative auto-playing animation.
+Fade-and-slide-up on every section, hover effects (web) or bouncy press effects (native) on every card, decorative auto-playing animation.
 Emoji used as icons, stock illustrations, lorem ipsum, real-looking stock photos of people.
 A grid of identical professor cards as the only way to browse.
 
-Use cards only for self-contained objects (an appointment, a professor in a pinned row). Use lists, rows, and plain sections elsewhere. Vary radius by hierarchy: large surfaces and sheets 20 px, cards 14 px, inputs 10 px, chips and pills fully rounded.
+Use cards only for self-contained objects (an appointment, a professor in a pinned row). Use lists, rows, and plain sections elsewhere. Vary radius by hierarchy: large surfaces and sheets 20, cards 14, inputs 10, chips and pills fully rounded (dp on native, px on web).
 
 4. Visual foundations (tokens)
 
-All values live in CSS variables and the Tailwind theme. No hard-coded colors, spacing, radii, or durations in components.
+All values live in one typed theme module (src/theme/: color palettes for light and dark, type scale, spacing, radii, elevation, durations), read through a useTheme() hook and React Native StyleSheet. No hard-coded colors, spacing, radii, or durations in components; a lint rule flags raw hex values and numeric literals in style objects outside src/theme/. (Web equivalent of CSS variables: the same module drives the web build, so there is one source of truth.)
 
 4.1 Color
 Status colors are conventional because most users already understand them. Each is always paired with the door icon and a text label:
@@ -55,48 +56,54 @@ Not confirmed: outlined gray
 Check that status states remain distinguishable with deuteranopia and protanopia; the icon and label must carry the meaning on their own.
 Brand primary: a hue that does not compete with the status hues (not green, amber, or red) and is not indigo/violet. Propose it in the design plan with reasoning.
 Neutrals: slightly tinted to harmonize with the primary. Not pure gray, not cream.
-Light and dark themes are two separately designed palettes; dark is not an inverted light theme.
+Light and dark themes are two separately designed palettes; dark is not an inverted light theme. The app follows the system setting (useColorScheme / Appearance) unless the user picks one in Settings; status bar, navigation bar and splash background follow the active theme.
 Contrast (WCAG 2.2 AA) in both themes: 4.5:1 for body text, 3:1 for large text and UI components.
 Color is never the only carrier of meaning.
 4.2 Typography
-Arabic-first. Use one family that covers Arabic and Latin with matched metrics, or a deliberate, well-matched pair (candidates: Readex Pro; IBM Plex Sans Arabic with IBM Plex Sans). Justify the choice. Do not default to Inter alone.
-Mobile type scale: 13, 15, 17, 20, 24, 30 px. Body text 16 to 17 px. Headings step up one level on desktop.
-Line height: about 1.7 for Arabic, about 1.5 for Latin. Line length at most 70 characters.
+Arabic-first. Use one family that covers Arabic and Latin with matched metrics, or a deliberate, well-matched pair (candidates: Readex Pro; IBM Plex Sans Arabic with IBM Plex Sans). Justify the choice. Do not default to Inter alone, or to the platform system font alone. Fonts are bundled with the app (expo-font with the @expo-google-fonts package of the chosen family) so they work offline; the splash screen stays until fonts load.
+Mobile type scale: 13, 15, 17, 20, 24, 30 (px on web, density-independent points on native). Body text 16 to 17. Headings step up one level on the desktop web layout.
+Line height: about 1.7 for Arabic, about 1.5 for Latin. React Native needs absolute line heights, so the theme computes them per size and per script. Line length at most 70 characters.
+System font scale: text respects the phone's font-size setting up to 200% (maxFontSizeMultiplier = 2); layouts must reflow, not clip. This replaces browser zoom on native.
 Sentence case everywhere. Build hierarchy with size and weight, not color tricks.
-Numerals: Western digits (0 to 9) in both languages for times, dates, and room numbers, used consistently.
+Numerals: Western digits (0 to 9) in both languages for times, dates, and room numbers, used consistently. Times are formatted in Asia/Riyadh by our own small formatter (Riyadh is a fixed UTC+3) rather than relying on Intl time-zone support, which differs between Hermes on Android, iOS and browsers.
 4.3 Space, shape, elevation
-Spacing scale on a 4 px base: 4, 8, 12, 16, 24, 32, 48, 64.
+Spacing scale on a 4-unit base (dp on native, px on web): 4, 8, 12, 16, 24, 32, 48, 64.
 Radius by hierarchy (Section 3).
-At most 3 elevation levels. Prefer surface-color contrast and hairline borders; use shadows only for floating layers (sheets, menus, toasts).
+At most 3 elevation levels. Prefer surface-color contrast and hairline borders (StyleSheet.hairlineWidth on native); use shadows only for floating layers (sheets, menus, toasts). Native shadows differ by platform (iOS shadow props, Android elevation); the theme defines each level for both so they look the same.
 4.4 Icons and illustration
-Lucide icons with a consistent stroke (about 1.75 px) for UI.
+Lucide icons (lucide-react-native, rendered with react-native-svg) with a consistent stroke (about 1.75) for UI.
 Custom SVG doors for status (Section 2).
 Empty-state illustrations: simple line drawings in the same stroke style (a corridor, a door, a calendar) using only brand and neutral colors.
 5. Motion
 Motion only answers a user action or shows a state change.
 Durations: 120 ms for press feedback, 200 ms for small transitions, 300 to 400 ms for sheets and the door animation. Ease-out on enter, ease-in on exit, springs for sheets.
-Press feedback: subtle scale (about 0.97) on primary controls.
+Press feedback: subtle scale (about 0.97) on primary controls (Pressable + Reanimated).
+Haptics (native only, expo-haptics): a light impact when a professor changes status, and a success notification haptic at the booking-confirmed moment. Nowhere else; never as decoration. Haptics follow the system setting and are skipped when the device has them disabled.
 One orchestrated moment: booking confirmed. The door opens, a checkmark appears, and the summary reads like "Booked with Dr. X, Sunday 10:30".
-Live updates: when a visible professor's status changes, cross-fade the door and label and announce it with aria-live="polite".
+Live updates: when a visible professor's status changes, cross-fade the door and label and announce it politely: accessibilityLiveRegion="polite" on Android, AccessibilityInfo.announceForAccessibility on iOS, aria-live="polite" on the web build (React Native Web maps accessibilityLiveRegion to aria-live).
 Skeleton loaders shaped like the real content. Optimistic updates for status changes and messages, with clear rollback on failure.
-prefers-reduced-motion: replace movement with instant or opacity-only changes.
-Use Motion (Framer Motion) for React animation; no second animation library.
+Reduced motion: when the system setting is on (AccessibilityInfo.isReduceMotionEnabled / Reanimated useReducedMotion on native, prefers-reduced-motion on web), replace movement with instant or opacity-only changes.
+Use Reanimated for all animation (no Moti, no second animation library). Animations run on the UI thread and must hold 60 fps on a mid-range Android phone.
 6. Layout and navigation
 Mobile-first.
-Phones: bottom tab bar.
+Phones: bottom tab bar (Expo Router tabs).
 Students: Home, Search, Appointments, Messages, Profile.
 Professors: Status, Requests, Schedule, Messages, Profile.
-Desktop (1024 px and up): side rail navigation and two-pane layouts (list plus detail) where it helps.
+Desktop web build (1024 px and up): side rail navigation and two-pane layouts (list plus detail) where it helps. The admin area is designed for this layout only.
 Primary actions sit within thumb reach on phones; sticky where useful (Book and Message on the profile).
-Touch targets at least 44 x 44 px with at least 8 px between them.
-No horizontal page scroll at 320 px.
-Every gesture (swipe, long-press) also has a visible button.
+Touch targets at least 48 x 48 (dp on Android, which also satisfies the 44 pt iOS minimum; px on web) with at least 8 between them; use hitSlop rather than shrinking visible spacing.
+No horizontal scroll at 320 width (dp or px).
+Every gesture (swipe, long-press, pull-to-refresh) also has a visible button.
+Safe areas: every screen respects notches, the home indicator and Android navigation bars (react-native-safe-area-context); sticky bars sit above the home indicator.
+Android back button: closes the topmost sheet, dialog or keyboard first, then goes back one screen; it never exits the app from a sheet, and never loses a booking in progress without confirmation.
+Keyboard: an input never sits under the on-screen keyboard (KeyboardAvoidingView or scroll-into-view); the chat composer stays above it; tapping outside dismisses it; the return key moves to the next field or submits.
 7. Screen specifications
 
 Each screen defines its purpose, key content, primary action, and loading, empty, error, and offline states.
 
 7.1 Language and sign-in
-First launch asks for language (العربية / English) before anything else.
+First launch asks for language (العربية / English) before anything else; the device language (expo-localization) is preselected, never auto-applied.
+Changing language switches layout direction with I18nManager.forceRTL and then reloads the app cleanly (expo-updates reloadAsync) after a one-line explanation, returning the user to the same screen; on the web build the document dir attribute changes without a reload.
 Sign in with a university email. The role comes from the account, not from a user choice.
 7.2 Student home ("Now")
 
@@ -116,11 +123,12 @@ Results are list rows: door, name, department, status label, last updated. Avail
 7.4 Professor profile
 Nameplate header (Section 2) with the door, status label, the professor's short note, and last updated time.
 Office location (building, floor, room).
-A "Today" timeline showing office-hour blocks with a marker for the current time.
+A "Today" timeline: an agenda of office-hour and class blocks, each with its times, door, name and where it stands now, the time between blocks marked "Not in office", and where now falls.
 Sticky bottom bar: Book (primary), Message (secondary), Pin (icon button).
-7.5 Booking (bottom sheet on mobile, dialog on desktop)
+7.5 Booking (bottom sheet on phones, dialog on desktop web)
 Day strip (Sunday to Thursday, this week and next).
-Time chips. Unavailable times stay visible but disabled, and tapping one explains why.
+The day's free stretches in one line ("Free: 10:00 AM–10:30 AM, 10:45 AM–12:00 PM"), then the start: hour chips, then minute chips on 5-minute steps. Unavailable starts stay visible but disabled, and tapping one explains why.
+Length: a stepper (5 minutes shorter or longer) and one-tap lengths (10, 15, 20, 30, 45, 60 min) that fit; it starts at the professor's usual length and never runs past the next booking or the end of office hours.
 Optional topic chips (Assignment, Exam review, Advising, Other) plus optional short text.
 Confirmation summary, then the signature moment (Section 5).
 Never lose the user's selection on an error.
@@ -138,10 +146,10 @@ This is the most important professor screen and must be usable in one tap by any
 Top: a large status control with the four doors; the current one clearly selected.
 Below: quick presets ("Back in 15 min", "Back in 30 min", "In office until ...", "Away for today") and an optional note of up to 60 characters.
 Then: today's schedule timeline and pending requests with Approve and Decline buttons (swipe is only a shortcut).
-Desktop: compact enough to keep open in a browser tab. Reflect the current status in the tab title and favicon.
+Desktop web: compact enough to keep open in a browser tab. Reflect the current status in the tab title and favicon (web only; native apps have no equivalent and use no app-icon badge).
 7.9 Notifications and settings
 Notifications grouped by today and earlier, each linking to its source.
-Settings: language, theme (system, light, dark), text size (default, large, larger), notification preferences.
+Settings: language, theme (system, light, dark), text size (small, medium, big; multiplies the system font scale, capped at 200% total), notification preferences (in-app only).
 8. Content and voice
 Plain, warm, respectful. Arabic must read as natural Modern Standard Arabic, never machine-translated. Address the user directly.
 Buttons say exactly what happens: "Book 10:30", "Send", "Cancel appointment". The same verb carries through the flow (Book, then Booked).
@@ -155,12 +163,13 @@ Relative time: "updated 3 min ago" / "آخر تحديث قبل 3 دقائق".
 Errors state what happened and how to fix it, without apologizing or blaming. Empty states invite an action.
 All strings live in i18n files (ar.json, en.json). No hard-coded UI text.
 9. Inclusive by default
-WCAG 2.2 AA. Semantic HTML, labelled inputs, visible focus rings, full keyboard navigation, screen-reader announcements for status changes and toasts.
-Text can grow to 200% without lost content or overlap.
+WCAG 2.2 AA (applied to the native app as well as the web build). Native: every control has accessibilityRole, accessibilityLabel and accessibilityState (selected, disabled, busy); logical reading order for TalkBack and VoiceOver; accessibilityViewIsModal on sheets and dialogs so focus stays inside. Web: semantic HTML via React Native Web roles, visible focus rings, full keyboard navigation. Both: labelled inputs, screen-reader announcements for status changes and toasts.
+Text can grow to 200% without lost content or overlap (system font scale on native, browser zoom on web).
 Status is readable without color (icon plus label).
-RTL and LTR are both first-class: logical CSS properties (ms, me, ps, pe, text-start), mirrored directional icons, numbers and times never mirrored.
-Performance on a mid-range Android phone over 4G: LCP under 2.5 s, INP under 200 ms, initial JavaScript at most 200 KB gzipped, lazy-loaded secondary routes, font-display: swap with a sensible system fallback stack.
-Slow or offline: show the last known status with its timestamp and a clear offline notice. Never show a blank screen.
+RTL and LTR are both first-class: direction comes from I18nManager on native and the dir attribute on web; styles use logical properties only (marginStart/End, paddingStart/End, start/end, textAlign "auto"), directional icons are mirrored in RTL, numbers and times are never mirrored.
+Native performance (mid-range Android phone, release build): cold start to an interactive Home under 2 s; scrolling and animations at a steady 60 fps (long lists use FlatList virtualization, no layout animations on scroll). Measured on a release build; numbers taken in Expo Go development mode are reported but are not representative.
+Web build performance (mid-range Android phone over 4G, web build only): LCP under 2.5 s, INP under 200 ms, initial JavaScript at most 200 KB gzipped, lazy-loaded secondary routes, font-display: swap with a sensible system fallback stack.
+Slow or offline: show the last known status with its timestamp and a clear offline notice (connectivity from @react-native-community/netinfo; last known data persisted on the device). Never show a blank screen.
 10. Design process for Claude Code
 Design plan (no code). Propose two clearly different directions grounded in Sections 1 and 2. For each give:
 4 to 6 named hex colors for light and for dark,
@@ -168,13 +177,65 @@ the typeface choice and type scale,
 a layout concept with ASCII wireframes of Student Home and Professor Status,
 how the door signature will be drawn and animated,
 a short motion plan. Then critique each direction against Section 3. Revise anything that reads as generic and state what you changed and why. Write it to docs/design-plan.md, commit, and stop for my choice.
-Foundations. Implement tokens, fonts, theme switching, RTL, the i18n scaffold, and a /styleguide route that shows every token and component (buttons, chips, inputs, all door states, list rows, cards, bottom sheet, toast, skeletons, empty state) in Arabic and English, light and dark. Stop for review.
+Foundations. Implement the typed theme module, fonts, theme switching, RTL (with the reload flow), the i18n scaffold, and a /styleguide route (an Expo Router screen available on native and web) that shows every token and component (buttons, chips, inputs, all door states, list rows, cards, bottom sheet, toast, skeletons, empty state) in Arabic and English, light and dark. Stop for review.
 Screens. Build one screen at a time in the order of Section 7, using real seed data.
-Visual self-review. If a headless browser is available (for example Playwright), capture screenshots at 360, 768, and 1280 px in Arabic-light and English-dark, review them, and fix problems before reporting. If not, describe the manual checks I should do.
+Visual self-review. Capture Playwright screenshots of the Expo web build at 360, 768, and 1280 px in Arabic-light and English-dark, review them, and fix problems before reporting. Native-only behavior (haptics, TalkBack/VoiceOver, system font scale, safe areas, Android back, keyboard, RTL reload, performance) cannot be seen in those screenshots: list these as manual checks on a real phone, with exact steps, and report them as unverified until I confirm them.
 Run the Section 12 checklist for each screen and report the results honestly, including failures.
 11. Design decisions log
 
 Append entries as: date, decision, reason.
+
+2026-10-05, The client is one Expo (React Native) + TypeScript + Expo Router codebase for Android, iOS and web; every web-only rule in this file now has a stated native equivalent, Reason: students are mostly on phones; professors still get a desktop web build.
+2026-10-05, Tokens live in a typed theme module read through StyleSheet instead of NativeWind or CSS variables, Reason: type-checked tokens, no extra Babel/Metro layer, logical start/end properties are built into React Native, and it works unchanged in Expo Go and on web.
+2026-10-05, Minimum touch target raised from 44 to 48, Reason: 48 dp is the Android guideline and also satisfies the 44 pt iOS minimum.
+2026-10-05, Chosen direction: Direction A "Nameplate" with square lit doors (docs/design-plan.md Section 9), Reason: chosen by the product owner after comparing Directions A, B, the B/Plex mix, A with arched doors and A with square doors.
+2026-10-05, Palette = Direction A: light Wall #F2F5F8, Plate #FFFFFF, Ink #15212E, Graphite #4B5A69, Corridor blue #1F4F8C (on it #FFFFFF), Rule #D6DEE6, Lamp #FFE9A8; dark Night wall #0D151E, Night plate #152030, Chalk #E7EEF5, Slate #A3B2C2, Lit blue #8AB6EE (on it #0D151E), Night rule #263445, Lamp #F6D985. Status light / dark: in office #178C55 / #63D69A, in class #B06C00 / #F2B544, busy #9F1F1A / #E8524C, away #66727F / #94A2B1, Reason: all WCAG 2.2 AA pairs pass and status colours stay at least delta E 23.5 apart under simulated protanopia and deuteranopia (scripts/check_palette.py).
+2026-10-05, Typeface = IBM Plex Sans Arabic + IBM Plex Sans, weights 400/500/600, body 17, scale 13/15/17/20/24/30, Reason: Arabic and Latin drawn as one system; the Arabic is about 17% narrower than Readex Pro (measured), so labels fit small phones and 200% text.
+2026-10-05, Door = square doorway on a 24-unit grid, solid shapes lit from inside: open = leaf swung toward the viewer as a hinge-side trapezoid with lamp light in the doorway and on the floor; busy = nearly closed with a glowing latch-side seam and a no-entry bar; in class = closed with a book mark; away = closed and dark with a knob; not confirmed = dashed outline on a solid floor line, Reason: the owner preferred square doors to arches; solid lit shapes read better at 16 px than line art.
+2026-10-05, Layout = Direction A: list-first Home with flat hairline rows, cards only for the next appointment and pinned nameplates; Professor Status as 2 x 2 status tiles with presets, note, today's timeline and requests, Reason: chosen direction.
+2026-10-05, Dark danger changed from #E8524C to #F06A64 (dark busy status stays #E8524C), Reason: #E8524C as error text on the dark plate measured 4.48:1, just under 4.5:1; #F06A64 passes on wall and plate (app/src/theme/tokens.test.ts).
+2026-10-05, Door colours switch at once while the leaf, lamp and floor animate; there is no colour cross-fade, Reason: animated colour props on react-native-svg do not apply on the web build (Playwright showed the old colour staying). Plain colour props work on every platform, and the moving leaf already carries the change.
+2026-10-05, List-row names use body 17 semibold, wrap to 2 lines, and the trailing status is capped at 40% of the row, Reason: at 360 px in Arabic a title-size name next to the status was squeezed to a few letters.
+2026-10-05, The RTL/LTR switch reloads with reloadAppAsync() from expo; expo-updates was removed, Reason: same clean reload in Expo Go, one dependency fewer.
+2026-10-05, Lint forbids raw hex colours outside src/theme and whole-package lucide imports (icons are imported one by one), Reason: keeps every colour a token (Section 4); Metro does not tree-shake, and importing the package root put every lucide icon (about 210 KB gzipped) in the web bundle.
+2026-10-05, App icon, Android adaptive icon (background #1F4F8C, with a monochrome layer), favicon and splash image all use the square lit door in white or corridor blue, Reason: Section 2, the identity comes from the door.
+2026-10-05, Known failure (superseded by the product-focus entry below): the web build's initial JavaScript is 495 KB gzipped against the 200 KB target in Section 9 (measured with expo export, one entry bundle). App code is 33 KB raw. The rest is the approved stack (raw sizes): Reanimated 733 KB, Expo Router 430 KB, react-native-web 284 KB, react-dom 175 KB. Reaching 200 KB would mean dropping Reanimated or Expo Router on the web, which is a stack change, so it is reported rather than worked around. LCP and INP are still to be measured with Lighthouse in P6, Reason: honesty over a passing number; the owner decides whether to accept a revised target.
+2026-10-05, Product focus: the phone app is the product; the web build is only the automated test harness. Desktop layouts (side rail, two-pane) are not built and the 200 KB web bundle target no longer applies, Reason: owner's decision ("I just want the phone version").
+2026-10-05, React Native swaps textAlign left/right in right-to-left layouts on Android and iOS but not on the web build, so start/end alignment goes through one helper (app/src/lib/direction.ts), Reason: the P3b code aligned Arabic status text to the wrong edge on phones; web screenshots could not show it.
+2026-10-05, Tab bar labels grow with the system text size up to 130%, not 200%, and the bar is 72 tall, Reason: a fixed-height tab bar clips larger labels; system tab bars on iOS and Android also cap label growth. All screen content still scales to 200%.
+2026-10-05, Home "Available now" lists every professor of the student's department, in office first, with pinned ones marked by a filled pin, Reason: hiding pinned professors left the section empty with no explanation for a student who pinned their whole department.
+2026-10-05, Pinning is available from Home search results and department rows (a separate 48 x 48 pin button beside the row) until the profile screen adds Pin in P4, Reason: the empty state invites the student to search and pin, so pinning had to work in P3c.
+2026-10-05, The bell (notifications) is not shown on Home until P5, and Search, Appointments and Messages tabs appear in P4/P5, Reason: no placeholder controls that do nothing.
+2026-10-05, Screen-reader labels join their parts with the language's comma (", " / "، "), Reason: Arabic labels should not contain English punctuation.
+2026-10-05, Status changes of pinned professors are announced politely: AccessibilityInfo on Android and iOS, an aria-live region on the web build (React Native Web's announce does nothing), Reason: Section 5 live updates.
+
+2026-10-05, Admin area is phone screens (list, search, Add, a form sheet for create and edit, delete with confirmation), not a desktop layout, Reason: product focus on the phone app; the five tables fit one tab each.
+2026-10-05, Destructive actions (cancel an appointment, delete a block or a row) confirm in a bottom sheet with a danger button and a "keep" button, Reason: looks the same everywhere and works on the web build, where React Native's Alert does nothing.
+2026-10-05, Unavailable booking times stay visible, dimmed, named "09:00, unavailable" for screen readers, and explain why when tapped, Reason: DESIGN.md 7.5; the web build drops aria-disabled on a chip that still reacts to taps.
+2026-10-05, The booking day strip starts on today; the signature moment mounts the door closed, then opens it with a check badge and "Booked with Dr. X, Sunday 10:30", plus "the professor will approve or decline", Reason: bookings start as requests (pending), so the message says what happens next.
+2026-10-05, The "Today" timeline is a bar from the first to the last whole hour of the day's blocks (office hours in the in-office colour, classes in the in-class colour) with a now-marker, followed by the same blocks as text, running in the reading direction, Reason: colour never carries the meaning alone.
+2026-10-05, Professor status tiles are a radio group of four doors; presets are chips; the note is saved with the current status, Reason: one tap changes status; everything else is optional.
+
+2026-10-05, Chat bubbles: yours at the end edge in the primary colour, theirs at the start edge on a bordered plate; one time per burst (5 minutes, same sender), a day separator, and Sending / Sent / Read under your latest message only, Reason: DESIGN.md 7.7; receipts on every bubble would be noise.
+2026-10-05, A message appears at once; if sending fails it stays, marked "Not sent. Tap to try again.", and the error is announced, Reason: never lose what the user typed.
+2026-10-05, Professors get three quick replies above the composer (Come now, Running 10 minutes late, Let's reschedule) that send in one tap, Reason: replying must cost a professor as little as setting the status.
+2026-10-05, Notifications live under a bell on Home (students) and My status (professors), grouped Today / Earlier, each row a sentence that opens its source; a new message from the same person updates one unread notification instead of adding another, Reason: no push (CLAUDE.md Section 3), and a burst of messages should not flood the list.
+2026-10-05, The Messages tab badge counts unread messages and the tab is named "Messages, 2 unread", Reason: screen readers otherwise read the badge number before the tab name.
+2026-10-05, Text size (Default, Large 115%, Larger 130%) multiplies the phone's own text size, still capped at 200% in total; tab labels ignore it and shrink to fit one line, Reason: five tabs at 360 dp leave about 72 dp each.
+2026-10-05, Notification preferences (Appointments, Messages) only filter what the bell shows on this phone; nothing is sent outside the app, Reason: CLAUDE.md Section 3 rules out push, email and SMS.
+2026-10-05, Sign-up is one screen reached from sign-in by a quiet link: role tabs (Student, Professor), names, university email, password, department chips, then student number and year, or title and rank. Checks run before sending and show next to each field, Reason: account creation is rare, so one scrollable form beats a multi-step wizard, and the role decides which fields appear.
+2026-10-05, A professor's sign-up ends on "Request sent" with a closed (away) door, and the admin list marks such accounts "Not active" (the word now used for every inactive account), Reason: a professor account must be approved, and "Deactivated" read wrong for an account that was never active.
+2026-10-05, Times are shown on the 12-hour clock with the period in the UI language ("9:30 AM", "9:30 ص"; Western digits), and the schedule editor picks hour, minutes and AM/PM with chips, Reason: owner request; people at the university read and say times this way, and typing "13:00" on a phone keyboard was error-prone.
+2026-10-05, Departments are chosen from a menu: a field that opens a sheet with each college as a heading and its departments as a radio list, Reason: owner request; 12 departments as chips were a wall of buttons, and the college gives the list its structure.
+2026-10-05, A status without a return time reads "for the rest of today" instead of "until 12:00 AM", and a student whose department has no professors yet is told so instead of "nobody is in", Reason: both earlier messages were literally true and still misleading.
+2026-10-06, Booking is free (owner decision): a start on any 5-minute step inside office hours and any length in 5-minute steps; the sheet shows the day's free stretches, hour then minute chips, and a length stepper with one-tap lengths, starting at the professor's usual length, Reason: students need different lengths; hour then minute chips keep 24 starts per two hours to two short rows, and the summary line answers "when is she free?" before any tap.
+2026-10-06, When an appointment is cancelled, the student booked right after it that day gets "The appointment before yours ... was cancelled. Move yours earlier?"; tapping it opens a "Move earlier" sheet with the earlier free starts, the earliest as the one-tap button; length and approval stay, and the professor is told, Reason: owner request; one tap to act, and no new approval round for a time the professor already offers.
+2026-10-06, The "Today" timeline became an agenda (replacing the bar of 2026-10-05): one row per block with start and end times, a rail and door in the status colour, the name, "Now, until ..." as a pill on the current block, finished blocks dimmed, "Not in office" between blocks, and a "Now" mark where the time falls outside a block; each row is one spoken sentence, Reason: owner found the bar unclear; a list reads at a glance, at 200% text and in both directions.
+2026-10-06, Text size is Small (90%), Medium (100%, default) and Big (120%) of the phone's own size, still capped at 200%; sizes saved by the earlier version map to Medium or Big, Reason: owner request; small still keeps body text at about 15 dp.
+2026-10-06, Appointment cards show the end and length ("Until 10:45 AM, 15 min"), Reason: lengths now vary.
+2026-10-06, Admin area redesigned (owner request "make the admin GUI better"): an Overview tab first (accounts waiting for activation with one-tap Activate, number tiles that open their lists, quick Add buttons); Departments and Offices share a Campus tab behind a segmented switch so there are still five tabs; list rows lead with initials (people) or an icon, show a total, filter by All/Active/Not active, and departments are grouped by college with professor and student counts; forms are split into Account, Academic and Status with the office in a menu, Active as a switch and Delete apart at the bottom; a professor opens as a quick view (live status with the door, facts, upcoming appointments) before the form, Reason: the admin's first job is letting new professors in, which used to mean hunting for a "Not active" pill; sections and menus make long forms scannable at 360 dp.
+2026-10-06, Admin account forms never autofill: email and names are autocomplete off, the password new-password, with importantForAutofill no and textContentType none; the web build also sets the page's color-scheme to the theme, Reason: the browser filled the admin's own saved login into a new professor's form (owner report); in dark mode the browser's scrollbars and autofill were light.
+2026-10-06, The account screen is titled like its tab ("Profile" for students, "Account" for professors and admins), Reason: a professor saw "Profile" above the Account tab.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking
@@ -183,8 +244,10 @@ Append entries as: date, decision, reason.
  Arabic (RTL) and English (LTR) both correct; no clipped Arabic text
  Light and dark both pass contrast
  Nothing from Section 3 present
- Works at 320 px width and at 200% text size
- Keyboard and screen-reader usable
- Motion is purposeful; reduced motion respected
+ Works at 320 width and at 200% text size (system font scale on native, zoom on web)
+ Screen-reader usable (TalkBack, VoiceOver, and the web build); keyboard usable on the web build
+ Safe areas respected; Android back button behaves as in Section 6; keyboard never covers an input
+ Motion is purposeful; reduced motion respected; haptics only where Section 5 allows
  All copy comes from i18n files; every button names its action
- Lighthouse mobile: accessibility at least 95, performance at least 90 (if Lighthouse is available)
+ Lighthouse mobile on the web build: accessibility at least 95, performance at least 90 (if Lighthouse is available)
+ Each check is marked verified (how) or "needs a real phone"
