@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 
 import { preferenceKeys, readPreference, writePreference } from '@/lib/storage';
@@ -60,6 +60,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // The root view behind every screen matches the theme (no white flash in dark mode).
     SystemUI.setBackgroundColorAsync(palettes[scheme].bg).catch(() => undefined);
+    // Web build: the browser's own parts (scrollbars, form autofill) follow the theme too.
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.style.colorScheme = scheme;
+    }
   }, [scheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -41,7 +41,8 @@ export function AccountScreen() {
       contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
     >
       <Text variant="heading" role="heading">
-        {t('profile.title')}
+        {/* Named like its tab: "Profile" for students, "Account" for professors and admins. */}
+        {t(user.role === 'student' ? 'tabs.profile' : 'tabs.account')}
       </Text>
 
       <View style={styles.identity}>

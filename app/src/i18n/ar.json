@@ -283,7 +283,6 @@
     "campus": "الجامعة"
   },
   "profile": {
-    "title": "حسابي",
     "student_line": "{{department}}، السنة {{year}}",
     "sign_out": "تسجيل الخروج",
     "styleguide": "دليل التصميم (للتطوير فقط)"

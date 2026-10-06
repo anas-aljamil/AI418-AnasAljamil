@@ -387,6 +387,11 @@ function AdminForm<R extends AdminResource>({
             autoCapitalize={field.upper ? 'characters' : 'none'}
             autoCorrect={false}
             maxLength={field.maxLength}
+            // These are another person's details: never fill in the admin's own saved
+            // email and password (browser password managers, Android and iOS autofill).
+            autoComplete={field.secure ? 'new-password' : 'off'}
+            importantForAutofill="no"
+            textContentType="none"
           />
         );
       case 'department':

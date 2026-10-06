@@ -123,3 +123,15 @@ it('filters people by active state and opens a professor as a quick view first',
   expect(screen.getByRole('switch', { name: 'Account active' })).toBeTruthy();
   expect(screen.getByRole('button', { name: /^Office, Building A/ })).toBeTruthy();
 });
+
+it("never fills in the admin's own saved email and password when adding an account", async () => {
+  await renderWithProviders(<ProfessorsAdmin />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add' }));
+  const email = screen.getByLabelText('University email');
+  const password = screen.getByLabelText('Password (at least 8 characters)');
+  expect(email.props.value).toBe('');
+  expect(email.props.autoComplete).toBe('off');
+  expect(email.props.importantForAutofill).toBe('no');
+  expect(password.props.autoComplete).toBe('new-password');
+  expect(password.props.textContentType).toBe('none');
+});

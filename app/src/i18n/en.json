@@ -283,7 +283,6 @@
     "campus": "Campus"
   },
   "profile": {
-    "title": "Profile",
     "student_line": "{{department}}, year {{year}}",
     "sign_out": "Sign out",
     "styleguide": "Styleguide (development only)"
