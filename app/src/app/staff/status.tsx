@@ -155,7 +155,7 @@ export default function StatusScreen() {
                 <Button
                   variant="quiet"
                   label={t('status_screen.back_to_schedule')}
-                  onPress={() => apply(null)}
+                  onPress={() => apply(null, () => setNote(''))}
                 />
               </View>
             ) : null}

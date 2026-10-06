@@ -8,9 +8,9 @@ This plan says what is tested, at which level, how to run it, and what passed. E
 |---|---|---|---|
 | Database | `scripts/check_db.py` (65 checks) | The schema rejects bad data with the expected MySQL error (CHECK, UNIQUE, foreign keys, subtype guard, triggers). The seed obeys the business rules. Character set, engine and reserved words are right. The ER diagram matches the schema. | throwaway `<DB_NAME>_check` database |
 | SQL deliverables | `scripts/check_sql.py` (39 checks) | Every statement in `db/queries.sql` runs on MySQL 8. Each table has at least 5 queries and 2 aggregates, and every required clause is used. The views and the trigger demo give the results the seed implies. The data-quality queries return no rows. | throwaway `<DB_NAME>_sql` database |
-| Backend | pytest (124 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
-| App units | Jest + React Native Testing Library (115 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
-| End to end | Playwright on the Expo web build (38 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
+| Backend | pytest (128 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
+| App units | Jest + React Native Testing Library (116 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
+| End to end | Playwright on the Expo web build (49 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. Every screen of every role opens in both languages with no console error and no failed API request. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
 | Real phone | [phone-checklist.md](phone-checklist.md) (#1-#56) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
 
 The fixed moment for every automated level is **Monday 2026-10-05 10:00 Riyadh (07:00 UTC)**, in the week the seed is anchored on.
@@ -29,7 +29,7 @@ cd app && npm run export:web && npx expo serve --port 8081
 cd app && npm run screenshots                                    # all specs, one at a time
 ```
 
-The end-to-end specs share the database and change it (bookings, messages, admin rows, new accounts), so they run one at a time on a fresh seed. A second run needs `reset_db.py` first. The raised login and sign-up limits are for repeated test runs only: at the defaults (5 per minute), a second run within a minute is correctly refused with 429.
+The end-to-end specs share the database and change it (bookings, messages, admin rows, new accounts), so they run one at a time on a fresh seed. `flows.spec.ts` changes rows the later specs read, so it loads the seed again when it finishes. A second run needs `reset_db.py` first. The raised login and sign-up limits are for repeated test runs only: at the defaults (5 per minute), a second run within a minute is correctly refused with 429.
 
 ## 3. Traceability
 
@@ -37,7 +37,7 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 
 | Rule | Automated evidence |
 |---|---|
-| Effective status = override > schedule > unknown | pytest `test_status_rules.py` (14 tests); `test_sql_views.py` compares the SQL view with the API every 15 minutes for a week; Playwright P4 one-tap status |
+| Effective status = override > schedule > unknown | pytest `test_status_rules.py` (14 tests); `test_sql_views.py` compares the SQL view with the API every 15 minutes for a week; `test_clearing_after_several_updates_in_one_second_still_returns_to_the_schedule`; Playwright P4 one-tap status and `flows.spec.ts` (presets, note, back to the schedule, checked in MySQL) |
 | Override return time; no return time ends at Riyadh midnight; only the latest counts | `test_override_expires_at_return_time_and_falls_back_to_schedule`, `test_override_without_return_time_ends_at_riyadh_midnight`, `test_newer_override_replaces_older_even_after_it_expires`, and the same cases in `test_sql_views.py` |
 | Staleness: not confirmed after more than 4 hours | `test_stale_office_status_is_not_confirmed_after_more_than_4_hours`, `test_office_status_exactly_4_hours_old_is_still_confirmed`; Playwright P4 shows "In office (not confirmed)" |
 | Asia/Riyadh schedules, UTC storage, Sunday-Thursday | `test_connections_use_utc_and_utf8mb4`, `test_friday_with_a_schedule_is_away`; Jest `format.test.ts` (Riyadh dates and booking days) |
@@ -86,9 +86,9 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 |---|---|
 | `check_db.py` | 65/65 |
 | `check_sql.py` | 39/39 |
-| pytest | 124 passed; ruff clean |
-| Jest | 115 passed; typecheck, lint and format clean |
-| Playwright | 38 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 9, sign-up 3 |
+| pytest | 128 passed; ruff clean |
+| Jest | 116 passed; typecheck, lint and format clean |
+| Playwright | 49 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 9, sign-up 3, screen sweep 7, everyday flows 4 |
 | Real phone | #1-#56 not yet run (no phone in the cloud sandbox) |
 
 ## 5. Not covered, and why

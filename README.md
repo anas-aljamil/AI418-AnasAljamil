@@ -75,7 +75,7 @@ The app finds the backend on the same computer by itself (details and fixes for 
   - Requests, Schedule, Messages with quick replies, and notifications.
 - **Admins:** departments, offices, professors and students (create, edit, delete).
 - **Settings for everyone:** language, theme and text size.
-- **New users:** "Create an account" on the sign-in screen with a university email (`@upm.edu.sa`; students use their university number, like `4510440@upm.edu.sa`).
+- **New users:** "Create an account" on the sign-in screen with a university email (`@upm.edu.sa`; students use their university number, like `xxxxxxx@upm.edu.sa`).
   - Students start at once.
   - A professor's account waits until an admin sets it active.
 

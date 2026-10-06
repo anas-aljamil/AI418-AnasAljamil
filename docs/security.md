@@ -73,7 +73,7 @@ How the tokens behave:
 
 - **Who:** students and professors create their own accounts; admins never come from sign-up. The role is part of the request, but the request cannot pick `admin`, and the API refuses it.
 - **Only the university domain:** the address must end with `@` + `SIGNUP_EMAIL_DOMAIN` (default `upm.edu.sa`). There is no email verification (email is out of scope, CLAUDE.md Section 3), so the domain rule is the only proof of membership. Look-alikes such as `x@evil.upm.edu.sa` or `x@upm.edu.sa.evil.com` are refused.
-- **Students' addresses are their university number** (`4510440@upm.edu.sa`). The number is read from the address, so a student cannot claim a different number. Professors may use a name.
+- **Students' addresses are their university number** (`1234567@upm.edu.sa`). The number is read from the address, so a student cannot claim a different number. Professors may use a name.
 - **Seed accounts** stay on the reserved demo domain `university.example`, because seed data must be fictional (CLAUDE.md Section 8). They can sign in but are not created through sign-up.
 - **Students** are active at once and receive tokens exactly as at sign-in (refresh token in the body for the phone, httpOnly cookie for the web build).
 - **Professors** are created inactive and receive no tokens (HTTP 202). They cannot sign in, and students do not see them, until an admin sets the account active. So nobody can make themselves a professor and approve bookings or read chats.

@@ -202,11 +202,11 @@
     "pending_body": "سيتحقق مسؤول النظام من حسابك ويفعّله. بعدها سجّل الدخول بالبريد {{email}}.",
     "back_to_sign_in": "العودة إلى تسجيل الدخول",
     "have_account": "لديك حساب؟ سجّل الدخول",
-    "email_helper_student": "رقمك الجامعي ثم @{{domain}} (مثل 4510440@{{domain}}).",
+    "email_helper_student": "رقمك الجامعي ثم @{{domain}} (مثل xxxxxxx@{{domain}}).",
     "email_helper_professor": "بريدك الجامعي المنتهي بـ @{{domain}}.",
     "number_found": "الرقم الجامعي: {{number}}",
     "email_domain": "استخدم بريدك الجامعي المنتهي بـ @{{domain}}.",
-    "email_student": "يستخدم الطلاب رقمهم الجامعي بريدًا، مثل 4510440@{{domain}}."
+    "email_student": "يستخدم الطلاب رقمهم الجامعي بريدًا، مثل xxxxxxx@{{domain}}."
   },
   "errors": {
     "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -233,7 +233,7 @@
     "UNIVERSITY_NO_TAKEN": "الرقم الجامعي مستخدم في حساب آخر.",
     "EMAIL_DOMAIN": "يمكن إنشاء حساب بالبريد الجامعي فقط (@upm.edu.sa).",
     "INVALID_REFERENCE": "هذا القسم أو المكتب لم يعد موجودًا. اختر غيره.",
-    "STUDENT_EMAIL": "يسجّل الطلاب برقمهم الجامعي بريدًا، مثل 4510440@upm.edu.sa."
+    "STUDENT_EMAIL": "يسجّل الطلاب برقمهم الجامعي بريدًا، مثل xxxxxxx@upm.edu.sa."
   },
   "home": {
     "search_label": "ابحث عن أستاذ",

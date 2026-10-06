@@ -55,6 +55,23 @@ def test_clearing_the_status_returns_to_the_schedule(client, auth):
     assert (cleared["status"], cleared["source"]) == ("in_office", "schedule")
 
 
+def test_clearing_after_several_updates_in_one_second_still_returns_to_the_schedule(client, auth, clock):
+    # Bug found end to end: with the clock frozen (DEMO_NOW), clearing removed only the
+    # latest update, so the one set just before it counted again.
+    headers = auth(KHALID)
+    client.post(STATUS, json={"status": "away", "expires_at": "2026-10-05T10:15:00+03:00"}, headers=headers)
+    client.post(STATUS, json={"status": "busy", "note": "Meeting"}, headers=headers)
+    cleared = client.delete(STATUS, headers=headers).json()
+    assert (cleared["status"], cleared["source"]) == ("in_office", "schedule")
+
+    # An update from earlier stays in the history and ends now.
+    client.post(STATUS, json={"status": "away"}, headers=headers)
+    clock.at += timedelta(minutes=5)
+    client.post(STATUS, json={"status": "busy"}, headers=headers)
+    cleared = client.delete(STATUS, headers=headers).json()
+    assert (cleared["status"], cleared["source"]) == ("in_office", "schedule")
+
+
 def test_status_input_is_validated(client, auth):
     headers = auth(KHALID)
     too_long = client.post(STATUS, json={"status": "busy", "note": "x" * 61}, headers=headers)

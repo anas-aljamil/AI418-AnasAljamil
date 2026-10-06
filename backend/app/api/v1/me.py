@@ -76,16 +76,21 @@ def clear_status(
     user: User = Depends(current_professor), db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
 ) -> StatusOut:
     now = clock.now()
-    override = directory.latest_overrides(db, now, [user.user_id]).get(user.user_id)
-    if override and now < override_end(override):
-        if override.created_at >= now:
-            # Set and cleared within the same second: expires_at could not be
-            # both after created_at (database CHECK) and not after now, so the
-            # momentary update is removed instead.
-            db.delete(override)
-        else:
+    while True:
+        override = directory.latest_overrides(db, now, [user.user_id]).get(user.user_id)
+        if override is None or now >= override_end(override):
+            break
+        if override.created_at < now:
             override.expires_at = now
-        db.commit()
+            break
+        # Set and cleared within the same second: expires_at could not be
+        # both after created_at (database CHECK) and not after now, so the
+        # momentary update is removed instead. The one before it then counts
+        # again, so the loop looks at that one too (several taps in one second,
+        # or a frozen demo clock).
+        db.delete(override)
+        db.flush()
+    db.commit()
     return _status_now(db, user.user_id, clock)
 
 

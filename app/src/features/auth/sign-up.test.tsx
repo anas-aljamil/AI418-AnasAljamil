@@ -117,7 +117,7 @@ it.each([
   ['4519001@gmail.com', 'Use your university email, ending in @upm.edu.sa.'],
   [
     'r.alqahtani@upm.edu.sa',
-    'Students use their university number as the email, for example 4510440@upm.edu.sa.',
+    'Students use their university number as the email, for example xxxxxxx@upm.edu.sa.',
   ],
 ])('explains the email rule for %s before sending', async (email, message) => {
   await renderWithProviders(<SignUpScreen />, 'en');

@@ -193,10 +193,10 @@ describe('status end', () => {
 
 describe('university email', () => {
   it('reads the university number from a student address', () => {
-    expect(universityNumberOf('4510440@upm.edu.sa')).toBe('4510440');
+    expect(universityNumberOf('1234567@upm.edu.sa')).toBe('1234567');
     expect(universityNumberOf('r.alqahtani@upm.edu.sa')).toBeNull();
-    expect(universityNumberOf('4510440@gmail.com')).toBeNull();
-    expect(universityNumberOf('4510440@evil.upm.edu.sa')).toBeNull();
+    expect(universityNumberOf('1234567@gmail.com')).toBeNull();
+    expect(universityNumberOf('1234567@evil.upm.edu.sa')).toBeNull();
   });
 
   it('accepts only the university domain', () => {

@@ -7,7 +7,7 @@ SameSite=Strict cookie scoped to /api/v1/auth. Cookie-based calls must also send
 X-Requested-With: mawjood, which a cross-site form cannot do (see docs/security.md).
 
 Sign-up needs an address at the university domain (SIGNUP_EMAIL_DOMAIN). A
-student's address is their university number (4510440@upm.edu.sa), so the
+student's address is their university number (1234567@upm.edu.sa), so the
 number is read from it. A student is signed in at once; a professor's account is created inactive and
 waits for an admin to activate it, so nobody can make themselves a professor.
 """

@@ -202,11 +202,11 @@
     "pending_body": "An administrator will check and activate your account. Then sign in with {{email}}.",
     "back_to_sign_in": "Back to sign in",
     "have_account": "Already have an account? Sign in",
-    "email_helper_student": "Your university number, then @{{domain}} (for example 4510440@{{domain}}).",
+    "email_helper_student": "Your university number, then @{{domain}} (for example xxxxxxx@{{domain}}).",
     "email_helper_professor": "Your university email, ending in @{{domain}}.",
     "number_found": "University number: {{number}}",
     "email_domain": "Use your university email, ending in @{{domain}}.",
-    "email_student": "Students use their university number as the email, for example 4510440@{{domain}}."
+    "email_student": "Students use their university number as the email, for example xxxxxxx@{{domain}}."
   },
   "errors": {
     "INVALID_CREDENTIALS": "The email or password is incorrect.",
@@ -233,7 +233,7 @@
     "UNIVERSITY_NO_TAKEN": "Another account already uses this university number.",
     "EMAIL_DOMAIN": "Only university email addresses (@upm.edu.sa) can create an account.",
     "INVALID_REFERENCE": "That department or office no longer exists. Choose another one.",
-    "STUDENT_EMAIL": "Students sign up with their university number as the email, for example 4510440@upm.edu.sa."
+    "STUDENT_EMAIL": "Students sign up with their university number as the email, for example xxxxxxx@upm.edu.sa."
   },
   "home": {
     "search_label": "Search professors",

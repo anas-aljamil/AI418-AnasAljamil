@@ -43,8 +43,8 @@ describe('translation files', () => {
       // translated) and codes like "A" in "مبنى A".
       const words =
         text
+          .replace(/[\w.]*@(?:{{\w+}}|[\w.]+)/g, '') // an address, its domain maybe a placeholder
           .replace(/{{\w+}}/g, '')
-          .replace(/[\w.]*@[\w.]+/g, '')
           .match(/[A-Za-z]{2,}/g) ?? [];
       expect({ key, untranslated: words }).toEqual({ key, untranslated: [] });
     }
