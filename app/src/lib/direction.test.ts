@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { I18nManager, Platform } from 'react-native';
 
 import { insetEnd, insetStart, textAlignFor } from './direction';
 
@@ -6,11 +6,21 @@ describe('text alignment by reading direction', () => {
   const original = Platform.OS;
   afterEach(() => {
     Platform.OS = original;
+    jest.restoreAllMocks();
   });
 
-  it('on phones uses left/right as start/end, because React Native swaps them in RTL', () => {
+  it('on phones in a right-to-left layout uses the swapped side (React Native swaps it back)', () => {
     Platform.OS = 'ios';
+    jest.replaceProperty(I18nManager, 'isRTL', true);
     expect([textAlignFor('start', 'ar'), textAlignFor('end', 'ar')]).toEqual(['left', 'right']);
+    // English on an Arabic phone before the reload: 'right' is swapped to the left side.
+    expect([textAlignFor('start', 'en'), textAlignFor('end', 'en')]).toEqual(['right', 'left']);
+  });
+
+  it('on phones whose layout is still left-to-right uses the physical side', () => {
+    Platform.OS = 'android';
+    jest.replaceProperty(I18nManager, 'isRTL', false);
+    expect([textAlignFor('start', 'ar'), textAlignFor('end', 'ar')]).toEqual(['right', 'left']);
     expect([textAlignFor('start', 'en'), textAlignFor('end', 'en')]).toEqual(['left', 'right']);
   });
 

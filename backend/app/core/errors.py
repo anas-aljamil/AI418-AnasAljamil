@@ -37,6 +37,18 @@ MYSQL_ERRORS = {
     1452: (422, "INVALID_REFERENCE", "A referenced record does not exist."),
     3819: (422, "CONSTRAINT_VIOLATION", "The data breaks a database rule."),
     1644: (409, "SLOT_TAKEN", "This time overlaps another appointment."),
+    # Unknown table / unknown column: the database is older than the code (after a pull that
+    # changed db/schema.sql). Say how to fix it instead of a bare 500.
+    1146: (
+        503,
+        "SCHEMA_OUTDATED",
+        "The database is older than the code. Rebuild it: python3 scripts/reset_db.py, then restart the API.",
+    ),
+    1054: (
+        503,
+        "SCHEMA_OUTDATED",
+        "The database is older than the code. Rebuild it: python3 scripts/reset_db.py, then restart the API.",
+    ),
 }
 
 HTTP_CODES = {
@@ -79,6 +91,8 @@ def install_error_handlers(app: FastAPI) -> None:
         number = mysql_error_number(exc)
         if number in MYSQL_ERRORS:
             status, code, message = MYSQL_ERRORS[number]
+            if code == "SCHEMA_OUTDATED":
+                log.error("%s (MySQL %s: %s)", message, number, exc.orig)
             return JSONResponse(error_body(code, message), status)
         log.exception("Unhandled database error %s", number)
         return JSONResponse(error_body("INTERNAL_ERROR", "Something went wrong on the server."), 500)

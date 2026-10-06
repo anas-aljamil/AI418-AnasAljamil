@@ -538,6 +538,8 @@
   "department_picker": {
     "choose": "Choose a department",
     "hint": "Opens the list of departments by college",
-    "all": "All departments"
+    "all": "All departments",
+    "loading": "Loading the departments…",
+    "none": "No departments yet. An administrator adds them."
   }
 }

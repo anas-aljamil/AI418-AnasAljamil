@@ -11,6 +11,8 @@ export const preferenceKeys = {
   user: 'mawjood.user',
   textSize: 'mawjood.textSize',
   notifications: 'mawjood.notifications',
+  /** The language a direction reload was last tried for (stops a reload loop). */
+  directionReload: 'mawjood.directionReload',
 } as const;
 
 export async function readPreference(key: string): Promise<string | null> {

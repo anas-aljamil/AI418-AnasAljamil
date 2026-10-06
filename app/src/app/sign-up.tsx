@@ -240,6 +240,9 @@ export default function SignUpScreen() {
             value={departmentId}
             onChange={setDepartmentId}
             error={errors.department}
+            loading={departments.isPending}
+            loadError={departments.error ? t(errorKey(departments.error)) : undefined}
+            onRetry={() => departments.refetch()}
           />
 
           {role === 'student' ? (

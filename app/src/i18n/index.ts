@@ -54,8 +54,17 @@ export async function initI18n(): Promise<Language> {
   if (Platform.OS !== 'web') {
     I18nManager.allowRTL(true);
     if (I18nManager.isRTL !== (language === 'ar')) {
-      I18nManager.forceRTL(language === 'ar');
-      await reloadAppAsync('Apply layout direction for the saved language');
+      // Reload once to apply the direction. If it still does not match after that reload
+      // (Expo Go without RTL support), carry on: the root layout follows the language anyway
+      // (layoutDirection), and reloading again would loop forever.
+      const tried = await readPreference(preferenceKeys.directionReload);
+      if (tried !== language) {
+        await writePreference(preferenceKeys.directionReload, language);
+        I18nManager.forceRTL(language === 'ar');
+        await reloadAppAsync('Apply layout direction for the saved language');
+      }
+    } else {
+      await writePreference(preferenceKeys.directionReload, '');
     }
   }
   return language;
@@ -71,6 +80,7 @@ export async function switchLanguage(language: Language): Promise<void> {
   await i18n.changeLanguage(language);
   applyWebDirection(language);
   if (Platform.OS !== 'web' && I18nManager.isRTL !== (language === 'ar')) {
+    await writePreference(preferenceKeys.directionReload, language);
     I18nManager.forceRTL(language === 'ar');
     await reloadAppAsync('Switch layout direction for the new language');
   }

@@ -8,7 +8,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
-  I18nManager,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -127,7 +126,9 @@ export default function ConversationScreen() {
     ...(messages.data ?? []).map((message) => ({ kind: 'sent' as const, message })),
   ];
   const latestMine = (messages.data ?? []).find((m) => m.mine)?.message_id;
-  const flip = language === 'ar' && !I18nManager.isRTL;
+  // Icons are drawings: layout direction moves them but never mirrors them, so the back
+  // arrow is flipped for Arabic on every platform.
+  const flip = language === 'ar';
 
   const renderItem = ({ item, index }: { item: Item; index: number }) => {
     const message = item.message;

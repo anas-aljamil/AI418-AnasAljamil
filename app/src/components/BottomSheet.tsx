@@ -28,6 +28,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { layoutDirection } from '@/lib/direction';
 import { useTheme } from '@/theme/ThemeProvider';
 import { durations, radii, space } from '@/theme/tokens';
 import { Button } from './Button';
@@ -44,7 +45,7 @@ const OFFSCREEN = 600;
 
 export function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors, shadow } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
@@ -84,7 +85,8 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.root}>
+      {/* A modal starts a new layout root, so it takes the reading direction again. */}
+      <View style={[styles.root, layoutDirection(i18n.language === 'ar' ? 'ar' : 'en')]}>
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}
         >

@@ -18,7 +18,8 @@ import {
   IBMPlexSans_500Medium,
   IBMPlexSans_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-sans';
-import { I18nextProvider } from 'react-i18next';
+import { StyleSheet, View } from 'react-native';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 
@@ -28,22 +29,30 @@ import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
+import { layoutDirection } from '@/lib/direction';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function AppShell() {
   const { scheme, colors } = useTheme();
   const { state } = useAuth();
+  const { i18n: strings } = useTranslation();
+  const direction = layoutDirection(strings.language === 'ar' ? 'ar' : 'en');
   const restoring = state.status === 'restoring';
   useEffect(() => {
     if (!restoring) SplashScreen.hideAsync().catch(() => undefined);
   }, [restoring]);
   if (restoring) return null;
   return (
-    <>
+    <View style={[styles.fill, direction]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
-    </>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      />
+    </View>
   );
 }
 
@@ -82,3 +91,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

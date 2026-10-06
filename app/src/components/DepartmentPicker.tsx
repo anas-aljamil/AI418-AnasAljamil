@@ -15,6 +15,7 @@ import { departmentName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, touchTarget, type Language } from '@/theme/tokens';
 import { BottomSheet } from './BottomSheet';
+import { Button } from './Button';
 import { Text } from './Text';
 
 interface DepartmentPickerProps {
@@ -25,6 +26,10 @@ interface DepartmentPickerProps {
   /** Offer "All departments" (value null) first, for filters. */
   allLabel?: string;
   error?: string;
+  /** The list is still loading, or failed (the message says why; onRetry asks again). */
+  loading?: boolean;
+  loadError?: string;
+  onRetry?: () => void;
 }
 
 export function DepartmentPicker({
@@ -34,6 +39,9 @@ export function DepartmentPicker({
   onChange,
   allLabel,
   error,
+  loading,
+  loadError,
+  onRetry,
 }: DepartmentPickerProps) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
@@ -85,6 +93,19 @@ export function DepartmentPicker({
         <View role="radiogroup" accessibilityLabel={label} style={styles.list}>
           {allLabel ? (
             <Option label={allLabel} selected={value === null} onPress={() => choose(null)} />
+          ) : null}
+          {/* Never an empty sheet: say why there is nothing to choose. */}
+          {groups.length === 0 ? (
+            <View accessibilityLiveRegion="polite" style={styles.group}>
+              <Text color={loadError ? 'danger' : 'muted'}>
+                {loadError ?? t(loading ? 'department_picker.loading' : 'department_picker.none')}
+              </Text>
+              {loadError && onRetry ? (
+                <View style={styles.retry}>
+                  <Button variant="secondary" label={t('common.try_again')} onPress={onRetry} />
+                </View>
+              ) : null}
+            </View>
           ) : null}
           {groups.map((group) => (
             <View key={group.key} style={styles.group}>
@@ -175,6 +196,7 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   grow: { flex: 1 },
+  retry: { alignItems: 'flex-start' },
   list: { gap: space.md },
   group: { gap: space.xxs },
   option: {

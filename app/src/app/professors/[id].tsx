@@ -4,7 +4,7 @@
  * and a sticky bar with Book (primary) and Pin within thumb reach. Message joins in P5.
  */
 import { useState } from 'react';
-import { I18nManager, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -65,8 +65,9 @@ export default function ProfessorProfile() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
   // Directional icons mirror in right-to-left layouts (DESIGN.md Section 9). On native the
-  // layout direction already mirrors the row; the web build needs the flip on the icon.
-  const flip = language === 'ar' && !I18nManager.isRTL;
+  // Icons are drawings: layout direction moves them but never mirrors them, so the back
+  // arrow is flipped for Arabic on every platform.
+  const flip = language === 'ar';
 
   const data = professor.data;
   const status = data

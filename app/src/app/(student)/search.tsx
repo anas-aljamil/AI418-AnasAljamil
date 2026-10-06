@@ -95,15 +95,16 @@ export default function SearchScreen() {
           />
         </View>
       </View>
-      {departments.data?.length ? (
-        <DepartmentPicker
-          label={t('search.department_filter')}
-          departments={departments.data}
-          value={departmentIds[0] ?? null}
-          onChange={(id) => setDepartmentIds(id === null ? [] : [id])}
-          allLabel={t('department_picker.all')}
-        />
-      ) : null}
+      <DepartmentPicker
+        label={t('search.department_filter')}
+        departments={departments.data ?? []}
+        value={departmentIds[0] ?? null}
+        onChange={(id) => setDepartmentIds(id === null ? [] : [id])}
+        allLabel={t('department_picker.all')}
+        loading={departments.isPending}
+        loadError={departments.error ? t(errorKey(departments.error)) : undefined}
+        onRetry={() => departments.refetch()}
+      />
       {active ? (
         <View style={styles.clear}>
           <Button variant="quiet" label={t('search.clear')} onPress={clear} />

@@ -3,7 +3,7 @@
  * source (the appointment list or the conversation) and marked read when opened. The
  * settings filter (appointments, messages) decides what this phone shows.
  */
-import { I18nManager, SectionList, StyleSheet, View } from 'react-native';
+import { SectionList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +35,9 @@ export default function NotificationsScreen() {
   const user = useUser();
   const { query, visible, hidden, unread } = useVisibleNotifications();
   const markRead = useMarkNotificationsRead();
-  const flip = language === 'ar' && !I18nManager.isRTL;
+  // Icons are drawings: layout direction moves them but never mirrors them, so the back
+  // arrow is flipped for Arabic on every platform.
+  const flip = language === 'ar';
 
   const text = (n: AppNotification) => {
     const name = n.actor ? participantName(n.actor, language, t) : '';

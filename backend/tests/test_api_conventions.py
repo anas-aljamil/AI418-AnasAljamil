@@ -2,6 +2,7 @@
 
 from sqlalchemy import text
 
+from app.core import schema_check
 from app.models import Base
 from tests.conftest import SAAD
 
@@ -96,3 +97,33 @@ def test_optional_text_fields_accept_an_explicit_null(client, auth):
         headers=auth(KHALID),
     )
     assert block.status_code == 201, block.text
+
+
+def test_the_startup_check_finds_no_problem_in_a_current_database(engine):
+    assert schema_check.schema_problems(engine) == []
+
+
+def test_health_says_when_the_database_is_older_than_the_code(client):
+    client.app.state.schema_problems = ["table colleges is missing"]
+    response = client.get("/api/v1/health")
+    assert response.status_code == 503
+    error = response.json()["error"]
+    assert error["code"] == "SCHEMA_OUTDATED"
+    assert "table colleges is missing" in error["message"] and "reset_db.py" in error["message"]
+
+
+def test_a_missing_table_or_column_says_the_database_is_outdated(client):
+    """A database built before a schema change answers with how to fix it, not a bare 500."""
+    import pymysql
+    from sqlalchemy.exc import ProgrammingError
+
+    for number, text_ in ((1146, "Table 'mawjood.colleges' doesn't exist"), (1054, "Unknown column")):
+
+        def outdated(number=number, text_=text_):
+            raise ProgrammingError("SELECT ...", {}, pymysql.err.ProgrammingError(number, text_))
+
+        client.app.add_api_route(f"/outdated-{number}", outdated)
+        response = client.get(f"/outdated-{number}")
+        assert response.status_code == 503
+        error = response.json()["error"]
+        assert error["code"] == "SCHEMA_OUTDATED" and "reset_db.py" in error["message"]

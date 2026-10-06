@@ -48,6 +48,9 @@
     "scheme": "mawjood",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supportsRTL": true
     }
   }
 }
