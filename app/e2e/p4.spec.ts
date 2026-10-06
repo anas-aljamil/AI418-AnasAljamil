@@ -159,7 +159,14 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
 }) => {
   test.setTimeout(120_000);
   const admin = await open(browser, 'admin@university.example');
-  await expect(admin).toHaveURL(/\/admin\/departments$/);
+  // Admins land on the overview: what waits for activation, the numbers, quick actions.
+  await expect(admin).toHaveURL(/\/admin\/overview$/);
+  // The seed has one switched-off student account.
+  await expect(admin.getByText('Waiting for activation (1)', { exact: true })).toBeVisible();
+  await expect(admin.getByRole('button', { name: 'Activate Ziyad Al-Shammari' })).toBeVisible();
+  await expect(admin.getByRole('button', { name: /^Professors: 8/ })).toBeVisible();
+  await shoot(admin, 'en-9-admin-overview');
+  await admin.getByRole('tab', { name: 'Campus' }).click();
 
   const fill = async (label: string, value: string) =>
     admin.getByLabel(label, { exact: true }).fill(value);
@@ -172,8 +179,15 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
     await admin.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(admin.getByText('Saved', { exact: true })).toBeVisible();
   };
-  const remove = async (rowText: string) => {
-    await admin.getByText(rowText, { exact: true }).click();
+  // Professors open as a quick view first; Edit details leads to the form.
+  const openRow = async (rowText: string, viaSummary = false) => {
+    // The list row (a button named by its title first); the overview may list the same name.
+    const escaped = rowText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await admin.getByRole('button', { name: new RegExp(`^${escaped}(,|$)`) }).click();
+    if (viaSummary) await admin.getByRole('button', { name: 'Edit details' }).click();
+  };
+  const remove = async (rowText: string, viaSummary = false) => {
+    await openRow(rowText, viaSummary);
     await admin.getByRole('button', { name: 'Delete', exact: true }).click();
     await admin
       .getByRole('dialog', { name: /^Delete / })
@@ -183,14 +197,14 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   };
 
   // Departments
-  await admin.getByRole('button', { name: 'Add' }).click();
+  await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await admin.getByRole('button', { name: 'College of Engineering', exact: true }).click();
   await fill('Code (capital English letters)', 'GEO');
   await fill('Name in Arabic', 'الجغرافيا');
   await fill('Name in English', 'Geography');
   await save();
   expect(sql("SELECT name_en FROM departments WHERE code = 'GEO'")).toBe('Geography');
-  await admin.getByText('Geography', { exact: true }).click();
+  await openRow('Geography');
   await fill('Name in English', 'Geography and GIS');
   await save();
   expect(sql("SELECT name_en FROM departments WHERE code = 'GEO'")).toBe('Geography and GIS');
@@ -200,7 +214,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
 
   // Offices
   await admin.getByRole('tab', { name: 'Offices' }).click();
-  await admin.getByRole('button', { name: 'Add' }).click();
+  await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await fill('Building code', 'D');
   await fill('Floor', '1');
   await fill('Room number', '101');
@@ -208,7 +222,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   expect(
     sql("SELECT COUNT(*) FROM offices WHERE building_code = 'D' AND room_number = '101'"),
   ).toBe('1');
-  await admin.getByText('Building D, floor 1, room 101', { exact: true }).click();
+  await openRow('Building D, floor 1, room 101');
   await fill('Room number', '102');
   await save();
   expect(sql("SELECT room_number FROM offices WHERE building_code = 'D'")).toBe('102');
@@ -217,7 +231,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
 
   // Professors
   await admin.getByRole('tab', { name: 'Professors' }).click();
-  await admin.getByRole('button', { name: 'Add' }).click();
+  await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await fill('University email', 'test.professor@university.example');
   await fill('Password (at least 8 characters)', 'Test-pass-2026');
   await fill('Name in Arabic', 'أستاذ تجريبي');
@@ -227,7 +241,14 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   expect(sql("SELECT role FROM users WHERE email = 'test.professor@university.example'")).toBe(
     'professor',
   );
-  await admin.getByText('Test Professor', { exact: true }).click();
+  await openRow('Test Professor');
+  await expect(
+    admin.getByRole('dialog', { name: 'Test Professor' }).getByText('Upcoming appointments'),
+  ).toBeVisible();
+  await shoot(admin, 'en-10-admin-professor-summary');
+  await admin.getByRole('button', { name: 'Edit details' }).click();
+  await expect(admin.getByRole('heading', { name: 'Academic' })).toBeVisible();
+  await shoot(admin, 'en-11-admin-professor-form');
   await fill('Name in English', 'Test Professor Two');
   await admin.getByRole('button', { name: '30 min' }).click();
   await save();
@@ -237,14 +258,14 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
     ),
   ).toBe('Test Professor Two/30');
   await shoot(admin, 'en-8-admin-professors');
-  await remove('Test Professor Two');
+  await remove('Test Professor Two', true);
   expect(sql("SELECT COUNT(*) FROM users WHERE email = 'test.professor@university.example'")).toBe(
     '0',
   );
 
   // Students
   await admin.getByRole('tab', { name: 'Students' }).click();
-  await admin.getByRole('button', { name: 'Add' }).click();
+  await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await fill('University email', 'test.student@university.example');
   await fill('Password (at least 8 characters)', 'Test-pass-2026');
   await fill('Name in Arabic', 'طالب تجريبي');
@@ -257,9 +278,9 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
       "SELECT university_no FROM students s JOIN users u ON u.user_id = s.student_id WHERE u.email = 'test.student@university.example'",
     ),
   ).toBe('S9999');
-  await admin.getByText('Test Student', { exact: true }).click();
+  await openRow('Test Student');
   await admin.getByRole('button', { name: '3', exact: true }).click();
-  await admin.getByRole('button', { name: 'Not active', exact: true }).click();
+  await admin.getByRole('switch', { name: 'Account active' }).click(); // switch it off
   await save();
   expect(
     sql(

@@ -108,15 +108,13 @@ test('a professor asks for an account; it works once the admin activates it', as
   await signIn(page, 'm.alfaraj@upm.edu.sa', 'a-long-password');
   await expect(page.getByText(/^This account is not active yet/)).toBeVisible();
 
-  // The admin finds the request marked "Not active" and activates it.
+  // The admin sees the request on the overview and activates it in one tap.
   const admin = await fresh(browser);
   await signIn(admin, 'admin@university.example', 'Mawjood-Demo-2026');
-  await admin.getByRole('tab', { name: 'Professors' }).click();
-  await expect(admin.getByText('Not active', { exact: true })).toBeVisible();
-  await admin.getByText('Mansour Al-Faraj', { exact: true }).click();
-  await admin.getByRole('button', { name: 'Account active', exact: true }).click();
-  await admin.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(admin.getByText('Saved', { exact: true })).toBeVisible();
+  // Next to the seed's switched-off student.
+  await expect(admin.getByText('Waiting for activation (2)', { exact: true })).toBeVisible();
+  await admin.getByRole('button', { name: 'Activate Mansour Al-Faraj', exact: true }).click();
+  await expect(admin.getByText('Mansour Al-Faraj can sign in now', { exact: true })).toBeVisible();
   expect(sql("SELECT is_active FROM users WHERE email = 'm.alfaraj@upm.edu.sa'")).toBe('1');
 
   await signIn(page, 'm.alfaraj@upm.edu.sa', 'a-long-password');

@@ -11,7 +11,7 @@ export default function Index() {
   const home = {
     student: '/home',
     professor: '/staff/status',
-    admin: '/admin/departments',
+    admin: '/admin/overview',
   } as const;
   return <Redirect href={home[state.user.role]} />;
 }

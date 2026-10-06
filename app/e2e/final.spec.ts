@@ -30,8 +30,8 @@ const ROLES = {
   admin: {
     email: 'admin@university.example',
     tabs: {
-      en: ['Departments', 'Offices', 'Professors', 'Students', 'Account'],
-      ar: ['الأقسام', 'المكاتب', 'الأساتذة', 'الطلاب', 'حسابي'],
+      en: ['Overview', 'Campus', 'Professors', 'Students', 'Account'],
+      ar: ['نظرة عامة', 'الجامعة', 'الأساتذة', 'الطلاب', 'حسابي'],
     },
   },
 } as const;

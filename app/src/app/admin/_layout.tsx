@@ -1,8 +1,8 @@
-/** Admin tabs: departments, offices, professors, students and account (phone layout). */
+/** Admin tabs: overview, campus (departments and offices), professors, students, account. */
 import { Redirect, Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Building from 'lucide-react-native/icons/building';
-import DoorOpen from 'lucide-react-native/icons/door-open';
+import Landmark from 'lucide-react-native/icons/landmark';
+import LayoutDashboard from 'lucide-react-native/icons/layout-dashboard';
 import GraduationCap from 'lucide-react-native/icons/graduation-cap';
 import UserRound from 'lucide-react-native/icons/user-round';
 import Users from 'lucide-react-native/icons/users';
@@ -19,12 +19,12 @@ export default function AdminTabs() {
   return (
     <Tabs screenOptions={options}>
       <Tabs.Screen
-        name="departments"
-        options={{ title: t('tabs.departments'), tabBarIcon: tabIcon(Building) }}
+        name="overview"
+        options={{ title: t('tabs.overview'), tabBarIcon: tabIcon(LayoutDashboard) }}
       />
       <Tabs.Screen
-        name="offices"
-        options={{ title: t('tabs.offices'), tabBarIcon: tabIcon(DoorOpen) }}
+        name="campus"
+        options={{ title: t('tabs.campus'), tabBarIcon: tabIcon(Landmark) }}
       />
       <Tabs.Screen
         name="professors"

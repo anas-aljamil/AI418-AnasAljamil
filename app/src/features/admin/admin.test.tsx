@@ -2,7 +2,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { api, ApiError } from '@/api/client';
-import DepartmentsAdmin from '@/app/admin/departments';
+import { DepartmentsAdmin } from './screens';
 import { renderWithProviders, testCollege, testDepartment } from '@/test-utils';
 
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: jest.fn() }));
@@ -14,6 +14,9 @@ beforeEach(() => {
   mockApi.mockImplementation(async (path: string, method = 'GET') => {
     if (method === 'GET' && path.startsWith('/colleges')) {
       return { items: [testCollege], total: 1, limit: 100, offset: 0 };
+    }
+    if (method === 'GET' && /^\/admin\/(professors|students)/.test(path)) {
+      return { items: [], total: 0, limit: 100, offset: 0 };
     }
     if (method === 'GET') return { items: [cs], total: 1, limit: 100, offset: 0 };
     if (method === 'DELETE') throw new ApiError(409, 'IN_USE', 'raw');

@@ -112,6 +112,13 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 | 59 | Today timeline | As Dr. Noura, My status; and a student on her profile; in Arabic and English, at 200% text | One row per block with times, door and name; the current one outlined with "Now, until ..."; finished ones dimmed; "Not in office" between blocks; right to left in Arabic; each row read as one sentence | needs a real phone | needs a real phone |
 | 60 | Text sizes | Profile, Text size: Small, Medium, Big | Small is slightly smaller and still readable; Medium is the phone's size; Big is larger; the choice stays after closing Expo Go | needs a real phone | needs a real phone |
 
+## Admin area (2026-10-06)
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 61 | Admin overview and activation | Sign up as a professor; sign in as admin; on Overview tap Activate; tap each number tile | The request is listed under "Waiting for activation" with the student account that is switched off; Activate shows "... can sign in now" and the row leaves; tiles open Professors, Students and Campus (Departments or Offices); TalkBack/VoiceOver read each tile as one sentence | needs a real phone | needs a real phone |
+| 62 | Admin lists and forms | Campus (switch to Offices and back), Professors (filter Not active, open a professor, Edit details), Students (Add); in Arabic and English | Departments under college headings with counts; quick view shows the live status door; the form has Account, Academic and Status parts, the office menu, the Active switch and Delete at the bottom; nothing is cut off at 200% text | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
 - **P6:** a final pass of everything above. Record each result in the Android and iOS columns ("pass", or what went wrong). Until then every row stays "needs a real phone". The automated evidence for each area is listed in [test-plan.md](test-plan.md).

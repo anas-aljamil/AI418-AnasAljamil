@@ -9,9 +9,9 @@ This plan says what is tested, at which level, how to run it, and what passed. E
 | Database | `scripts/check_db.py` (67 checks) | The schema rejects bad data with the expected MySQL error (CHECK, UNIQUE, foreign keys, subtype guard, triggers). The seed obeys the business rules. Character set, engine and reserved words are right. The ER diagram matches the schema. | throwaway `<DB_NAME>_check` database |
 | SQL deliverables | `scripts/check_sql.py` (39 checks) | Every statement in `db/queries.sql` runs on MySQL 8. Each table has at least 5 queries and 2 aggregates, and every required clause is used. The views and the trigger demo give the results the seed implies. The data-quality queries return no rows. | throwaway `<DB_NAME>_sql` database |
 | Backend | pytest (134 tests) | Every API rule at its exact boundary: status, booking, cancellation window, chat eligibility, roles and ownership, validation, error shape, pagination, rate limits, tokens and CSRF. The SQL views agree with the API's status logic every 15 minutes for a whole week. | `<DB_NAME>_test` (real MySQL, one rolled-back transaction per test, fixed clock) |
-| App units | Jest + React Native Testing Library (128 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
+| App units | Jest + React Native Testing Library (131 tests) | Components are accessible (role, name, state). The screens handle loading, empty, error and offline states. Booking keeps the selection on error. The API client refreshes tokens. Riyadh time and Arabic plurals are formatted right. RTL helpers work. Both language files match. Colour tokens pass WCAG contrast. | in memory, mocked API |
 | End to end | Playwright on the Expo web build (50 tests) | Real flows against the real API and MySQL, each checked in the database. Timed UX targets. Arabic and English screenshots, light and dark. Every tab of every role fits 320 px. Every screen of every role opens in both languages with no console error and no failed API request. | seeded dev database, API with `DEMO_NOW`, browser clock frozen at the same moment |
-| Real phone | [phone-checklist.md](phone-checklist.md) (#1-#60) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
+| Real phone | [phone-checklist.md](phone-checklist.md) (#1-#62) | What a web build cannot show: TalkBack/VoiceOver, the system font size at 200%, haptics, safe areas, Android back, the keyboard, Expo Go on Android and iOS. | needs a person with a phone |
 
 The fixed moment for every automated level is **Monday 2026-10-05 10:00 Riyadh (07:00 UTC)**, in the week the seed is anchored on.
 
@@ -58,7 +58,7 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 | 5-10 fictional seed rows per table | `check_db.py` seed checks; `reset_db.py` prints row counts |
 | `queries.sql`: 5 queries and 2 aggregates per table, every clause, joins, GROUP BY + HAVING, views, trigger | `check_sql.py` coverage section |
 | Files in sync | `check_db.py` ER-diagram sync check; `test_models_match_the_mysql_schema` (ORM and schema agree) |
-| Full CRUD from the UI on the real database | Playwright P4: the admin creates, edits and deletes a department, office, professor and student, each checked in MySQL |
+| Full CRUD from the UI on the real database | Playwright P4: the admin creates, edits and deletes a department, office, professor and student, each checked in MySQL; Playwright sign-up: a new professor activated from the admin overview in one tap; Jest `overview.test.tsx` (activation request, tiles, filters, professor quick view) |
 
 ### Security (CLAUDE.md Section 8)
 
@@ -88,9 +88,9 @@ The end-to-end specs share the database and change it (bookings, messages, admin
 | `check_db.py` | 67/67 |
 | `check_sql.py` | 39/39 |
 | pytest | 134 passed; ruff clean |
-| Jest | 128 passed; typecheck, lint and format clean |
+| Jest | 131 passed; typecheck, lint and format clean |
 | Playwright | 50 passed: styleguide 13, P3c 6, P4 4, P5 3, final QA 9, sign-up 3, screen sweep 7, everyday flows 5 |
-| Real phone | #1-#60 not yet run (no phone in the cloud sandbox) |
+| Real phone | #1-#62 not yet run (no phone in the cloud sandbox) |
 
 ## 5. Not covered, and why
 

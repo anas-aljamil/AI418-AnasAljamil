@@ -24,8 +24,8 @@ const TABS = {
     ar: ['حالتي', 'الطلبات', 'الجدول', 'الرسائل', 'حسابي'],
   },
   admin: {
-    en: ['Departments', 'Offices', 'Professors', 'Students', 'Account'],
-    ar: ['الأقسام', 'المكاتب', 'الأساتذة', 'الطلاب', 'حسابي'],
+    en: ['Overview', 'Campus', 'Professors', 'Students', 'Account'],
+    ar: ['نظرة عامة', 'الجامعة', 'الأساتذة', 'الطلاب', 'حسابي'],
   },
 } as const;
 
@@ -121,8 +121,8 @@ for (const language of ['en', 'ar'] as const) {
     const problems = watch(page);
     await signIn(page, ACCOUNTS.admin, language);
     await visitTabs(page, TABS.admin[language]);
-    // Every form opens, including the department menu.
-    for (const tab of TABS.admin[language].slice(0, 4)) {
+    // Every form opens (Campus, Professors, Students), and a professor's quick view.
+    for (const tab of TABS.admin[language].slice(1, 4)) {
       await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
       await page
         .getByRole('button', { name: language === 'ar' ? 'إضافة' : 'Add', exact: true })
@@ -133,6 +133,12 @@ for (const language of ['en', 'ar'] as const) {
         .last()
         .click();
     }
+    await page.getByRole('tab', { name: new RegExp(`^${TABS.admin[language][2]}`) }).click();
+    await page
+      .getByRole('button', { name: language === 'ar' ? /^نورة الحربي/ : /^Noura Al-Harbi/ })
+      .first()
+      .click();
+    await page.waitForLoadState('networkidle');
     expect(problems).toEqual([]);
   });
 }
