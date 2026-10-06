@@ -19,7 +19,7 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 |---|---|
 | `User` is named `users` | Plural table names throughout; `USER` is also a MySQL keyword and SQL-standard reserved word. `scripts/check_db.py` verifies that no identifier is a MySQL reserved word. |
 | New `offices` table | Storing building, floor and room on `professors` creates the transitive dependency `professor_id -> (building, room) -> floor`. Shared offices would also repeat the same location on several rows (an update anomaly). |
-| `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class"), not only when they hold office hours. Individual bookable slots are not stored: they are fully determined by a block plus `slot_minutes`, so storing them would be redundant. |
+| `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class"), not only when they hold office hours. Bookable times are not stored: every 5-minute start inside an office-hours block, minus the active appointments, is fully determined by the blocks and the appointments, so storing them would be redundant. |
 | New `conversations` table; `messages.sender_role` replaces sender/recipient ids | Storing both `sender_id` and `recipient_id` on each message repeats the pair on every row, and allows a message whose participants contradict its thread. With a conversation row, the pair is stored once, and `sender_role` identifies the sender among exactly two participants. |
 | New `colleges` table (added 2026-10-05) | Departments are grouped by college. Putting the college name on `departments` would create `department_id -> college -> college name` and repeat each name for every department of the college. |
 | New `pins` table | Needed by the student home screen ("My professors"). It is an M:N relationship, so it gets its own table. |
@@ -82,7 +82,7 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 - FDs: `appointment_id -> student_id, professor_id, starts_at, ends_at, status, topic, note, created_at, updated_at`.
 - `(professor_id, starts_at)` is unique only among *active* rows. A cancelled booking and a new booking may share a start time, so it is not a candidate key. MySQL enforces the active-only uniqueness through the virtual column `active_slot` (Section 8.4).
 - `active_slot` is not stored data: it is a **virtual** generated column (computed when read; only the unique index keeps a copy). It cannot disagree with `status` and `starts_at`, so it introduces no update anomaly.
-- `ends_at` is stored deliberately. It is **not** determined by `starts_at + professors.slot_minutes`, because a professor may change their slot length after a booking is made. `ends_at` records the length agreed at booking time, which is a fact about the appointment itself.
+- `ends_at` is stored deliberately. It is **not** determined by `starts_at + professors.slot_minutes`: the student chooses the length (any number of 5-minute steps), and `slot_minutes` is only the length the app suggests first. `ends_at` records the length agreed at booking time, which is a fact about the appointment itself.
 - **BCNF**.
 
 ### pins
@@ -136,7 +136,7 @@ We accept this deliberately:
 |---|---|
 | Professor's effective status (In office / In class / Busy / Away / Not confirmed / Unknown) | Latest unexpired `status_overrides` row; else the schedule: the block covering "now" in Riyadh time, or Away outside all blocks; Unknown only for a professor with no schedule. Computed by the API (and later by a view) |
 | "Updated X min ago" | `MAX(status_overrides.created_at)` for the professor |
-| Bookable time slots | `office_hours` blocks split into `slot_minutes` pieces, minus active appointments |
+| Bookable times | every 5-minute start in an `office_hours` block, with the longest length that fits before the next active appointment or the end of the block |
 | Message sender and recipient | `conversations` + `messages.sender_role` |
 | Notification text | `notifications.type` + linked row + reader's language |
 | Unread counts | `COUNT(*) ... WHERE read_at IS NULL` |

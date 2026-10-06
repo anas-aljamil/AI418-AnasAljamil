@@ -160,8 +160,9 @@ CREATE TABLE students (
 
 -- -----------------------------------------------------------------------------
 -- professors: subtype of users (1:1), same role guard as students.
--- slot_minutes is the bookable slot length; open_messages lets any student
--- start a chat without an appointment.
+-- slot_minutes is the professor's usual appointment length, which the app
+-- offers first (students may choose any length in 5-minute steps);
+-- open_messages lets any student start a chat without an appointment.
 -- -----------------------------------------------------------------------------
 CREATE TABLE professors (
     professor_id   INT         NOT NULL,
@@ -195,8 +196,9 @@ CREATE TABLE professors (
 -- -----------------------------------------------------------------------------
 -- schedule_blocks: a professor's recurring weekly timetable.
 -- 'office_hours' blocks are bookable and derive "In office";
--- 'class' blocks derive "In class". Bookable slots are computed, not stored.
--- Times sit on a 15-minute grid so both slot lengths divide them cleanly.
+-- 'class' blocks derive "In class". Bookable times are computed, not stored:
+-- any 5-minute start inside an office_hours block, for any length that fits.
+-- Block times sit on a 15-minute grid (whole 5-minute steps).
 -- Overlapping blocks for one professor are rejected by the API.
 -- -----------------------------------------------------------------------------
 CREATE TABLE schedule_blocks (
@@ -243,9 +245,9 @@ CREATE TABLE status_overrides (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
--- appointments: a student's booking of one slot with a professor.
--- ends_at is stored (not derived from slot_minutes) because a professor may
--- change slot length later; it records the length agreed at booking time.
+-- appointments: a student's booking of a stretch of a professor's office hours.
+-- ends_at is stored because the student chooses the length (5-minute steps);
+-- it is not derived from slot_minutes, which is only the suggested length.
 -- Lifecycle: pending -> approved | declined | cancelled; approved -> cancelled
 -- | completed | no_show (transitions enforced by the API).
 --
@@ -373,6 +375,7 @@ CREATE TABLE notifications (
         REFERENCES conversations (conversation_id) ON DELETE CASCADE ON UPDATE RESTRICT,
     CONSTRAINT ck_notifications_type CHECK (type IN ('appointment_requested', 'appointment_approved',
                                                      'appointment_declined', 'appointment_cancelled',
+                                                     'appointment_moved', 'slot_freed',
                                                      'new_message')),
     CONSTRAINT ck_notifications_reference CHECK (
         (type = 'new_message' AND conversation_id IS NOT NULL AND appointment_id IS NULL)

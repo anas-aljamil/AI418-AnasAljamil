@@ -76,18 +76,29 @@ def test_profile_has_office_location_and_todays_timeline(client, auth):
     assert nora["status"]["status"] == "away" and nora["slot_minutes"] == 15
 
 
-def test_slots_follow_the_slot_length_and_mark_taken_and_past_times(client, auth):
+def test_slots_are_5_minute_starts_with_the_longest_free_length(client, auth):
     headers = auth(SAAD)
     next_monday = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-12", headers=headers).json()
-    assert next_monday["slot_minutes"] == 15 and len(next_monday["slots"]) == 8  # 10:00-12:00
-    first = next_monday["slots"][0]
-    assert (first["local_time"], first["available"], first["reason"]) == ("10:00", False, "taken")
+    assert (next_monday["slot_minutes"], next_monday["step_minutes"]) == (15, 5)
+    slots = next_monday["slots"]
+    assert len(slots) == 24  # 10:00-12:00 in 5-minute starts
+    first = slots[0]
+    assert (first["local_time"], first["available"], first["reason"], first["max_minutes"]) == (
+        "10:00",
+        False,
+        "taken",  # Maha's 10:00-10:15
+        0,
+    )
     assert first["starts_at"] == "2026-10-12T07:00:00Z"
-    assert all(s["available"] for s in next_monday["slots"][1:])
+    assert [s["local_time"] for s in slots if not s["available"]] == ["10:00", "10:05", "10:10"]
+    assert (slots[3]["local_time"], slots[3]["max_minutes"]) == ("10:15", 105)  # to 12:00
     today = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-05", headers=headers).json()
     assert today["slots"][0]["reason"] == "past"  # 10:00 is now
-    thirty = client.get(f"/api/v1/professors/{REEM}/slots?date=2026-10-12", headers=headers).json()
-    assert [s["local_time"] for s in thirty["slots"]] == ["10:00", "10:30", "11:00", "11:30"]
+    # Reem (10:00-12:00, 30-minute usual length) has an appointment at 10:30-11:00.
+    reem = client.get(f"/api/v1/professors/{REEM}/slots?date=2026-10-12", headers=headers).json()
+    longest = {s["local_time"]: s["max_minutes"] for s in reem["slots"]}
+    assert (reem["slot_minutes"], longest["10:00"], longest["10:25"], longest["10:30"]) == (30, 30, 5, 0)
+    assert longest["11:00"] == 60
 
 
 def test_slots_outside_this_week_and_next_are_refused(client, auth):

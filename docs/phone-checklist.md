@@ -84,7 +84,7 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 | 46 | Badges | After #43 (before reading), look at Dr. Noura's tab bar and bell; turn on TalkBack/VoiceOver and move to the Messages tab | A number on Messages and on the bell; the reader says "Messages, 1 unread" and "Notifications, 2 new" | needs a real phone | needs a real phone |
 | 47 | Notifications | Tap the bell, then the new message row | Today / Earlier groups; the row opens the conversation; "Mark all as read" clears the New marks | needs a real phone | needs a real phone |
 | 48 | Chat not allowed | As Yousef, open Mr. Faisal's profile and tap Message | A message explains that a booking is needed first; no conversation opens | needs a real phone | needs a real phone |
-| 49 | Text size | Profile, Text size: Larger; then also set the phone's largest text size | Every screen grows; nothing is clipped; the five tab labels stay on one line (they shrink rather than overlap) | needs a real phone | needs a real phone |
+| 49 | Text size | Profile, Text size: Big; then also set the phone's largest text size; then Small | Every screen grows; nothing is clipped; the five tab labels stay on one line (they shrink rather than overlap) | needs a real phone | needs a real phone |
 | 50 | Notification preferences | Turn off Messages; send Saad a message from Dr. Noura | The bell does not count it and the list says some are hidden; the Messages tab still shows it | needs a real phone | needs a real phone |
 
 ## After P6: sign-up
@@ -102,6 +102,15 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 | 54 | 12-hour clock | Look at a professor's profile, the booking times and your appointments, in Arabic and in English | Times read like 9:30 AM / 9:30 ص, never 13:00 | needs a real phone | needs a real phone |
 | 55 | Schedule time picker | As a professor, Schedule, Add a block; set the end to 1:30 PM in three taps (PM, 1, :30); save | The sheet scrolls; the chosen time shows above the chips; the block appears as 10:00 AM–1:30 PM | needs a real phone | needs a real phone |
 | 56 | Department menu | Sign-up, admin Professors (Add) and Search: open the department field | A sheet with the three colleges as headings; choosing a department closes it and shows the choice; TalkBack/VoiceOver reads "Department, Software Engineering" | needs a real phone | needs a real phone |
+
+## Free booking, moving earlier, timeline (2026-10-06)
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 57 | Free start and length | As a student, book Dr. Noura on Sunday: read the "Free:" line, choose 10 AM, then :05, then 20 min, then press + twice; book | Starts every 5 minutes; the length line reads "30 min, until 10:35 AM"; + is disabled at the longest free length; the appointment card shows "Until 10:35 AM, 30 min"; TalkBack/VoiceOver read the minute chips as full times | needs a real phone | needs a real phone |
+| 58 | Time freed before yours | Book 10:00 for 30 min as Lama (right before Saad's 10:30), cancel it; sign in as Saad and open the bell | "The appointment before yours ... was cancelled. Move yours earlier?"; tapping it opens Move earlier; "Move to 10:00 AM" moves it in one tap and it stays Approved; Dr. Noura's bell says it moved | needs a real phone | needs a real phone |
+| 59 | Today timeline | As Dr. Noura, My status; and a student on her profile; in Arabic and English, at 200% text | One row per block with times, door and name; the current one outlined with "Now, until ..."; finished ones dimmed; "Not in office" between blocks; right to left in Arabic; each row read as one sentence | needs a real phone | needs a real phone |
+| 60 | Text sizes | Profile, Text size: Small, Medium, Big | Small is slightly smaller and still readable; Medium is the phone's size; Big is larger; the choice stays after closing Expo Go | needs a real phone | needs a real phone |
 
 ## Later phases (added when the feature exists)
 

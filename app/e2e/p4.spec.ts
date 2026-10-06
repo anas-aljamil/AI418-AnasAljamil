@@ -64,15 +64,15 @@ async function shoot(page: Page, name: string) {
   await page.setViewportSize({ width: 360, height: 800 });
 }
 
-/** Opens the booking sheet and picks the first free time on the first day that has one. */
+/** Opens the booking sheet and picks the first free start on the first day that has one. */
 async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   const sheet = page.getByRole('dialog', { name: sheetName });
   await expect(sheet).toBeVisible();
   const days = sheet.getByRole('button', { name: /^\S+ \d+$/ });
   for (let i = 0; i < (await days.count()); i++) {
     await days.nth(i).click();
-    // Taken and past times are named "9:00 AM, unavailable"; free ones are just the time
-    // (Arabic: "9:00 ص" / "1:00 م").
+    // Starts are minute chips under the hour chips. Taken and past ones are named
+    // "9:00 AM, unavailable"; free ones are just the time (Arabic: "9:00 ص" / "1:00 م").
     const free = sheet.getByRole('button', { name: /^\d{1,2}:\d\d ([AP]M|ص|م)$/ });
     if (
       await free
@@ -96,7 +96,9 @@ test('a student books, the professor approves, the student sees Approved', async
   const sheet = await chooseFirstFreeTime(student, /^Book with/); // steps 2-3: day, time
   await sheet.getByRole('button', { name: 'Advising' }).click(); // optional
   await shoot(student, 'en-2-booking-sheet');
-  await sheet.getByRole('button', { name: /^Book \d{1,2}:\d\d [AP]M$/ }).click(); // step 4
+  // The length starts at the professor's usual 15 minutes (any 5-minute step is allowed).
+  await expect(sheet.getByText(/^15 min, until \d{1,2}:\d\d [AP]M$/)).toBeVisible();
+  await sheet.getByRole('button', { name: /^Book \d{1,2}:\d\d [AP]M, 15 min$/ }).click(); // step 4
   await expect(student.getByText(/^Booked with Dr\. Noura Al-Harbi, /)).toBeVisible();
   await shoot(student, 'en-3-booked');
   await student.getByRole('button', { name: 'Done' }).click();
@@ -118,6 +120,11 @@ test('a student books, the professor approves, the student sees Approved', async
       'SELECT status FROM appointments WHERE student_id = 10 AND professor_id = 1 ORDER BY appointment_id DESC LIMIT 1',
     ),
   ).toBe('approved');
+  expect(
+    sql(
+      'SELECT TIMESTAMPDIFF(MINUTE, starts_at, ends_at) FROM appointments WHERE student_id = 10 AND professor_id = 1 ORDER BY appointment_id DESC LIMIT 1',
+    ),
+  ).toBe('15');
 });
 
 test("a professor's one-tap status reaches the student within one poll", async ({ browser }) => {

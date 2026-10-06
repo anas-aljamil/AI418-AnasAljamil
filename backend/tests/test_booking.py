@@ -91,15 +91,40 @@ def test_past_and_cancelled_appointments_do_not_count_toward_the_limit(client, a
     assert book(client, headers, NORA, "2026-10-13T10:30:00+03:00").status_code == 201
 
 
-def test_start_must_be_on_the_professors_slot_grid(client, auth):
+def test_any_5_minute_start_and_length_that_fits_the_office_hours(client, auth):
     headers = auth(LAMA)
-    off_grid = book(client, headers, NORA, "2026-10-11T10:10:00+03:00")
+    # Noura's Sunday office hours are 10:00-12:00; Saad holds 10:30-10:45.
+    twenty = book(client, headers, NORA, "2026-10-11T10:05:00+03:00", minutes=25)
+    assert twenty.status_code == 201, twenty.text
+    assert (twenty.json()["starts_at"], twenty.json()["ends_at"]) == (
+        "2026-10-11T07:05:00Z",
+        "2026-10-11T07:30:00Z",  # ends exactly where Saad's begins
+    )
+    long_one = book(client, headers, NORA, "2026-10-11T10:45:00+03:00", minutes=75)  # to 12:00
+    assert long_one.status_code == 201, long_one.text
+    # Without a length, the professor's usual length (Reem: 30 minutes), at any 5-minute start.
+    default = book(client, auth(MAHA), REEM, "2026-10-12T11:05:00+03:00")
+    assert (default.status_code, default.json()["ends_at"]) == (201, "2026-10-12T08:35:00Z")
+
+
+def test_start_and_length_must_stay_on_the_grid_inside_office_hours(client, auth):
+    headers = auth(LAMA)
+    off_grid = book(client, headers, NORA, "2026-10-11T10:07:00+03:00")
     outside_hours = book(client, headers, NORA, "2026-10-11T12:00:00+03:00")  # block ends at 12:00
+    runs_past_the_end = book(client, headers, NORA, "2026-10-11T11:50:00+03:00", minutes=15)
     class_time = book(client, headers, NORA, "2026-10-11T08:00:00+03:00")  # a class block
-    half_slot = book(client, headers, REEM, "2026-10-12T10:15:00+03:00")  # Reem uses 30 minutes
     friday = book(client, headers, NORA, "2026-10-09T10:00:00+03:00")
-    for response in (off_grid, outside_hours, class_time, half_slot, friday):
+    for response in (off_grid, outside_hours, runs_past_the_end, class_time, friday):
         assert (response.status_code, code(response)) == (422, "INVALID_SLOT")
+    for minutes in (0, 7, 605):
+        response = book(client, headers, NORA, "2026-10-11T10:00:00+03:00", minutes=minutes)
+        assert code(response) == "VALIDATION_ERROR", minutes
+
+
+def test_a_longer_appointment_cannot_overlap_the_next_booking(client, auth):
+    # 10:05 for 30 minutes would run into Saad's 10:30-10:45.
+    response = book(client, auth(LAMA), NORA, "2026-10-11T10:05:00+03:00", minutes=30)
+    assert (response.status_code, code(response)) == (409, "SLOT_TAKEN")
 
 
 def test_cannot_book_the_past_or_beyond_next_week(client, auth):
@@ -209,3 +234,77 @@ def test_students_list_upcoming_and_past_appointments(client, auth):
 def test_professors_see_only_their_own_appointments_and_can_filter_by_status(client, auth):
     page = client.get(f"{BOOK}?scope=all&status=pending", headers=auth(NORA)).json()
     assert [a["appointment_id"] for a in page["items"]] == [7]
+
+
+# --- time freed before mine, and moving earlier ----------------------------------
+
+
+def notifications_of(db, user_id, kind):
+    return db.scalars(
+        select(Notification).where(Notification.user_id == user_id, Notification.type == kind)
+    ).all()
+
+
+def test_cancelling_tells_the_next_student_who_moves_earlier_and_stays_approved(client, auth, db):
+    # Lama books 10:00-10:30 on Sunday, just before Saad's approved 10:30-10:45, then cancels.
+    lama = book(client, auth(LAMA), NORA, "2026-10-11T10:00:00+03:00", minutes=30).json()
+    assert client.get(f"{BOOK}/6/earlier-starts", headers=auth(SAAD)).json()["starts"] == []
+    client.post(f"{BOOK}/{lama['appointment_id']}/cancel", headers=auth(LAMA))
+
+    [freed] = notifications_of(db, SAAD, "slot_freed")
+    assert freed.appointment_id == 6
+    listed = client.get("/api/v1/notifications", headers=auth(SAAD)).json()["items"][0]
+    assert (listed["type"], listed["actor"]["user_id"], listed["starts_at"]) == (
+        "slot_freed",
+        NORA,
+        "2026-10-11T07:30:00Z",
+    )
+    starts = client.get(f"{BOOK}/6/earlier-starts", headers=auth(SAAD)).json()["starts"]
+    # 15 minutes fit from 10:00 to 10:25 (his own old time is no obstacle).
+    assert starts == [f"2026-10-11T07:{m:02d}:00Z" for m in (0, 5, 10, 15, 20, 25)]
+
+    moved = client.post(f"{BOOK}/6/move", json={"starts_at": starts[0]}, headers=auth(SAAD))
+    assert moved.status_code == 200, moved.text
+    body = moved.json()
+    assert (body["status"], body["starts_at"], body["ends_at"]) == (
+        "approved",
+        "2026-10-11T07:00:00Z",
+        "2026-10-11T07:15:00Z",
+    )
+    db.expire_all()
+    assert notifications_of(db, SAAD, "slot_freed")[0].read_at is not None  # acted on
+    [told] = notifications_of(db, NORA, "appointment_moved")
+    assert told.appointment_id == 6
+
+
+def test_no_notice_when_nobody_can_use_the_freed_time(client, auth, db):
+    # Cancelling the last appointment of the day frees time before nobody.
+    lama = book(client, auth(LAMA), NORA, "2026-10-11T11:00:00+03:00", minutes=30).json()
+    client.post(f"{BOOK}/{lama['appointment_id']}/cancel", headers=auth(LAMA))
+    # Saad cancelling his own booking just before his next one does not notify him.
+    assert client.post(f"{BOOK}/7/cancel", headers=auth(SAAD)).status_code == 200  # stay under the limit
+    own = book(client, auth(SAAD), NORA, "2026-10-11T10:00:00+03:00", minutes=30).json()
+    client.post(f"{BOOK}/{own['appointment_id']}/cancel", headers=auth(SAAD))
+    assert notifications_of(db, SAAD, "slot_freed") == []
+
+
+def test_moving_is_only_earlier_the_same_day_and_never_onto_another_booking(client, auth):
+    saad = auth(SAAD)
+    later = client.post(f"{BOOK}/6/move", json={"starts_at": "2026-10-11T11:00:00+03:00"}, headers=saad)
+    other_day = client.post(f"{BOOK}/7/move", json={"starts_at": "2026-10-11T10:00:00+03:00"}, headers=saad)
+    for response in (later, other_day):
+        assert (response.status_code, code(response)) == (422, "MOVE_NOT_EARLIER")
+    book(client, auth(LAMA), NORA, "2026-10-11T10:00:00+03:00", minutes=30)
+    taken = client.post(f"{BOOK}/6/move", json={"starts_at": "2026-10-11T10:15:00+03:00"}, headers=saad)
+    assert (taken.status_code, code(taken)) == (409, "SLOT_TAKEN")
+    off_grid = client.post(f"{BOOK}/6/move", json={"starts_at": "2026-10-11T09:55:00+03:00"}, headers=saad)
+    assert code(off_grid) == "INVALID_SLOT"  # before the office hours
+
+
+def test_only_the_student_who_booked_can_move_an_active_appointment(client, auth):
+    target = {"starts_at": "2026-10-11T10:00:00+03:00"}
+    assert client.post(f"{BOOK}/6/move", json=target, headers=auth(LAMA)).status_code == 404
+    assert client.post(f"{BOOK}/6/move", json=target, headers=auth(NORA)).status_code == 403
+    assert client.get(f"{BOOK}/6/earlier-starts", headers=auth(NORA)).status_code == 403
+    finished = client.post(f"{BOOK}/1/move", json=target, headers=auth(SAAD))
+    assert (finished.status_code, code(finished)) == (409, "INVALID_TRANSITION")

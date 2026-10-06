@@ -139,18 +139,22 @@ export interface ProfessorDetail extends ProfessorSummary {
   can_message?: boolean | null;
 }
 
+/** A possible start (every 5 minutes in office hours). */
 export interface Slot {
   starts_at: string;
-  ends_at: string;
   local_time: string;
   available: boolean;
   reason: 'past' | 'taken' | null;
+  /** Longest appointment that can start here (5-minute steps; 0 when unavailable). */
+  max_minutes: number;
 }
 
 export interface DaySlots {
   professor_id: number;
   date: string;
+  /** The professor's usual length, offered first. */
   slot_minutes: number;
+  step_minutes: number;
   slots: Slot[];
 }
 
@@ -211,6 +215,8 @@ export type NotificationType =
   | 'appointment_approved'
   | 'appointment_declined'
   | 'appointment_cancelled'
+  | 'appointment_moved'
+  | 'slot_freed'
   | 'new_message';
 
 export interface AppNotification {

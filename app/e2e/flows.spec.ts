@@ -2,8 +2,8 @@
  * Everyday flows not covered elsewhere, end to end on the web build and checked in MySQL:
  * status presets, note and back to the schedule; editing and deleting a schedule block;
  * declining a request and what the student then sees; cancelling; mark all as read; switching
- * the language from the profile. Same setup as the other specs (seeded database, DEMO_NOW);
- * the seed is loaded again afterwards.
+ * the language from the profile; a cancellation that frees time and moving earlier. Same
+ * setup as the other specs (seeded database, DEMO_NOW); each flow starts from a fresh seed.
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -37,11 +37,12 @@ async function open(browser: Browser, email: string, language: 'ar' | 'en' = 'en
   return page;
 }
 
-// These flows change rows the later specs read (statuses, Saad's appointments, Noura's
-// schedule), so the seed is loaded again when they are done.
-test.afterAll(() => {
+// These flows change rows the other tests read (statuses, Saad's appointments, Noura's
+// schedule), so each starts from the seed, and the later specs find it unchanged.
+const reseed = () =>
   execFileSync('python3', ['scripts/reset_db.py'], { cwd: path.resolve(__dirname, '../..') });
-});
+test.beforeEach(reseed);
+test.afterAll(reseed);
 
 const latestOverride = (professorId: number) =>
   sql(
@@ -153,4 +154,59 @@ test('switching to Arabic from the profile turns the layout right to left', asyn
   expect(direction).toBe('rtl');
   await page.getByRole('button', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+});
+
+test('a cancellation frees time and the next student moves earlier in one tap', async ({
+  browser,
+}) => {
+  // Lama books Sunday 10:00 for 30 minutes, right before Saad's approved 10:30.
+  const lama = await open(browser, 'l.alshehri@university.example');
+  await lama
+    .getByRole('button', { name: /^Dr\. Noura Al-Harbi/ })
+    .first()
+    .click();
+  await expect(lama).toHaveURL(/\/professors\/1$/);
+  await lama.getByRole('button', { name: 'Book', exact: true }).click();
+  const sheet = lama.getByRole('dialog', { name: /^Book with/ });
+  await sheet.getByRole('button', { name: 'Sun 11', exact: true }).click();
+  await sheet.getByRole('button', { name: '10 AM', exact: true }).click();
+  await sheet.getByRole('button', { name: '10:00 AM', exact: true }).click();
+  await sheet.getByRole('button', { name: '30 minutes', exact: true }).click();
+  await expect(sheet.getByText('30 min, until 10:30 AM', { exact: true })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Book 10:00 AM, 30 min', exact: true }).click();
+  await expect(lama.getByText(/^Booked with Dr\. Noura Al-Harbi, /)).toBeVisible();
+  expect(
+    sql(
+      "SELECT CONCAT(starts_at, '/', ends_at) FROM appointments WHERE student_id = 10 " +
+        'ORDER BY appointment_id DESC LIMIT 1',
+    ),
+  ).toBe('2026-10-11 07:00:00/2026-10-11 07:30:00');
+
+  // ...then cancels it.
+  await lama.getByRole('button', { name: 'Done' }).click();
+  await lama.goto('/appointments'); // the profile has no tab bar
+  await lama.getByRole('button', { name: 'Cancel appointment', exact: true }).first().click();
+  await lama
+    .getByRole('dialog', { name: 'Cancel this appointment?' })
+    .getByRole('button', { name: 'Cancel appointment' })
+    .click();
+  await expect(lama.getByText('Appointment cancelled', { exact: true })).toBeVisible();
+
+  // Saad is told and moves his appointment to 10:00 in one tap; it stays approved.
+  const saad = await open(browser, 's.almutairi@university.example');
+  await saad.getByRole('button', { name: /^Notifications/ }).click();
+  await saad
+    .getByRole('button', {
+      name: /The appointment before yours with Dr\. Noura Al-Harbi was cancelled/,
+    })
+    .click();
+  const move = saad.getByRole('dialog', { name: 'Move earlier' });
+  await move.getByRole('button', { name: 'Move to 10:00 AM', exact: true }).click();
+  await expect(saad.getByText('Moved to 10:00 AM', { exact: true })).toBeVisible();
+  expect(
+    sql("SELECT CONCAT(status, '/', starts_at) FROM appointments WHERE appointment_id = 6"),
+  ).toBe('approved/2026-10-11 07:00:00');
+  expect(
+    sql("SELECT COUNT(*) FROM notifications WHERE user_id = 1 AND type = 'appointment_moved'"),
+  ).toBe('1');
 });

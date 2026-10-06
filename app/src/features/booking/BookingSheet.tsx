@@ -1,17 +1,22 @@
 /**
  * Booking (DESIGN.md 7.5): a bottom sheet with the day strip (Sunday-Thursday, this week and
- * next), time chips, optional topic and note, a summary, then the one orchestrated moment:
- * the door opens, a check appears, "Booked with Dr. X, Sunday 10:30", and a success haptic.
+ * next), the free stretches of that day, a start on any 5-minute step (hour chips, then minute
+ * chips), a length in 5-minute steps (a stepper and one-tap lengths, starting from the
+ * professor's usual length and never past the next booking or the end of office hours),
+ * optional topic and note, a summary, then the one orchestrated moment: the door opens, a
+ * check appears, "Booked with Dr. X, Sunday 10:30", and a success haptic.
  *
- * Steps from the profile: Book, (day, defaulted to the first bookable day), time, confirm.
- * Unavailable times stay visible and say why when tapped. An error never clears the day,
- * topic or note; only a time that was just taken by someone else is unselected.
+ * Steps from the profile: Book, (day, defaulted to the first bookable day), time (start and
+ * length), confirm. Unavailable starts stay visible and say why when tapped. An error never
+ * clears the day, topic or note; only a time that was just taken by someone else is unselected.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import Check from 'lucide-react-native/icons/check';
+import Minus from 'lucide-react-native/icons/minus';
+import Plus from 'lucide-react-native/icons/plus';
 
 import { ApiError } from '@/api/client';
 import { useBook, useSlots } from '@/api/queries';
@@ -25,10 +30,11 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { insetEnd } from '@/lib/direction';
 import { errorKey } from '@/lib/errors';
-import { bookingDays, clockText, whenText } from '@/lib/format';
+import { addMinutes, bookingDays, clockText, hourText, whenText } from '@/lib/format';
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { space, type Language } from '@/theme/tokens';
+import { space, touchTarget, type Language } from '@/theme/tokens';
+import { fitLength, freeWindows, hoursOf, QUICK_LENGTHS, STEP } from './times';
 
 const TOPICS: Topic[] = ['assignment', 'exam_review', 'advising', 'other'];
 
@@ -45,6 +51,9 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   const days = useMemo(() => bookingDays(new Date()), []);
   const [day, setDay] = useState(days[0]?.date ?? null);
   const [slot, setSlot] = useState<Slot | null>(null);
+  const [hour, setHour] = useState<number | null>(null);
+  // The length the student chose; until then the professor's usual length (both fitted).
+  const [length, setLength] = useState<number | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -67,8 +76,23 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   const chooseDay = (date: string) => {
     setDay(date);
     setSlot(null);
+    setHour(null);
     setMessage(null);
   };
+
+  const daySlots = slots.data?.slots ?? [];
+  const hours = hoursOf(daySlots);
+  const hourOf = (option: Slot) => Number(option.local_time.slice(0, 2));
+  const shownHour =
+    hour ??
+    hours.find((h) => daySlots.some((s) => s.available && hourOf(s) === h)) ??
+    hours[0] ??
+    null;
+  const windows = freeWindows(daySlots);
+  const minutes = slot
+    ? fitLength(length ?? slots.data?.slot_minutes ?? professor.slot_minutes, slot.max_minutes)
+    : 0;
+  const listSeparator = language === 'ar' ? '، ' : ', ';
 
   const chooseSlot = (option: Slot) => {
     if (option.available) {
@@ -86,6 +110,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
       {
         professor_id: professor.professor_id,
         starts_at: slot.starts_at,
+        minutes,
         topic,
         note: note.trim() || null,
       },
@@ -147,27 +172,107 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
             <SkeletonRow />
           ) : slots.error ? (
             <Text color="danger">{t(errorKey(slots.error))}</Text>
-          ) : slots.data?.slots.length ? (
-            <View style={styles.wrap}>
-              {slots.data.slots.map((option) => (
-                <Chip
-                  key={option.starts_at}
-                  label={clockText(option.local_time, t)}
-                  selected={slot?.starts_at === option.starts_at}
-                  dimmed={!option.available}
-                  // Said out loud too: the web build drops aria-disabled on a tappable chip.
-                  accessibilityLabel={
-                    option.available
-                      ? undefined
-                      : t('booking.unavailable_label', { time: clockText(option.local_time, t) })
-                  }
-                  onPress={() => chooseSlot(option)}
-                />
-              ))}
-            </View>
+          ) : daySlots.length ? (
+            <>
+              <Text color={windows.length ? 'muted' : 'danger'}>
+                {windows.length
+                  ? t('booking.free', {
+                      windows: windows
+                        .map((w) =>
+                          t('booking.window', {
+                            start: clockText(w.start, t),
+                            end: clockText(w.end, t),
+                          }),
+                        )
+                        .join(listSeparator),
+                    })
+                  : t('booking.no_free')}
+              </Text>
+              <View style={styles.wrap}>
+                {hours.map((h) => (
+                  <Chip
+                    key={h}
+                    label={hourText(h, t)}
+                    selected={shownHour === h}
+                    dimmed={!daySlots.some((s) => s.available && hourOf(s) === h)}
+                    onPress={() => setHour(h)}
+                  />
+                ))}
+              </View>
+              <View style={styles.wrap}>
+                {daySlots
+                  .filter((option) => hourOf(option) === shownHour)
+                  .map((option) => (
+                    <Chip
+                      key={option.starts_at}
+                      label={`:${option.local_time.slice(3, 5)}`}
+                      selected={slot?.starts_at === option.starts_at}
+                      dimmed={!option.available}
+                      // Said out loud too: the web build drops aria-disabled on a tappable chip.
+                      accessibilityLabel={
+                        option.available
+                          ? clockText(option.local_time, t)
+                          : t('booking.unavailable_label', {
+                              time: clockText(option.local_time, t),
+                            })
+                      }
+                      onPress={() => chooseSlot(option)}
+                    />
+                  ))}
+              </View>
+            </>
           ) : (
             <Text color="muted">{t('booking.no_times')}</Text>
           )}
+
+          {slot ? (
+            <>
+              <Text variant="label" role="heading">
+                {t('booking.length')}
+              </Text>
+              <View style={styles.stepper}>
+                <StepButton
+                  label={t('booking.shorter')}
+                  disabled={minutes <= STEP}
+                  onPress={() => setLength(minutes - STEP)}
+                  icon="minus"
+                />
+                <Text
+                  weight="semibold"
+                  style={[styles.grow, styles.center]}
+                  accessibilityLiveRegion="polite"
+                >
+                  {t('booking.length_value', {
+                    minutes,
+                    end: clockText(addMinutes(slot.local_time, minutes), t),
+                  })}
+                </Text>
+                <StepButton
+                  label={t('booking.longer')}
+                  disabled={minutes >= slot.max_minutes}
+                  onPress={() => setLength(minutes + STEP)}
+                  icon="plus"
+                />
+              </View>
+              <View style={styles.wrap}>
+                {QUICK_LENGTHS.filter((option) => option <= slot.max_minutes).map((option) => (
+                  <Chip
+                    key={option}
+                    label={t('booking.minutes_chip', { minutes: option })}
+                    accessibilityLabel={t('booking.minutes_long', { minutes: option })}
+                    selected={minutes === option}
+                    onPress={() => setLength(option)}
+                  />
+                ))}
+              </View>
+              <Text variant="caption" color="muted">
+                {t('booking.length_max', {
+                  minutes: slot.max_minutes,
+                  time: clockText(slot.local_time, t),
+                })}
+              </Text>
+            </>
+          ) : null}
 
           <Text variant="label" role="heading">
             {t('booking.topic')}
@@ -195,7 +300,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
             <Text weight="medium">
               {t('booking.summary', {
                 when,
-                minutes: professor.slot_minutes,
+                minutes,
                 office: officeText(professor.office, t),
               })}
             </Text>
@@ -208,7 +313,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
               book.isPending
                 ? t('booking.booking')
                 : slot
-                  ? t('booking.confirm', { time: clockText(slot.local_time, t) })
+                  ? t('booking.confirm', { time: clockText(slot.local_time, t), minutes })
                   : t('booking.choose_time')
             }
             onPress={confirm}
@@ -218,6 +323,41 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
         </>
       )}
     </BottomSheet>
+  );
+}
+
+/** A round 48 px button that makes the length 5 minutes shorter or longer. */
+function StepButton({
+  label,
+  icon,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon: 'minus' | 'plus';
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  const Icon = icon === 'minus' ? Minus : Plus;
+  return (
+    <Pressable
+      role="button"
+      accessibilityLabel={label}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.step,
+        {
+          borderColor: colors.line,
+          backgroundColor: colors.surface,
+          opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Icon color={colors.text} size={22} strokeWidth={2} />
+    </Pressable>
   );
 }
 
@@ -273,4 +413,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   center: { textAlign: 'center' },
+  grow: { flex: 1 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  step: {
+    width: touchTarget,
+    height: touchTarget,
+    borderRadius: touchTarget / 2,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

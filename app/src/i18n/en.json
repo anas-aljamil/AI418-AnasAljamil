@@ -31,7 +31,8 @@
     "from_schedule": "from the schedule",
     "clock": "{{time}} {{period}}",
     "am": "AM",
-    "pm": "PM"
+    "pm": "PM",
+    "hour": "{{hour}} {{period}}"
   },
   "settings": {
     "language": "Language",
@@ -43,10 +44,10 @@
     "language_en": "English",
     "direction_reload": "The app restarts to switch the layout direction.",
     "text_size": "Text size",
-    "text_default": "Default",
-    "text_large": "Large",
-    "text_larger": "Larger",
-    "text_size_helper": "Adds to your phone's own text size, up to twice the normal size.",
+    "text_small": "Small",
+    "text_medium": "Medium",
+    "text_big": "Big",
+    "text_size_helper": "Small, medium or big, on top of your phone's own text size, up to twice the normal size.",
     "notifications": "Notifications in the app",
     "notify_appointments": "Appointments",
     "notify_messages": "Messages",
@@ -331,7 +332,12 @@
     "book": "Book",
     "back": "Back",
     "load_failed": "Couldn't load this professor",
-    "until_end_of_day": "for the rest of today"
+    "until_end_of_day": "for the rest of today",
+    "timeline_now_until": "Now, until {{time}}",
+    "timeline_done": "Finished",
+    "timeline_range": "{{start}}–{{end}}",
+    "timeline_gap": "Not in office",
+    "timeline_gap_line": "Not in office, {{range}}"
   },
   "booking": {
     "title": "Book with {{name}}",
@@ -349,13 +355,26 @@
     "note_helper": "Up to 200 characters",
     "summary": "{{when}}, {{minutes}} min, {{office}}",
     "choose_time": "Choose a time",
-    "confirm": "Book {{time}}",
+    "confirm": "Book {{time}}, {{minutes}} min",
     "booking": "Booking",
     "booked": "Booked with {{name}}, {{when}}",
     "awaiting": "The professor will approve or decline. You'll see the answer in Appointments.",
     "done": "Done",
     "day_chip": "{{day}} {{date}}",
-    "unavailable_label": "{{time}}, unavailable"
+    "unavailable_label": "{{time}}, unavailable",
+    "start": "Start",
+    "length": "Length",
+    "free": "Free: {{windows}}",
+    "window": "{{start}}–{{end}}",
+    "no_free": "Nothing free on this day. Choose another day.",
+    "minute_label": "{{time}}",
+    "length_value": "{{minutes}} min, until {{end}}",
+    "length_max": "Up to {{minutes}} min from {{time}}",
+    "shorter": "5 minutes shorter",
+    "longer": "5 minutes longer",
+    "minutes_chip": "{{minutes}} min",
+    "choose_start": "Choose a start time first.",
+    "minutes_long": "{{minutes}} minutes"
   },
   "appointments": {
     "title": "Appointments",
@@ -378,7 +397,15 @@
     "confirm_cancel_title": "Cancel this appointment?",
     "confirm_cancel_body": "{{name}}, {{when}}. The time becomes free for other students.",
     "keep": "Keep it",
-    "cancelled": "Appointment cancelled"
+    "cancelled": "Appointment cancelled",
+    "move": "Move earlier",
+    "move_title": "Move earlier",
+    "move_body": "Your appointment with {{name}} is {{when}}. These earlier times are free the same day; the length and approval stay the same.",
+    "move_to": "Move to {{time}}",
+    "move_none": "No earlier time is free now.",
+    "moved": "Moved to {{time}}",
+    "moving": "Moving",
+    "length_line": "Until {{end}}, {{minutes}} min"
   },
   "status_screen": {
     "title": "My status",
@@ -528,7 +555,9 @@
     "appointment_approved": "{{name}} approved your appointment, {{when}}",
     "appointment_declined": "{{name}} declined your request for {{when}}",
     "appointment_cancelled": "Appointment with {{name}} cancelled, {{when}}",
-    "new_message": "New message from {{name}}"
+    "new_message": "New message from {{name}}",
+    "appointment_moved": "{{name}} moved the appointment earlier, to {{when}}",
+    "slot_freed": "The appointment before yours with {{name}} was cancelled. Move yours earlier? It is {{when}}"
   },
   "time_picker": {
     "hour_label": "{{field}}, hour {{hour}}",

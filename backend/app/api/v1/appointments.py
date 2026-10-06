@@ -11,7 +11,15 @@ from app.core.pagination import Page, PageParams, page_params, paginate
 from app.db import get_db
 from app.deps import current_student, get_current_user
 from app.models import Appointment, Professor, Student, User
-from app.schemas import AppointmentOut, AppointmentProfessorOut, BookingIn, OfficeOut, PersonOut
+from app.schemas import (
+    AppointmentOut,
+    AppointmentProfessorOut,
+    BookingIn,
+    EarlierStartsOut,
+    MoveIn,
+    OfficeOut,
+    PersonOut,
+)
 from app.services import booking
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
@@ -84,7 +92,14 @@ def create_appointment(
     clock: Clock = Depends(get_clock),
 ) -> AppointmentOut:
     appointment = booking.book(
-        db, user.user_id, body.professor_id, body.starts_at_utc(), body.topic, body.note, clock.now()
+        db,
+        user.user_id,
+        body.professor_id,
+        body.starts_at_utc(),
+        body.minutes,
+        body.topic,
+        body.note,
+        clock.now(),
     )
     return appointment_out(appointment)
 
@@ -94,6 +109,39 @@ def get_appointment(
     appointment_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> AppointmentOut:
     return appointment_out(booking.get_for_participant(db, appointment_id, user))
+
+
+@router.get(
+    "/{appointment_id}/earlier-starts",
+    response_model=EarlierStartsOut,
+    summary="Free earlier starts the same day where this appointment fits (its student)",
+)
+def get_earlier_starts(
+    appointment_id: int,
+    user: User = Depends(current_student),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> EarlierStartsOut:
+    appointment = booking.get_for_participant(db, appointment_id, user)
+    starts = (
+        booking.earlier_starts(db, appointment, clock.now()) if appointment.status in booking.ACTIVE else []
+    )
+    return EarlierStartsOut(appointment_id=appointment_id, starts=starts)
+
+
+@router.post(
+    "/{appointment_id}/move",
+    response_model=AppointmentOut,
+    summary="Move my appointment earlier the same day (students); length and status stay",
+)
+def move_appointment(
+    appointment_id: int,
+    body: MoveIn,
+    user: User = Depends(current_student),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> AppointmentOut:
+    return appointment_out(booking.move_earlier(db, appointment_id, body.starts_at_utc(), user, clock.now()))
 
 
 @router.post(

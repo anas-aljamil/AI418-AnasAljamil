@@ -1,4 +1,5 @@
-"""Bookable slots: office_hours blocks cut into the professor's slot length."""
+"""Bookable times: any start on a 5-minute grid inside an office_hours block, with any
+length in 5-minute steps that stays inside the block and clear of other bookings."""
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -10,10 +11,10 @@ from app.services.status import BlockLike
 @dataclass(frozen=True)
 class Slot:
     starts_at: datetime  # naive UTC
-    ends_at: datetime
     local_time: time
     available: bool
     reason: str | None  # "past" | "taken" when not available
+    max_minutes: int  # longest appointment that can start here (0 when not available)
 
 
 def booking_window_end(now: datetime) -> datetime:
@@ -24,51 +25,67 @@ def booking_window_end(now: datetime) -> datetime:
     return from_riyadh(datetime.combine(this_sunday + timedelta(days=14), time()))
 
 
-def find_block(blocks: list[BlockLike], starts_at: datetime, slot_minutes: int) -> BlockLike | None:
-    """The office_hours block in which starts_at begins a whole slot on the grid, if any."""
+STEP = timedelta(minutes=5)  # starts and lengths move in 5-minute steps
+
+
+def on_grid(local: datetime) -> bool:
+    return local.second == 0 and local.microsecond == 0 and local.minute % 5 == 0
+
+
+def find_block(blocks: list[BlockLike], starts_at: datetime, minutes: int) -> BlockLike | None:
+    """The office_hours block that holds the whole appointment [starts_at, + minutes), if any.
+    The start must be on the 5-minute grid and the length a whole number of 5-minute steps."""
     local = to_riyadh(starts_at)
-    if local.second or local.microsecond:
+    length = timedelta(minutes=minutes)
+    if not on_grid(local) or length <= timedelta(0) or length % STEP:
         return None
-    day, start = riyadh_day_of_week(local), local.time()
-    end = (local + timedelta(minutes=slot_minutes)).time()
+    day, start, end = riyadh_day_of_week(local), local, local + length
     for block in blocks:
         if block.kind != "office_hours" or block.day_of_week != day:
             continue
-        offset = datetime.combine(local.date(), start) - datetime.combine(local.date(), block.start_time)
-        if (
-            block.start_time <= start
-            and end <= block.end_time
-            and end > start
-            and offset % timedelta(minutes=slot_minutes) == timedelta(0)
-        ):
+        block_start = datetime.combine(local.date(), block.start_time)
+        block_end = datetime.combine(local.date(), block.end_time)
+        if block_start <= start and end <= block_end:
             return block
     return None
 
 
 def day_slots(
     blocks: list[BlockLike],
-    slot_minutes: int,
     day: date,
     now: datetime,
     busy: list[tuple[datetime, datetime]],
 ) -> list[Slot]:
-    """All slots on a Riyadh-local day; busy holds active appointments (UTC ranges)."""
-    length = timedelta(minutes=slot_minutes)
+    """Every 5-minute start in the day's office hours (Riyadh-local day). busy holds the
+    active appointments (UTC ranges). max_minutes is the longest appointment that can start
+    there: up to the next booking or the end of the office-hours block."""
     slots = []
     for block in sorted(blocks, key=lambda b: b.start_time):
         if block.kind != "office_hours" or block.day_of_week != riyadh_day_of_week(day):
             continue
         local = datetime.combine(day, block.start_time)
-        block_end = datetime.combine(day, block.end_time)
-        while local + length <= block_end:
+        block_end = from_riyadh(datetime.combine(day, block.end_time))
+        while from_riyadh(local) + STEP <= block_end:
             start = from_riyadh(local)
-            end = start + length
+            limit = min([b_start for b_start, b_end in busy if b_start >= start + STEP] + [block_end])
             if start <= now:
                 reason = "past"
-            elif any(b_start < end and start < b_end for b_start, b_end in busy):
+            elif any(b_start < start + STEP and start < b_end for b_start, b_end in busy):
                 reason = "taken"
             else:
                 reason = None
-            slots.append(Slot(start, end, local.time(), reason is None, reason))
-            local += length
+            max_minutes = int((limit - start) / timedelta(minutes=1)) if reason is None else 0
+            slots.append(Slot(start, local.time(), reason is None, reason, max_minutes))
+            local += STEP
     return slots
+
+
+def free_starts(
+    blocks: list[BlockLike],
+    day: date,
+    now: datetime,
+    busy: list[tuple[datetime, datetime]],
+    minutes: int,
+) -> list[datetime]:
+    """The starts on a day where an appointment of this length fits."""
+    return [s.starts_at for s in day_slots(blocks, day, now, busy) if s.max_minutes >= minutes]

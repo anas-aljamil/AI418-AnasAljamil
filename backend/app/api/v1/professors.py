@@ -24,7 +24,7 @@ from app.schemas import (
 )
 from app.services import chat, directory
 from app.services.booking import ACTIVE
-from app.services.slots import booking_window_end, day_slots
+from app.services.slots import STEP, booking_window_end, day_slots
 
 router = APIRouter(tags=["professors"])
 
@@ -137,7 +137,7 @@ def get_professor(
 @router.get(
     "/professors/{professor_id}/slots",
     response_model=DaySlotsOut,
-    summary="Bookable slots on one day (Riyadh date)",
+    summary="Bookable start times on one day (Riyadh date), each with its longest free length",
 )
 def get_slots(
     professor_id: int,
@@ -162,18 +162,19 @@ def get_slots(
             Appointment.ends_at > day_start,
         )
     ).all()
-    slots = day_slots(professor.blocks, professor.slot_minutes, day, now, [tuple(r) for r in busy])
+    slots = day_slots(professor.blocks, day, now, [tuple(r) for r in busy])
     return DaySlotsOut(
         professor_id=professor_id,
         date=day,
         slot_minutes=professor.slot_minutes,
+        step_minutes=int(STEP / timedelta(minutes=1)),
         slots=[
             SlotOut(
                 starts_at=s.starts_at,
-                ends_at=s.ends_at,
                 local_time=s.local_time,
                 available=s.available,
                 reason=s.reason,
+                max_minutes=s.max_minutes,
             )
             for s in slots
         ],

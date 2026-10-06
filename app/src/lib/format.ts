@@ -124,6 +124,20 @@ export function riyadhDateKey(utc: Date): string {
 }
 
 /** Minutes since Riyadh midnight for an instant, or for an "HH:MM" schedule time. */
+/** "HH:MM" plus some minutes, as "HH:MM" (same day). */
+export function addMinutes(hhmm: string, minutes: number): string {
+  const total = minutesOfDay(hhmm) + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** A whole hour on the 12-hour clock without minutes: "10 AM" / "10 ص". */
+export function hourText(hour: number, t: TFunction): string {
+  return t('time.hour', {
+    hour: hour % 12 === 0 ? 12 : hour % 12,
+    period: t(hour < 12 ? 'time.am' : 'time.pm'),
+  });
+}
+
 export function minutesOfDay(at: Date | string): number {
   if (typeof at === 'string') {
     const [h = '0', m = '0'] = at.split(':');

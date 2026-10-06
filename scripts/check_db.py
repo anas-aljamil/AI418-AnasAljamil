@@ -53,7 +53,7 @@ MUST_FAIL = [
     ("students: role is generated and cannot be written",
      "INSERT INTO students (student_id, role, university_no, department_id) VALUES (16, 'admin', 'S9999', 1)",
      GENERATED_VALUE),
-    ("professors: slot length must be 15 or 30", "UPDATE professors SET slot_minutes = 20 WHERE professor_id = 1", CHECK_FAILED),
+    ("professors: usual length must be 15 or 30", "UPDATE professors SET slot_minutes = 20 WHERE professor_id = 1", CHECK_FAILED),
     ("departments: code must be upper case",
      "INSERT INTO departments (college_id, code, name_ar, name_en) VALUES (1, 'phys', 'الفيزياء', 'Physics')",
      CHECK_FAILED),
@@ -127,6 +127,10 @@ MUST_FAIL = [
      "INSERT INTO notifications (user_id, type, appointment_id) VALUES (9, 'new_message', 6)", CHECK_FAILED),
     ("notifications: appointment types must link an appointment",
      "INSERT INTO notifications (user_id, type, conversation_id) VALUES (9, 'appointment_approved', 1)", CHECK_FAILED),
+    ("notifications: 'time freed before yours' must link an appointment",
+     "INSERT INTO notifications (user_id, type, conversation_id) VALUES (9, 'slot_freed', 1)", CHECK_FAILED),
+    ("notifications: unknown type",
+     "INSERT INTO notifications (user_id, type, appointment_id) VALUES (9, 'appointment_shrunk', 6)", CHECK_FAILED),
 ]
 
 # (description, SQL, verification query, expected first column of the last row)
@@ -263,17 +267,17 @@ def run_seed_invariants() -> list[tuple[bool, str, str]]:
     def add(rows: list[list[str]], description: str, ok_detail: str = "ok") -> None:
         results.append((not rows, description, f"violations: {rows}" if rows else ok_detail))
 
-    # Rule: bookings fall inside an office_hours block, on the slot grid, one slot long.
+    # Rule: bookings fall inside one office_hours block, starting on the 5-minute grid,
+    # a whole number of 5-minute steps long.
     # Riyadh local = UTC + 3 h; DAYOFWEEK() is 1 = Sunday, so subtract 1.
-    add(q("SELECT a.appointment_id FROM appointments a JOIN professors p ON p.professor_id = a.professor_id "
-          "WHERE TIMESTAMPDIFF(MINUTE, a.starts_at, a.ends_at) <> p.slot_minutes OR NOT EXISTS ("
+    add(q("SELECT a.appointment_id FROM appointments a "
+          "WHERE MOD(MINUTE(a.starts_at), 5) <> 0 OR SECOND(a.starts_at) <> 0"
+          "   OR MOD(TIMESTAMPDIFF(MINUTE, a.starts_at, a.ends_at), 5) <> 0 OR NOT EXISTS ("
           "  SELECT 1 FROM schedule_blocks b WHERE b.professor_id = a.professor_id AND b.kind = 'office_hours'"
           "  AND b.day_of_week = DAYOFWEEK(a.starts_at + INTERVAL 3 HOUR) - 1"
           "  AND b.start_time <= TIME(a.starts_at + INTERVAL 3 HOUR)"
-          "  AND TIME(a.ends_at + INTERVAL 3 HOUR) <= b.end_time"
-          "  AND MOD(TIME_TO_SEC(TIME(a.starts_at + INTERVAL 3 HOUR)) - TIME_TO_SEC(b.start_time),"
-          "          p.slot_minutes * 60) = 0)"),
-        "appointments sit in office hours, on the slot grid, one slot long", "all 10 rows valid")
+          "  AND TIME(a.ends_at + INTERVAL 3 HOUR) <= b.end_time)"),
+        "appointments sit in one office-hours block, in 5-minute steps", "all 10 rows valid")
 
     # Rule: at most 2 pending/approved future appointments per student per professor.
     add(q("SELECT student_id, professor_id, COUNT(*) FROM appointments "

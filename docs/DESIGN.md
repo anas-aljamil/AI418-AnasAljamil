@@ -123,11 +123,12 @@ Results are list rows: door, name, department, status label, last updated. Avail
 7.4 Professor profile
 Nameplate header (Section 2) with the door, status label, the professor's short note, and last updated time.
 Office location (building, floor, room).
-A "Today" timeline showing office-hour blocks with a marker for the current time.
+A "Today" timeline: an agenda of office-hour and class blocks, each with its times, door, name and where it stands now, the time between blocks marked "Not in office", and where now falls.
 Sticky bottom bar: Book (primary), Message (secondary), Pin (icon button).
 7.5 Booking (bottom sheet on phones, dialog on desktop web)
 Day strip (Sunday to Thursday, this week and next).
-Time chips. Unavailable times stay visible but disabled, and tapping one explains why.
+The day's free stretches in one line ("Free: 10:00 AM–10:30 AM, 10:45 AM–12:00 PM"), then the start: hour chips, then minute chips on 5-minute steps. Unavailable starts stay visible but disabled, and tapping one explains why.
+Length: a stepper (5 minutes shorter or longer) and one-tap lengths (10, 15, 20, 30, 45, 60 min) that fit; it starts at the professor's usual length and never runs past the next booking or the end of office hours.
 Optional topic chips (Assignment, Exam review, Advising, Other) plus optional short text.
 Confirmation summary, then the signature moment (Section 5).
 Never lose the user's selection on an error.
@@ -148,7 +149,7 @@ Then: today's schedule timeline and pending requests with Approve and Decline bu
 Desktop web: compact enough to keep open in a browser tab. Reflect the current status in the tab title and favicon (web only; native apps have no equivalent and use no app-icon badge).
 7.9 Notifications and settings
 Notifications grouped by today and earlier, each linking to its source.
-Settings: language, theme (system, light, dark), text size (default, large, larger; multiplies the system font scale, capped at 200% total), notification preferences (in-app only).
+Settings: language, theme (system, light, dark), text size (small, medium, big; multiplies the system font scale, capped at 200% total), notification preferences (in-app only).
 8. Content and voice
 Plain, warm, respectful. Arabic must read as natural Modern Standard Arabic, never machine-translated. Address the user directly.
 Buttons say exactly what happens: "Book 10:30", "Send", "Cancel appointment". The same verb carries through the flow (Book, then Booked).
@@ -227,6 +228,11 @@ Append entries as: date, decision, reason.
 2026-10-05, Times are shown on the 12-hour clock with the period in the UI language ("9:30 AM", "9:30 ص"; Western digits), and the schedule editor picks hour, minutes and AM/PM with chips, Reason: owner request; people at the university read and say times this way, and typing "13:00" on a phone keyboard was error-prone.
 2026-10-05, Departments are chosen from a menu: a field that opens a sheet with each college as a heading and its departments as a radio list, Reason: owner request; 12 departments as chips were a wall of buttons, and the college gives the list its structure.
 2026-10-05, A status without a return time reads "for the rest of today" instead of "until 12:00 AM", and a student whose department has no professors yet is told so instead of "nobody is in", Reason: both earlier messages were literally true and still misleading.
+2026-10-06, Booking is free (owner decision): a start on any 5-minute step inside office hours and any length in 5-minute steps; the sheet shows the day's free stretches, hour then minute chips, and a length stepper with one-tap lengths, starting at the professor's usual length, Reason: students need different lengths; hour then minute chips keep 24 starts per two hours to two short rows, and the summary line answers "when is she free?" before any tap.
+2026-10-06, When an appointment is cancelled, the student booked right after it that day gets "The appointment before yours ... was cancelled. Move yours earlier?"; tapping it opens a "Move earlier" sheet with the earlier free starts, the earliest as the one-tap button; length and approval stay, and the professor is told, Reason: owner request; one tap to act, and no new approval round for a time the professor already offers.
+2026-10-06, The "Today" timeline became an agenda (replacing the bar of 2026-10-05): one row per block with start and end times, a rail and door in the status colour, the name, "Now, until ..." as a pill on the current block, finished blocks dimmed, "Not in office" between blocks, and a "Now" mark where the time falls outside a block; each row is one spoken sentence, Reason: owner found the bar unclear; a list reads at a glance, at 200% text and in both directions.
+2026-10-06, Text size is Small (90%), Medium (100%, default) and Big (120%) of the phone's own size, still capped at 200%; sizes saved by the earlier version map to Medium or Big, Reason: owner request; small still keeps body text at about 15 dp.
+2026-10-06, Appointment cards show the end and length ("Until 10:45 AM, 15 min"), Reason: lengths now vary.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

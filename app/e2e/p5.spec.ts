@@ -116,14 +116,17 @@ test('no booking means no chat; settings change text size and hide message notif
     '0',
   );
 
-  // Text size: the Profile heading grows by 30% with "Larger".
+  // Text size: from Medium (the default) the Profile heading grows by 20% with "Big" and
+  // shrinks by 10% with "Small".
   const settings = await open(browser, 'm.alanazi@university.example');
   await settings.getByRole('tab', { name: 'Profile' }).click();
   const heading = shown(settings, 'Text size');
-  const before = await heading.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-  await settings.getByRole('button', { name: 'Larger', exact: true }).click();
-  const after = await heading.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-  expect(after / before).toBeCloseTo(1.3, 1);
+  const size = () => heading.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const medium = await size();
+  await settings.getByRole('button', { name: 'Big', exact: true }).click();
+  expect((await size()) / medium).toBeCloseTo(1.2, 1);
+  await settings.getByRole('button', { name: 'Small', exact: true }).click();
+  expect((await size()) / medium).toBeCloseTo(0.9, 1);
 
   // Message notifications off: the bell list says some are hidden.
   await settings.getByRole('button', { name: 'Messages', exact: true }).click();

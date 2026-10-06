@@ -40,6 +40,7 @@ export const queryKeys = {
   appointmentList: (scope: 'upcoming' | 'past') => ['appointments', 'list', scope] as const,
   nextAppointment: ['appointments', 'next'] as const,
   requests: ['appointments', 'requests'] as const,
+  earlierStarts: (id: number) => ['appointments', id, 'earlier'] as const,
   myStatus: ['me', 'status'] as const,
   mySchedule: ['me', 'schedule'] as const,
   admin: (resource: AdminResource) => ['admin', resource] as const,
@@ -140,6 +141,8 @@ export function useSlots(id: number, date: string | null) {
 export interface BookingInput {
   professor_id: number;
   starts_at: string;
+  /** Length in 5-minute steps. */
+  minutes: number;
   topic: Topic | null;
   note: string | null;
 }
@@ -172,6 +175,30 @@ export function useAppointmentAction() {
     mutationFn: ({ id, action }: { id: number; action: AppointmentAction }) =>
       api<Appointment>(`/appointments/${id}/${action}`, 'POST'),
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.appointments }),
+  });
+}
+
+/** Earlier free starts the same day where the student's appointment fits (to move it). */
+export function useEarlierStarts(id: number | null) {
+  return useQuery({
+    queryKey: queryKeys.earlierStarts(id ?? 0),
+    queryFn: () =>
+      api<{ appointment_id: number; starts: string[] }>(`/appointments/${id}/earlier-starts`).then(
+        (body) => body.starts,
+      ),
+    enabled: id !== null,
+  });
+}
+
+export function useMoveAppointment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, startsAt }: { id: number; startsAt: string }) =>
+      api<Appointment>(`/appointments/${id}/move`, 'POST', { starts_at: startsAt }),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: queryKeys.appointments });
+      client.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
   });
 }
 

@@ -1,6 +1,7 @@
 /**
- * Booking sheet (DESIGN.md 7.5): unavailable times explain themselves, an error never loses
- * the selection (only a time someone else just took is unselected), and success shows the
+ * Booking sheet (DESIGN.md 7.5): unavailable times explain themselves, the start is any
+ * 5-minute step and the length any 5-minute step that fits, an error never loses the
+ * selection (only a time someone else just took is unselected), and success shows the
  * "Booked with ..." moment.
  */
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
@@ -38,25 +39,18 @@ const noura = {
 } as ProfessorDetail;
 
 const inTwoDays = Date.now() + 2 * 86_400_000;
+const at = (minutes: number) => new Date(inTwoDays + minutes * 60_000).toISOString();
 const slots = {
   professor_id: 1,
   date: '2026-10-07',
   slot_minutes: 15,
+  step_minutes: 5,
   slots: [
-    {
-      starts_at: new Date(inTwoDays).toISOString(),
-      ends_at: new Date(inTwoDays + 900_000).toISOString(),
-      local_time: '10:00',
-      available: true,
-      reason: null,
-    },
-    {
-      starts_at: new Date(inTwoDays + 900_000).toISOString(),
-      ends_at: new Date(inTwoDays + 1_800_000).toISOString(),
-      local_time: '10:15',
-      available: false,
-      reason: 'taken',
-    },
+    { starts_at: at(0), local_time: '10:00', available: true, reason: null, max_minutes: 15 },
+    { starts_at: at(5), local_time: '10:05', available: true, reason: null, max_minutes: 10 },
+    { starts_at: at(10), local_time: '10:10', available: true, reason: null, max_minutes: 5 },
+    { starts_at: at(15), local_time: '10:15', available: false, reason: 'taken', max_minutes: 0 },
+    { starts_at: at(60), local_time: '11:00', available: true, reason: null, max_minutes: 60 },
   ],
 };
 
@@ -74,7 +68,7 @@ async function chooseTimeAndTopic() {
   expect(screen.getByText('This time is already booked. Choose another.')).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: '10:00 AM' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Advising' }));
-  await fireEvent.press(screen.getByRole('button', { name: 'Book 10:00 AM' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Book 10:00 AM, 15 min' }));
 }
 
 beforeEach(() => mockApi.mockReset());
@@ -89,7 +83,7 @@ it('keeps the time, topic and note when the API refuses the booking', async () =
       'You already have 2 upcoming appointments with this professor. Cancel one to book another.',
     ),
   ).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Book 10:00 AM' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Book 10:00 AM, 15 min' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Advising' })).toBeSelected();
 });
 
@@ -111,13 +105,51 @@ it('unselects only a time that someone else just took, and reloads the times', a
 });
 
 it('shows the booked moment with the professor and the time', async () => {
-  serve(() => ({ ...slots.slots[0], appointment_id: 7, status: 'pending' }));
+  serve(() => ({ starts_at: at(0), ends_at: at(15), appointment_id: 7, status: 'pending' }));
   await chooseTimeAndTopic();
   expect(await screen.findByText(/^Booked with Dr\. Noura Al-Harbi, /)).toBeTruthy();
   expect(mockApi).toHaveBeenCalledWith('/appointments', 'POST', {
     professor_id: 1,
     starts_at: slots.slots[0]!.starts_at,
+    minutes: 15,
     topic: 'advising',
     note: null,
   });
+});
+
+it('shows the free stretches and lets the student choose any length that fits', async () => {
+  serve(() => {
+    throw new ApiError(409, 'BOOKING_LIMIT', 'raw'); // only the request body matters here
+  });
+  await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
+  expect(await screen.findByText('Free: 10:00 AM–10:15 AM, 11:00 AM–12:00 PM')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: '11 AM' }));
+  await fireEvent.press(screen.getByRole('button', { name: '11:00 AM' }));
+  // The professor's usual 15 minutes first, then 5 minutes longer, up to 60.
+  expect(screen.getByText('15 min, until 11:15 AM')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: '5 minutes longer' }));
+  await fireEvent.press(screen.getByRole('button', { name: '5 minutes longer' }));
+  expect(screen.getByText('25 min, until 11:25 AM')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: '60 minutes' }));
+  expect(screen.getByRole('button', { name: '5 minutes longer' })).toBeDisabled();
+  await fireEvent.press(screen.getByRole('button', { name: '5 minutes shorter' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Book 11:00 AM, 55 min' }));
+  expect(mockApi).toHaveBeenCalledWith('/appointments', 'POST', {
+    professor_id: 1,
+    starts_at: at(60),
+    minutes: 55,
+    topic: null,
+    note: null,
+  });
+});
+
+it('fits the length to a start with less free time', async () => {
+  serve(() => {
+    throw new Error('not booked in this test');
+  });
+  await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
+  await fireEvent.press(await screen.findByRole('button', { name: '10:10 AM' }));
+  expect(screen.getByText('5 min, until 10:15 AM')).toBeTruthy();
+  expect(screen.getByText('Up to 5 min from 10:10 AM')).toBeTruthy();
+  expect(screen.getByRole('button', { name: '5 minutes shorter' })).toBeDisabled();
 });

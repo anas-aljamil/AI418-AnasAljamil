@@ -46,7 +46,7 @@ export const persistOptions = {
   maxAge: DAY_MS,
   // Change this whenever an API response changes shape, so data saved by an older app version
   // is dropped instead of read (departments gained their college in 'colleges').
-  buster: 'colleges',
+  buster: 'free-booking',
   dehydrateOptions: {
     // Keep what the home screen shows; search results are not worth keeping.
     shouldDehydrateQuery: (query: Query) =>

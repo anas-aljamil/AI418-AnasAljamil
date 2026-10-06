@@ -1,6 +1,7 @@
 /**
  * Notifications (DESIGN.md 7.9): today's and earlier ones, newest first, each opening its
- * source (the appointment list or the conversation) and marked read when opened. The
+ * source (the appointment list, the "Move earlier" sheet when time opened before an
+ * appointment, or the conversation) and marked read when opened. The
  * settings filter (appointments, messages) decides what this phone shows.
  */
 import { SectionList, StyleSheet, View } from 'react-native';
@@ -49,6 +50,9 @@ export default function NotificationsScreen() {
     if (!n.read_at) markRead.mutate([n.notification_id]);
     if (n.type === 'new_message' && n.conversation_id) {
       router.push(`/conversations/${n.conversation_id}`);
+    } else if (n.type === 'slot_freed' && n.appointment_id) {
+      // Opens the "Move earlier" sheet for that appointment.
+      router.navigate({ pathname: '/appointments', params: { move: String(n.appointment_id) } });
     } else {
       router.navigate(user.role === 'professor' ? '/staff/requests' : '/appointments');
     }

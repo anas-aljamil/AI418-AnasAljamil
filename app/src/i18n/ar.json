@@ -31,7 +31,8 @@
     "from_schedule": "حسب الجدول",
     "clock": "{{time}} {{period}}",
     "am": "ص",
-    "pm": "م"
+    "pm": "م",
+    "hour": "{{hour}} {{period}}"
   },
   "settings": {
     "language": "اللغة",
@@ -43,10 +44,10 @@
     "language_en": "English",
     "direction_reload": "سيُعاد تشغيل التطبيق لتغيير اتجاه العرض.",
     "text_size": "حجم النص",
-    "text_default": "افتراضي",
-    "text_large": "كبير",
-    "text_larger": "أكبر",
-    "text_size_helper": "يُضاف إلى حجم النص في هاتفك، حتى ضعف الحجم العادي.",
+    "text_small": "صغير",
+    "text_medium": "متوسط",
+    "text_big": "كبير",
+    "text_size_helper": "صغير أو متوسط أو كبير، فوق حجم النص في هاتفك، حتى ضعف الحجم العادي.",
     "notifications": "الإشعارات داخل التطبيق",
     "notify_appointments": "المواعيد",
     "notify_messages": "الرسائل",
@@ -331,7 +332,12 @@
     "book": "احجز",
     "back": "رجوع",
     "load_failed": "تعذّر تحميل صفحة الأستاذ",
-    "until_end_of_day": "حتى نهاية اليوم"
+    "until_end_of_day": "حتى نهاية اليوم",
+    "timeline_now_until": "الآن، حتى {{time}}",
+    "timeline_done": "انتهت",
+    "timeline_range": "{{start}}–{{end}}",
+    "timeline_gap": "خارج المكتب",
+    "timeline_gap_line": "خارج المكتب، {{range}}"
   },
   "booking": {
     "title": "احجز مع {{name}}",
@@ -349,13 +355,26 @@
     "note_helper": "حتى 200 حرف",
     "summary": "{{when}}، {{minutes}} دقيقة، {{office}}",
     "choose_time": "اختر وقتًا",
-    "confirm": "احجز {{time}}",
+    "confirm": "احجز {{time}}، {{minutes}} دقيقة",
     "booking": "جارٍ الحجز",
     "booked": "تم الحجز مع {{name}}، {{when}}",
     "awaiting": "سيوافق الأستاذ على طلبك أو يعتذر عنه، وسترى الرد في صفحة مواعيدي.",
     "done": "تم",
     "day_chip": "{{day}} {{date}}",
-    "unavailable_label": "{{time}}، غير متاح"
+    "unavailable_label": "{{time}}، غير متاح",
+    "start": "البداية",
+    "length": "المدة",
+    "free": "متاح: {{windows}}",
+    "window": "{{start}}–{{end}}",
+    "no_free": "لا وقت متاح في هذا اليوم. اختر يومًا آخر.",
+    "minute_label": "{{time}}",
+    "length_value": "{{minutes}} دقيقة، حتى {{end}}",
+    "length_max": "حتى {{minutes}} دقيقة من {{time}}",
+    "shorter": "أقصر بخمس دقائق",
+    "longer": "أطول بخمس دقائق",
+    "minutes_chip": "{{minutes}} د",
+    "choose_start": "اختر وقت البداية أولًا.",
+    "minutes_long": "{{minutes}} دقيقة"
   },
   "appointments": {
     "title": "مواعيدي",
@@ -378,7 +397,15 @@
     "confirm_cancel_title": "إلغاء هذا الموعد؟",
     "confirm_cancel_body": "{{name}}، {{when}}. سيصبح الوقت متاحًا لطلاب آخرين.",
     "keep": "أبقِ الموعد",
-    "cancelled": "أُلغي الموعد"
+    "cancelled": "أُلغي الموعد",
+    "move": "قدّم الموعد",
+    "move_title": "تقديم الموعد",
+    "move_body": "موعدك مع {{name}} {{when}}. هذه أوقات أبكر متاحة في اليوم نفسه، وتبقى المدة والموافقة كما هي.",
+    "move_to": "قدّمه إلى {{time}}",
+    "move_none": "لا يوجد وقت أبكر متاح الآن.",
+    "moved": "قُدّم إلى {{time}}",
+    "moving": "جارٍ التقديم",
+    "length_line": "حتى {{end}}، {{minutes}} دقيقة"
   },
   "status_screen": {
     "title": "حالتي",
@@ -528,7 +555,9 @@
     "appointment_approved": "تمت الموافقة على موعدك مع {{name}}: {{when}}",
     "appointment_declined": "لم تتم الموافقة على طلبك مع {{name}}: {{when}}",
     "appointment_cancelled": "أُلغي الموعد مع {{name}}: {{when}}",
-    "new_message": "رسالة جديدة من {{name}}"
+    "new_message": "رسالة جديدة من {{name}}",
+    "appointment_moved": "قدّم {{name}} الموعد إلى {{when}}",
+    "slot_freed": "أُلغي الموعد الذي قبل موعدك مع {{name}}. هل تريد تقديم موعدك؟ موعدك {{when}}"
   },
   "time_picker": {
     "hour_label": "{{field}}، الساعة {{hour}}",

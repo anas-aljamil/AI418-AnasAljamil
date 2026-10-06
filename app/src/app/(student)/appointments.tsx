@@ -2,10 +2,12 @@
  * My appointments (DESIGN.md 7.6): Upcoming and Past. Upcoming pending or approved
  * appointments can be cancelled, with a confirmation, until 1 hour before they start;
  * inside that window the button stays visible but disabled, and the reason is shown.
+ * Opened with ?move=<id> (from the "time freed before yours" notification), it shows the
+ * "Move earlier" sheet for that appointment.
  */
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +24,7 @@ import {
   appointmentWhen,
   cancelState,
 } from '@/features/appointments/AppointmentCard';
+import { MoveSheet } from '@/features/appointments/MoveSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { useNow } from '@/lib/hooks';
@@ -42,6 +45,12 @@ export default function AppointmentsScreen() {
   const list = useAppointments(scope);
   const action = useAppointmentAction();
   const [confirming, setConfirming] = useState<Appointment | null>(null);
+  // The "Move earlier" sheet follows the route: ?move=<id> opens it, closing clears it.
+  const { move } = useLocalSearchParams<{ move?: string }>();
+  const upcoming = useAppointments('upcoming');
+  const moving = move
+    ? (upcoming.data?.find((a) => String(a.appointment_id) === move) ?? null)
+    : null;
 
   const cancel = () => {
     if (!confirming) return;
@@ -146,6 +155,7 @@ export default function AppointmentsScreen() {
         onCancel={() => setConfirming(null)}
         busy={action.isPending}
       />
+      <MoveSheet appointment={moving} onClose={() => router.setParams({ move: undefined })} />
     </>
   );
 }

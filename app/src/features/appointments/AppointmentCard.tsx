@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import type { Appointment } from '@/api/types';
 import { Card, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
-import { dateTimeText, riyadhDayDifference, whenText } from '@/lib/format';
+import { clockText, dateTimeText, riyadhDayDifference, riyadhTime, whenText } from '@/lib/format';
 import { fullName, officeText, professorName } from '@/lib/names';
 import { space, type Language } from '@/theme/tokens';
 
@@ -57,6 +57,14 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
         />
       </View>
       <Text>{appointmentWhen(appointment, now, t)}</Text>
+      <Text color="muted">
+        {t('appointments.length_line', {
+          end: clockText(riyadhTime(new Date(appointment.ends_at)), t),
+          minutes: Math.round(
+            (Date.parse(appointment.ends_at) - Date.parse(appointment.starts_at)) / 60_000,
+          ),
+        })}
+      </Text>
       <Text color="muted">{officeText(appointment.professor.office, t)}</Text>
       {appointment.topic ? (
         <Text color="muted">

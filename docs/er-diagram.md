@@ -80,7 +80,7 @@ erDiagram
         int office_id FK "nullable, SET NULL"
         varchar honorific "dr | prof | mr | ms | eng"
         varchar academic_rank
-        tinyint slot_minutes "15 | 30, default 15"
+        tinyint slot_minutes "usual length: 15 | 30, default 15"
         boolean open_messages "default false"
     }
     SCHEDULE_BLOCKS {
@@ -135,7 +135,7 @@ erDiagram
     NOTIFICATIONS {
         int notification_id PK
         int user_id FK
-        varchar type "4 appointment types | new_message"
+        varchar type "6 appointment types | new_message"
         int appointment_id FK "nullable"
         int conversation_id FK "nullable"
         datetime created_at
@@ -186,7 +186,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | STUDENT (subclass of USER) | inherits <ins>user_id</ins>; university_no, study_year | none |
 | PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank, slot_minutes, open_messages | effective_status, last_updated (from overrides, schedule and the clock) |
 | OFFICE | <ins>office_id</ins>, building_code, floor, room_number, created_at | none |
-| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, start_time, end_time, label | bookable_slots (block split by slot_minutes) |
+| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, start_time, end_time, label | bookable_starts (every 5 minutes in an office-hours block, minus active appointments) |
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
 | APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |

@@ -432,7 +432,7 @@ INNER JOIN departments AS d ON d.department_id = p.department_id
 LEFT JOIN offices AS o      ON o.office_id = p.office_id
 ORDER BY d.code, u.full_name_en;
 
--- P2. Professors any student may message, or who give 30-minute slots.
+-- P2. Professors any student may message, or whose usual appointment is 30 minutes.
 SELECT u.full_name_en, p.open_messages, p.slot_minutes
 FROM professors AS p
 INNER JOIN users AS u ON u.user_id = p.professor_id
@@ -815,6 +815,8 @@ SELECT n.notification_id,
            WHEN 'appointment_approved'  THEN CONCAT(other.full_name_en, ' approved your appointment')
            WHEN 'appointment_declined'  THEN CONCAT(other.full_name_en, ' declined your request')
            WHEN 'appointment_cancelled' THEN CONCAT('Appointment with ', other.full_name_en, ' cancelled')
+           WHEN 'appointment_moved'     THEN CONCAT(other.full_name_en, ' moved the appointment earlier')
+           WHEN 'slot_freed'            THEN CONCAT('Time opened before your appointment with ', other.full_name_en)
            ELSE CONCAT('New message from ', other.full_name_en)
        END AS shown_as,
        n.created_at, n.read_at IS NULL AS is_new
@@ -845,7 +847,8 @@ ORDER BY sent DESC;
 -- N4. Appointment notifications created between 29 September and 1 October.
 SELECT notification_id, user_id, type, created_at
 FROM notifications
-WHERE type IN ('appointment_requested', 'appointment_approved', 'appointment_declined', 'appointment_cancelled')
+WHERE type IN ('appointment_requested', 'appointment_approved', 'appointment_declined', 'appointment_cancelled',
+               'appointment_moved', 'slot_freed')
   AND created_at BETWEEN '2026-09-29 00:00:00' AND '2026-10-01 23:59:59'
 ORDER BY created_at;
 

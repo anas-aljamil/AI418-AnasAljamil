@@ -202,16 +202,19 @@ class ProfessorDetailOut(ProfessorSummaryOut):
 
 class SlotOut(BaseModel):
     starts_at: UtcDatetime
-    ends_at: UtcDatetime
     local_time: ClockTime
     available: bool
     reason: Literal["past", "taken"] | None
+    # Longest appointment that can start here (5-minute steps; 0 when not available).
+    max_minutes: int
 
 
 class DaySlotsOut(BaseModel):
     professor_id: int
     date: date
+    # The professor's usual length, offered first; any length in 5-minute steps is allowed.
     slot_minutes: int
+    step_minutes: int
     slots: list[SlotOut]
 
 
@@ -274,11 +277,27 @@ class AppointmentOut(BaseModel):
 class BookingIn(BaseModel):
     professor_id: int
     starts_at: AwareDatetime
+    # Length in 5-minute steps; without it, the professor's usual length.
+    minutes: int | None = Field(default=None, ge=5, le=600, multiple_of=5)
     topic: Topic | None = None
     note: OptionalText200
 
     def starts_at_utc(self) -> datetime:
         return to_naive_utc(self.starts_at)
+
+
+class MoveIn(BaseModel):
+    """Move an appointment earlier on the same day; its length stays."""
+
+    starts_at: AwareDatetime
+
+    def starts_at_utc(self) -> datetime:
+        return to_naive_utc(self.starts_at)
+
+
+class EarlierStartsOut(BaseModel):
+    appointment_id: int
+    starts: list[UtcDatetime]
 
 
 # --- admin -------------------------------------------------------------------
@@ -466,6 +485,8 @@ class NotificationOut(BaseModel):
         "appointment_approved",
         "appointment_declined",
         "appointment_cancelled",
+        "appointment_moved",
+        "slot_freed",
         "new_message",
     ]
     created_at: UtcDatetime
