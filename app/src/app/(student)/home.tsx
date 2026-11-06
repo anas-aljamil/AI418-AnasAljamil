@@ -7,7 +7,14 @@
  * its time; a section with nothing to show says what happened and offers a retry.
  */
 import { useRef, useState } from 'react';
-import { FlatList, Platform, ScrollView, StyleSheet, View, type TextInput } from 'react-native';
+import {
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type TextInputInstance,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,7 +70,7 @@ export default function HomeScreen() {
   const user = useUser();
   const now = useNow();
   const online = useOnline();
-  const searchRef = useRef<TextInput>(null);
+  const searchRef = useRef<TextInputInstance>(null);
   const [query, setQuery] = useState('');
   const searchText = useDebounced(query);
   const searching = query.trim().length > 0;
@@ -203,7 +210,7 @@ export default function HomeScreen() {
     </View>
   ) : searching && !search.isFetching ? (
     <Text color="muted">{t('home.no_results', { query: query.trim() })}</Text>
-  ) : null;
+  ) : undefined;
 
   return (
     <FlatList

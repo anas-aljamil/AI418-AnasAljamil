@@ -1,5 +1,11 @@
 import { useState, type Ref } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { textAlignFor } from '@/lib/direction';
@@ -18,7 +24,7 @@ import { Text } from './Text';
 
 interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   /** Lets a form move focus to this field (e.g. the return key on the field before). */
-  ref?: Ref<TextInput>;
+  ref?: Ref<TextInputInstance>;
   /** Always visible above the input (never a placeholder-only label). */
   label: string;
   helper?: string;

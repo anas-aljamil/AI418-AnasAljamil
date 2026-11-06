@@ -11,7 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  type TextInput,
+  type TextInputInstance,
 } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +37,7 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
 
   if (state.status === 'signedIn') return <Redirect href="/" />;
 

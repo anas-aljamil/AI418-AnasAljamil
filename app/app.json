@@ -43,7 +43,8 @@
           "image": "./assets/splash-icon.png"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-status-bar"
     ],
     "scheme": "mawjood",
     "experiments": {

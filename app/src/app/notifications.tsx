@@ -124,7 +124,7 @@ export default function NotificationsScreen() {
             <Text variant="caption" color="muted" style={styles.footer}>
               {t('notifications.hidden')}
             </Text>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           query.data === undefined && !query.error ? (

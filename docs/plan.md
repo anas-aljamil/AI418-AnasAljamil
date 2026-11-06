@@ -41,7 +41,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
 - Each direction is critiqued against Section 3 and revised. No code.
 
 ### P3b: Expo foundations and /styleguide (stop for your review)
-- Expo SDK 57 app in `app/` (Expo Router, TypeScript strict) that opens in Expo Go on Android and iOS and as a web build.
+- Expo SDK 58 app in `app/` (Expo Router, TypeScript strict) that opens in Expo Go on Android and iOS and as a web build.
 - Typed theme module (both palettes, type scale with per-script line heights, spacing, radii, elevation, durations); fonts bundled; theme switching (system/light/dark); i18n scaffold (ar.json, en.json); RTL with the I18nManager reload flow; backend URL discovery (see run-on-phone.md).
 - A `/styleguide` screen shows every token and component in Arabic and English, light and dark: buttons, chips, inputs, all door states with animation, list rows, cards, bottom sheet, toast, skeletons, empty state.
 - Evidence:
@@ -183,9 +183,9 @@ These cannot be verified in this cloud sandbox (no phone or emulator) or by web 
 
 P1 adds no dependency: its scripts use only the Python standard library and the `mysql` command-line client that ships with MySQL.
 
-### Client (Expo SDK 57; every native module below is included in Expo Go, so no custom build is needed)
+### Client (Expo SDK 58; every native module below is included in Expo Go, so no custom build is needed)
 
-Versions are pinned by `npx expo install`, which picks the ones matching SDK 57. Each package is installed in the phase that first uses it: P3b installed the app, navigation, SVG, icons, Reanimated, i18n, fonts, haptics, system UI, AsyncStorage and the dev tools; TanStack Query, NetInfo and expo-secure-store come in P3c, gesture-handler with the first draggable sheet in P4.
+Versions are pinned by `npx expo install`, which picks the ones matching SDK 58 (upgraded from SDK 57 on 2026-11-06). Each package is installed in the phase that first uses it: P3b installed the app, navigation, SVG, icons, Reanimated, i18n, fonts, haptics, system UI, AsyncStorage and the dev tools; TanStack Query, NetInfo and expo-secure-store come in P3c, gesture-handler with the first draggable sheet in P4.
 
 | Package | Purpose |
 |---|---|
@@ -213,7 +213,7 @@ Not used, deliberately:
 - **Dropped from the earlier web plan:** react-router, @fontsource/* and Radix.
 
 ## Risks specific to the new stack
-- **Expo Go supports only the newest SDK.** If Expo releases SDK 58 during the term, the store version of Expo Go may stop opening an SDK 57 project. Mitigation: upgrade with `npx expo install --fix` (usually small), or install the matching Expo Go build from expo.dev.
+- **Expo Go supports only the newest SDK.** The project moved from SDK 57 to SDK 58 on 2026-11-06 for this reason. When a newer SDK ships, upgrade with `npx expo install expo@^<version> --fix`; if `expo-modules-core` ends up nested under `node_modules/expo/`, delete `node_modules` and `package-lock.json` and reinstall, since Expo packages and jest-expo import it from the top level.
 - **Phone and computer must share a network.** University Wi-Fi often blocks device-to-device traffic. Fallback: a phone hotspot, or `npx expo start --tunnel` for the app (the API URL then has to be set by hand; see run-on-phone.md).
 - **The RTL reload behaves differently on web and native.** It is verified on a real phone in P3b.
 - **MySQL 8's binary logging blocks trigger creation for users without SUPER.** Documented: load the schema as root, or set `log_bin_trust_function_creators = 1`.
