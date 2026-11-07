@@ -432,12 +432,13 @@ INNER JOIN departments AS d ON d.department_id = p.department_id
 LEFT JOIN offices AS o      ON o.office_id = p.office_id
 ORDER BY d.code, u.full_name_en;
 
--- P2. Professors any student may message, or whose usual appointment is 30 minutes.
-SELECT u.full_name_en, p.open_messages, p.slot_minutes
+-- P2. Professors whose usual appointment is 30 minutes, or who close their
+-- messages on a Friday or Saturday (days off).
+SELECT u.full_name_en, p.slot_minutes
 FROM professors AS p
 INNER JOIN users AS u ON u.user_id = p.professor_id
-WHERE p.open_messages = TRUE
-   OR p.slot_minutes IN (30)
+WHERE p.slot_minutes IN (30)
+   OR p.professor_id IN (SELECT h.professor_id FROM chat_closed_hours AS h WHERE h.day_of_week IN (5, 6))
 ORDER BY u.full_name_en;
 
 -- P3. Aggregate: professors per academic rank, in rank order.
@@ -528,7 +529,133 @@ WHERE b.day_of_week = DAYOFWEEK(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00'))
 
 
 -- =============================================================================
--- 9. status_overrides
+-- 9. booking_periods
+-- =============================================================================
+
+-- BP1. Dr. Noura's weekly booking times in Riyadh time. App: profile, Schedule > Booking.
+SELECT ELT(b.day_of_week + 1, 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday') AS day,
+       TIME_FORMAT(b.start_time, '%H:%i') AS starts, TIME_FORMAT(b.end_time, '%H:%i') AS ends
+FROM booking_periods AS b
+WHERE b.professor_id = 1
+ORDER BY b.day_of_week, b.start_time;
+
+-- BP2. Booking times that lie outside office hours (no office-hours block covers
+-- them): bookable even though the timetable says the professor is not in.
+SELECT u.full_name_en, b.day_of_week, b.start_time, b.end_time
+FROM booking_periods AS b
+INNER JOIN users AS u ON u.user_id = b.professor_id
+WHERE NOT EXISTS (SELECT 1 FROM schedule_blocks AS s
+                  WHERE s.professor_id = b.professor_id AND s.kind = 'office_hours'
+                    AND s.day_of_week = b.day_of_week
+                    AND s.start_time <= b.start_time AND b.end_time <= s.end_time)
+ORDER BY u.full_name_en, b.day_of_week;
+
+-- BP3. Aggregate: bookable minutes per week and number of booking times per
+-- professor, listing those under three hours a week (GROUP BY + HAVING).
+SELECT u.full_name_en, COUNT(*) AS periods,
+       SUM(TIME_TO_SEC(TIMEDIFF(b.end_time, b.start_time))) DIV 60 AS bookable_minutes
+FROM booking_periods AS b
+INNER JOIN users AS u ON u.user_id = b.professor_id
+GROUP BY b.professor_id, u.full_name_en
+HAVING bookable_minutes < 180
+ORDER BY bookable_minutes;
+
+-- BP4. Aggregate: per working day, how many professors take bookings and the
+-- earliest and latest bookable times.
+SELECT ELT(day_of_week + 1, 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday') AS day,
+       COUNT(DISTINCT professor_id) AS professors, MIN(start_time) AS earliest, MAX(end_time) AS latest
+FROM booking_periods
+GROUP BY day_of_week
+ORDER BY day_of_week;
+
+-- BP5. Professors who cannot be booked because they have no booking times
+-- (expected: no rows in the seed). App: profile ("hasn't set booking times").
+SELECT u.full_name_en
+FROM professors AS p
+INNER JOIN users AS u          ON u.user_id = p.professor_id
+LEFT JOIN booking_periods AS b ON b.professor_id = p.professor_id
+WHERE b.period_id IS NULL;
+
+-- BP6. Booking times starting between 11:00 and 13:00 on Sunday or Monday.
+SELECT u.full_name_en, b.day_of_week, b.start_time, b.end_time
+FROM booking_periods AS b
+INNER JOIN users AS u ON u.user_id = b.professor_id
+WHERE b.day_of_week IN (0, 1)
+  AND b.start_time BETWEEN '11:00:00' AND '13:00:00'
+ORDER BY b.day_of_week, b.start_time;
+
+
+-- =============================================================================
+-- 10. chat_closed_hours
+-- =============================================================================
+
+-- CH1. Every professor's weekly closed message hours, read as text: an end at
+-- or before the start runs into the next day; equal times close the whole day.
+-- App: Schedule > Messages.
+SELECT u.full_name_en,
+       ELT(h.day_of_week + 1, 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+           'Friday', 'Saturday') AS day,
+       CASE WHEN h.start_time = h.end_time THEN 'all day'
+            WHEN h.end_time > h.start_time
+                 THEN CONCAT(TIME_FORMAT(h.start_time, '%H:%i'), '-', TIME_FORMAT(h.end_time, '%H:%i'))
+            ELSE CONCAT(TIME_FORMAT(h.start_time, '%H:%i'), '-', TIME_FORMAT(h.end_time, '%H:%i'), ' next day')
+       END AS closed
+FROM chat_closed_hours AS h
+INNER JOIN users AS u ON u.user_id = h.professor_id
+ORDER BY u.full_name_en, h.day_of_week, h.start_time;
+
+-- CH2. Aggregate: closed minutes per week for each professor, with professors
+-- who never close their messages shown as 0 (OUTER JOIN).
+SELECT u.full_name_en,
+       COUNT(h.closure_id) AS closures,
+       COALESCE(SUM(IF(h.end_time > h.start_time,
+                       TIME_TO_SEC(TIMEDIFF(h.end_time, h.start_time)) DIV 60,
+                       1440 - TIME_TO_SEC(TIMEDIFF(h.start_time, h.end_time)) DIV 60)), 0) AS closed_minutes
+FROM professors AS p
+INNER JOIN users AS u            ON u.user_id = p.professor_id
+LEFT JOIN chat_closed_hours AS h ON h.professor_id = p.professor_id
+GROUP BY p.professor_id, u.full_name_en
+ORDER BY closed_minutes DESC, u.full_name_en;
+
+-- CH3. Professors whose messages are closed right now (the session clock is
+-- the demo moment, Monday 10:00 Riyadh). App: profile and conversation
+-- ("not taking messages until ...").
+SELECT DISTINCT u.full_name_en
+FROM chat_closed_hours AS h
+INNER JOIN users AS u ON u.user_id = h.professor_id
+CROSS JOIN (SELECT 0 AS shift UNION ALL SELECT 10080) AS w
+WHERE (DAYOFWEEK(UTC_TIMESTAMP() + INTERVAL 3 HOUR) - 1) * 1440
+      + HOUR(UTC_TIMESTAMP() + INTERVAL 3 HOUR) * 60 + MINUTE(UTC_TIMESTAMP() + INTERVAL 3 HOUR) + w.shift
+      - (h.day_of_week * 1440 + TIME_TO_SEC(h.start_time) DIV 60)
+      BETWEEN 0 AND IF(h.end_time > h.start_time,
+                       TIME_TO_SEC(TIMEDIFF(h.end_time, h.start_time)) DIV 60,
+                       1440 - TIME_TO_SEC(TIMEDIFF(h.start_time, h.end_time)) DIV 60) - 1;
+
+-- CH4. Aggregate: closures per day of the week, including the weekend.
+SELECT ELT(day_of_week + 1, 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+           'Friday', 'Saturday') AS day,
+       COUNT(*) AS closures, COUNT(DISTINCT professor_id) AS professors
+FROM chat_closed_hours
+GROUP BY day_of_week
+ORDER BY day_of_week;
+
+-- CH5. Night closures: closed hours that run past midnight into the next day.
+SELECT u.full_name_en, h.day_of_week, h.start_time, h.end_time
+FROM chat_closed_hours AS h
+INNER JOIN users AS u ON u.user_id = h.professor_id
+WHERE h.end_time < h.start_time
+ORDER BY h.day_of_week;
+
+-- CH6. Professors whose messages are open all week (no closed hours at all).
+SELECT u.full_name_en
+FROM professors AS p
+INNER JOIN users AS u ON u.user_id = p.professor_id
+WHERE p.professor_id NOT IN (SELECT professor_id FROM chat_closed_hours)
+ORDER BY u.full_name_en;
+
+
+-- =============================================================================
+-- 11. status_overrides
 -- =============================================================================
 
 -- SO1. Dr. Noura's manual status history, newest first.
@@ -574,7 +701,7 @@ WHERE created_at BETWEEN '2026-09-27 00:00:00' AND '2026-10-01 23:59:59'
 
 
 -- =============================================================================
--- 10. appointments
+-- 12. appointments
 -- =============================================================================
 
 -- A1. Saad's upcoming appointments, soonest first (view V3). App: Appointments.
@@ -641,7 +768,7 @@ HAVING COUNT(*) > 1;
 
 
 -- =============================================================================
--- 11. pins
+-- 13. pins
 -- =============================================================================
 
 -- PN1. Saad's pinned professors with their live status (view V1). App: Home.
@@ -690,7 +817,7 @@ WHERE pn.professor_id IS NULL;
 
 
 -- =============================================================================
--- 12. conversations
+-- 14. conversations
 -- =============================================================================
 
 -- C1. Dr. Noura's conversations, latest activity first, with the unread count.
@@ -705,25 +832,35 @@ WHERE c.professor_id = 1
 GROUP BY c.conversation_id, u.full_name_en
 ORDER BY COALESCE(MAX(m.created_at), MAX(c.created_at)) DESC;
 
--- C2. Why each conversation is allowed (CLAUDE.md Section 4): a non-declined
--- appointment, or the professor accepts messages from everyone.
+-- C2. Each conversation, whether the student also booked the professor (chat no
+-- longer needs a booking, CLAUDE.md Section 4) and how many weekly closed times
+-- the professor has.
 SELECT c.conversation_id, c.student_id, c.professor_id,
        EXISTS (SELECT 1 FROM appointments AS a
                WHERE a.student_id = c.student_id AND a.professor_id = c.professor_id
                  AND a.status <> 'declined') AS has_booking,
-       p.open_messages
+       COUNT(h.closure_id) AS weekly_closures
 FROM conversations AS c
-INNER JOIN professors AS p ON p.professor_id = c.professor_id
+LEFT JOIN chat_closed_hours AS h ON h.professor_id = c.professor_id
+GROUP BY c.conversation_id, c.student_id, c.professor_id
 ORDER BY c.conversation_id;
 
--- C3. Data quality: conversations that meet neither rule (expected: no rows).
-SELECT c.conversation_id
-FROM conversations AS c
-INNER JOIN professors AS p ON p.professor_id = c.professor_id
-WHERE p.open_messages = FALSE
-  AND NOT EXISTS (SELECT 1 FROM appointments AS a
-                  WHERE a.student_id = c.student_id AND a.professor_id = c.professor_id
-                    AND a.status <> 'declined');
+-- C3. Data quality: student messages sent while the professor's messages were
+-- closed (expected: no rows). A closure is a range of minutes in the week from
+-- Sunday 00:00 Riyadh; an end at or before the start runs into the next day, and
+-- the message is also tried one week later so Saturday-night closures wrap.
+SELECT m.message_id, c.conversation_id, h.closure_id
+FROM messages AS m
+INNER JOIN conversations AS c     ON c.conversation_id = m.conversation_id
+INNER JOIN chat_closed_hours AS h ON h.professor_id = c.professor_id
+CROSS JOIN (SELECT 0 AS shift UNION ALL SELECT 10080) AS w
+WHERE m.sender_role = 'student'
+  AND (DAYOFWEEK(m.created_at + INTERVAL 3 HOUR) - 1) * 1440
+      + HOUR(m.created_at + INTERVAL 3 HOUR) * 60 + MINUTE(m.created_at + INTERVAL 3 HOUR) + w.shift
+      - (h.day_of_week * 1440 + TIME_TO_SEC(h.start_time) DIV 60)
+      BETWEEN 0 AND IF(h.end_time > h.start_time,
+                       TIME_TO_SEC(TIMEDIFF(h.end_time, h.start_time)) DIV 60,
+                       1440 - TIME_TO_SEC(TIMEDIFF(h.start_time, h.end_time)) DIV 60) - 1;
 
 -- C4. Aggregate: conversations per professor, including professors with none.
 SELECT u.full_name_en, COUNT(c.conversation_id) AS conversations
@@ -748,7 +885,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 13. messages
+-- 15. messages
 -- =============================================================================
 
 -- M1. One thread in order, with the sender's name (the sender is the
@@ -804,7 +941,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 14. notifications
+-- 16. notifications
 -- =============================================================================
 
 -- N1. Dr. Noura's notifications, newest first, with the sentence the app shows
@@ -871,7 +1008,7 @@ WHERE n.user_id NOT IN (COALESCE(a.student_id, c.student_id), COALESCE(a.profess
 
 
 -- =============================================================================
--- 15. across tables
+-- 17. across tables
 -- =============================================================================
 
 -- X1. Saad's activity in one timeline: appointments booked, messages sent and
@@ -912,7 +1049,7 @@ ORDER BY student_id, professor_id;
 
 
 -- =============================================================================
--- 16. double-booking trigger demo
+-- 18. double-booking trigger demo
 -- =============================================================================
 
 -- T1. Remove a demo procedure left over from an interrupted run, if any.

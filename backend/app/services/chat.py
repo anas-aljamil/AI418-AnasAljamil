@@ -1,39 +1,82 @@
-"""Chat rules (CLAUDE.md Section 4): a student and a professor may message each other only
-after the student has at least one appointment with the professor that was not declined, or
-when the professor has turned on "open messages". Checked when a conversation is opened and
-on every message, so a rule that stops holding stops the chat too."""
+"""Chat rules (CLAUDE.md Section 4, revised 2026-11-07): any student may message any active
+professor, and the professor may answer any student, except that students cannot send while
+the professor's weekly closed hours (chat_closed_hours) are on. Professors can always write.
+Checked when a message is sent, so a closure that starts mid-conversation stops new student
+messages at once; reading the conversation stays possible.
 
-from datetime import datetime
+Closed hours as a range in the week: minutes from Sunday 00:00 (Riyadh), half-open
+[start, end). An end at or before the start runs past midnight into the next day
+(equal times close the whole day), and Saturday night wraps around to Sunday.
+"""
 
-from sqlalchemy import func, select
+from datetime import datetime, time, timedelta
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.clock import riyadh_day_of_week, to_riyadh
 from app.core.errors import AppError, not_found
-from app.models import Appointment, Conversation, Notification, Professor, User
+from app.models import ChatClosedHours, Conversation, Notification, Professor, User
 
-CHAT_NOT_ALLOWED = AppError(
-    403,
-    "CHAT_NOT_ALLOWED",
-    "You can message this professor after booking an appointment with them.",
-)
+DAY = 24 * 60
+WEEK = 7 * DAY
+
+Span = tuple[int, int]  # minutes in the week, half-open
 
 
-def can_chat(db: Session, student_id: int, professor_id: int) -> bool:
-    professor = db.get(Professor, professor_id)
-    if professor is None:
-        return False
-    if professor.open_messages:
-        return True
-    booked = db.scalar(
-        select(func.count())
-        .select_from(Appointment)
-        .where(
-            Appointment.student_id == student_id,
-            Appointment.professor_id == professor_id,
-            Appointment.status != "declined",
-        )
+def chat_closed(until: datetime) -> AppError:
+    return AppError(
+        403,
+        "CHAT_CLOSED",
+        f"This professor is not taking messages right now. Messages open again at {until.isoformat()}Z.",
     )
-    return bool(booked)
+
+
+def _minutes(at: time) -> int:
+    return at.hour * 60 + at.minute
+
+
+def closure_span(day_of_week: int, start: time, end: time) -> Span:
+    begin = day_of_week * DAY + _minutes(start)
+    length = (_minutes(end) - _minutes(start)) % DAY or DAY
+    return begin, begin + length
+
+
+def spans_overlap(a: Span, b: Span) -> bool:
+    """Overlap anywhere in the week, counting a range that wraps past Saturday midnight."""
+    return any(a[0] < b[1] + shift and b[0] + shift < a[1] for shift in (-WEEK, 0, WEEK))
+
+
+def closed_until(closures: list[ChatClosedHours], now: datetime) -> datetime | None:
+    """When students may write again (naive UTC), or None when chat is open now.
+    Back-to-back closures count as one: the answer is the end of the whole closed stretch."""
+    local = to_riyadh(now)
+    second = (riyadh_day_of_week(local) * DAY + local.hour * 60 + local.minute) * 60 + local.second
+    spans = [closure_span(c.day_of_week, c.start_time, c.end_time) for c in closures]
+    # Each range in seconds, also one week earlier and later so wrapping ranges match.
+    ranges = [(s * 60 + shift, e * 60 + shift) for s, e in spans for shift in (-WEEK * 60, 0, WEEK * 60)]
+    end = next((e for s, e in ranges if s <= second < e), None)
+    if end is None:
+        return None
+    # Follow touching or overlapping ranges, at most one week ahead.
+    extended = True
+    while extended and end - second < WEEK * 60:
+        extended = False
+        for s, e in ranges:
+            if s <= end < e:
+                end, extended = e, True
+    return now + timedelta(seconds=min(end - second, WEEK * 60))
+
+
+def professor_closed_until(db: Session, professor_id: int, now: datetime) -> datetime | None:
+    closures = db.scalars(select(ChatClosedHours).where(ChatClosedHours.professor_id == professor_id)).all()
+    return closed_until(list(closures), now)
+
+
+def can_chat(db: Session, professor_id: int) -> bool:
+    """A conversation can be opened with any professor whose account is active."""
+    professor = db.get(Professor, professor_id)
+    return professor is not None and professor.user.is_active
 
 
 def get_for_participant(db: Session, conversation_id: int, user: User) -> Conversation:

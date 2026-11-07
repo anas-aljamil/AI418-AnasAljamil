@@ -19,7 +19,9 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 |---|---|
 | `User` is named `users` | Plural table names throughout; `USER` is also a MySQL keyword and SQL-standard reserved word. `scripts/check_db.py` verifies that no identifier is a MySQL reserved word. |
 | New `offices` table | Storing building, floor and room on `professors` creates the transitive dependency `professor_id -> (building, room) -> floor`. Shared offices would also repeat the same location on several rows (an update anomaly). |
-| `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class"), not only when they hold office hours. Bookable times are not stored: every 5-minute start inside an office-hours block, minus the active appointments, is fully determined by the blocks and the appointments, so storing them would be redundant. |
+| `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class"), not only when they hold office hours. |
+| New `booking_periods` table (owner decision 2026-11-07) | When students may book is the professor's own choice and no longer the same as office hours (a professor may take bookings outside them, or not in all of them). It is a separate fact about the professor and the week, so it gets its own table; a `bookable` flag on `schedule_blocks` could not express a period outside every block. Bookable times are still not stored: every 5-minute start inside a period, minus the active appointments, is fully determined by the periods and the appointments. |
+| New `chat_closed_hours` table; `professors.open_messages` removed (owner decision 2026-11-07) | Chat no longer depends on an appointment: every student may write, except during weekly hours the professor closes. Those hours are a multi-valued fact about the professor (several per week), so they cannot be a column on `professors` without repeating groups (1NF); one row per closure keeps them atomic. The old `open_messages` flag has no meaning under the new rule and was dropped rather than kept unused. |
 | New `conversations` table; `messages.sender_role` replaces sender/recipient ids | Storing both `sender_id` and `recipient_id` on each message repeats the pair on every row, and allows a message whose participants contradict its thread. With a conversation row, the pair is stored once, and `sender_role` identifies the sender among exactly two participants. |
 | New `colleges` table (added 2026-10-05) | Departments are grouped by college. Putting the college name on `departments` would create `department_id -> college -> college name` and repeat each name for every department of the college. |
 | New `pins` table | Needed by the student home screen ("My professors"). It is an M:N relationship, so it gets its own table. |
@@ -60,7 +62,7 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### professors
 - Candidate key: **professor_id**.
-- FDs: `professor_id -> department_id, office_id, honorific, academic_rank, slot_minutes, open_messages`.
+- FDs: `professor_id -> department_id, office_id, honorific, academic_rank, slot_minutes`.
 - Office location, department names and the professor's own name all live in their own tables.
 - **3NF/BCNF**, with the same `role` note as students (Section 5).
 
@@ -69,6 +71,20 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 - FDs: `block_id -> professor_id, kind, day_of_week, start_time, end_time, label`.
 - 1NF: the weekly timetable is one row per block, not repeating columns such as `sun_start` or `mon_start`.
 - `label` (a course code such as `SE 211`) has no dependent attributes. If course titles were ever needed, a `courses` table would be added rather than storing titles here.
+- **BCNF**.
+
+### booking_periods
+- Candidate keys: **period_id**, `(professor_id, day_of_week, start_time)`.
+- FDs: `period_id -> professor_id, day_of_week, start_time, end_time`.
+- 1NF: one row per weekly period, like `schedule_blocks`, not columns per weekday.
+- Independent of `schedule_blocks` on purpose: a period may lie inside office hours, outside them or over a class. No attribute of a period depends on a block, so there is no hidden dependency between the two tables; overlap between a professor's own periods is checked by the API (like blocks).
+- **BCNF**.
+
+### chat_closed_hours
+- Candidate keys: **closure_id**, `(professor_id, day_of_week, start_time)`.
+- FDs: `closure_id -> professor_id, day_of_week, start_time, end_time`.
+- `end_time` at or before `start_time` means the closure runs past midnight; the length is derived from the two times, not stored.
+- Whether a professor is closed *now*, and until when, is derived from these rows and the clock (Section 6).
 - **BCNF**.
 
 ### status_overrides
@@ -136,7 +152,8 @@ We accept this deliberately:
 |---|---|
 | Professor's effective status (In office / In class / Busy / Away / Not confirmed / Unknown) | Latest unexpired `status_overrides` row; else the schedule: the block covering "now" in Riyadh time, or Away outside all blocks; Unknown only for a professor with no schedule. Computed by the API (and later by a view) |
 | "Updated X min ago" | `MAX(status_overrides.created_at)` for the professor |
-| Bookable times | every 5-minute start in an `office_hours` block, with the longest length that fits before the next active appointment or the end of the block |
+| Bookable times | every 5-minute start in a `booking_periods` row, with the longest length that fits before the next active appointment or the end of the period |
+| "Not taking messages until ..." | the `chat_closed_hours` row covering now in Riyadh time, followed through back-to-back closures |
 | Message sender and recipient | `conversations` + `messages.sender_role` |
 | Notification text | `notifications.type` + linked row + reader's language |
 | Unread counts | `COUNT(*) ... WHERE read_at IS NULL` |

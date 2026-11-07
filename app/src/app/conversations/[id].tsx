@@ -4,6 +4,8 @@
  * from the same person), and your latest message says Sending, Sent or Read. A message shows
  * at once; if it fails it stays with "Not sent. Tap to try again." Professors get quick
  * replies. The composer stays above the keyboard. Opening the thread marks it read.
+ * While the professor's closed hours are on, a student reads the thread but the composer is
+ * replaced by when messages open again; the professor sees the same time and can still write.
  */
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -36,7 +38,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
-import { clockText, riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
+import { clockText, laterText, riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { participantName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -84,6 +86,12 @@ export default function ConversationScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const name = conversation ? participantName(conversation.other, language, t) : '';
+  // Polled with the conversation list; compared with the clock so it reopens on time.
+  const closedUntil =
+    conversation?.closed_until && new Date(conversation.closed_until) > now
+      ? new Date(conversation.closed_until)
+      : null;
+  const studentBlocked = user.role === 'student' && closedUntil !== null;
   // Mark the thread read once per newest unread message: not again when the request ends
   // (a failure would otherwise retry in a tight loop), only when a newer message arrives.
   const newestUnread = (messages.data ?? []).find((m) => !m.mine && !m.read_at)?.message_id;
@@ -257,6 +265,17 @@ export default function ConversationScreen() {
       >
         <View accessibilityLiveRegion="polite">
           {error ? <Text color="danger">{error}</Text> : null}
+          {closedUntil ? (
+            <Text
+              color={studentBlocked ? 'text' : 'muted'}
+              weight={studentBlocked ? 'medium' : undefined}
+            >
+              {t(studentBlocked ? 'chat.closed_until' : 'chat.closed_for_professor', {
+                name,
+                time: laterText(closedUntil, now, t),
+              })}
+            </Text>
+          ) : null}
         </View>
         {user.role === 'professor' ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -267,19 +286,21 @@ export default function ConversationScreen() {
             </View>
           </ScrollView>
         ) : null}
-        <View style={styles.composeRow}>
-          <View style={styles.grow}>
-            <TextField
-              label={t('chat.composer', { name })}
-              value={draft}
-              onChangeText={setDraft}
-              multiline
-              maxLength={1000}
-              counterLabel={() => ''}
-            />
+        {studentBlocked ? null : (
+          <View style={styles.composeRow}>
+            <View style={styles.grow}>
+              <TextField
+                label={t('chat.composer', { name })}
+                value={draft}
+                onChangeText={setDraft}
+                multiline
+                maxLength={1000}
+                counterLabel={() => ''}
+              />
+            </View>
+            <Button label={t('chat.send')} onPress={() => submit(draft)} disabled={!draft.trim()} />
           </View>
-          <Button label={t('chat.send')} onPress={() => submit(draft)} disabled={!draft.trim()} />
-        </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );

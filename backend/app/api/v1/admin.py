@@ -161,7 +161,6 @@ def professor_out(professor: Professor) -> AdminProfessorOut:
         honorific=professor.honorific,
         academic_rank=professor.academic_rank,
         slot_minutes=professor.slot_minutes,
-        open_messages=professor.open_messages,
     )
 
 
@@ -190,7 +189,6 @@ def create_professor(
         honorific=body.honorific,
         academic_rank=body.academic_rank,
         slot_minutes=body.slot_minutes,
-        open_messages=body.open_messages,
     )
     db.add(professor)
     db.commit()

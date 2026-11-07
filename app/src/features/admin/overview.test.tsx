@@ -39,7 +39,6 @@ const professors = [
     honorific: 'dr',
     academic_rank: 'assistant_professor',
     slot_minutes: 15,
-    open_messages: false,
   },
   {
     ...account(20, 'Mansour Al-Faraj', 'منصور الفرج', false),
@@ -48,7 +47,6 @@ const professors = [
     honorific: 'dr',
     academic_rank: 'lecturer',
     slot_minutes: 30,
-    open_messages: true,
   },
 ];
 const students = [

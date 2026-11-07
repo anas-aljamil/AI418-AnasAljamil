@@ -78,6 +78,33 @@ MUST_FAIL = [
     ("schedule_blocks: a block cannot run past midnight",
      "INSERT INTO schedule_blocks (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '23:00', '24:30')",
      CHECK_FAILED),
+    ("booking_periods: Friday is not a working day",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 5, '10:00', '11:00')",
+     CHECK_FAILED),
+    ("booking_periods: end must be after start",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '11:00', '10:00')",
+     CHECK_FAILED),
+    ("booking_periods: times sit on the 15-minute grid",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '10:00', '10:50')",
+     CHECK_FAILED),
+    ("booking_periods: one period per professor, day and start",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 0, '10:00', '10:30')",
+     DUPLICATE),
+    ("booking_periods: only professors have booking periods (foreign key)",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (9, 3, '10:00', '11:00')",
+     FK_CHILD),
+    ("chat_closed_hours: day must be 0 (Sunday) to 6 (Saturday)",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, start_time, end_time) VALUES (1, 7, '10:00', '11:00')",
+     CHECK_FAILED),
+    ("chat_closed_hours: times sit on the 15-minute grid",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '20:10', '08:00')",
+     CHECK_FAILED),
+    ("chat_closed_hours: times stay within one day (24:00 is written 00:00)",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '20:00', '24:00')",
+     CHECK_FAILED),
+    ("chat_closed_hours: one closure per professor, day and start",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, start_time, end_time) VALUES (1, 4, '16:00', '18:00')",
+     DUPLICATE),
     ("status_overrides: unknown status",
      "INSERT INTO status_overrides (professor_id, status) VALUES (1, 'lunch')", CHECK_FAILED),
     ("status_overrides: note longer than 60 characters",
@@ -135,6 +162,12 @@ MUST_FAIL = [
 
 # (description, SQL, verification query, expected first column of the last row)
 MUST_SUCCEED = [
+    ("booking_periods: a period may lie outside office hours (Sunday evening)",
+     "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 0, '18:00', '19:00')",
+     "SELECT COUNT(*) FROM booking_periods WHERE professor_id = 1 AND day_of_week = 0", "2"),
+    ("chat_closed_hours: an end before the start runs past midnight (night closure)",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, start_time, end_time) VALUES (2, 6, '20:00', '08:00')",
+     "SELECT COUNT(*) FROM chat_closed_hours WHERE professor_id = 2", "1"),
     ("appointments: adjacent slot (ends exactly when the next starts) is allowed",
      "INSERT INTO appointments (student_id, professor_id, starts_at, ends_at) "
      "VALUES (10, 1, '2026-10-11 07:15:00', '2026-10-11 07:30:00')",
@@ -157,10 +190,12 @@ MUST_SUCCEED = [
      " + (SELECT COUNT(*) FROM conversations WHERE student_id = 9)"
      " + (SELECT COUNT(*) FROM messages WHERE conversation_id = 1)"
      " + (SELECT COUNT(*) FROM notifications WHERE user_id = 9)", "0"),
-    ("users: deleting a professor account cascades to schedule, overrides and bookings",
+    ("users: deleting a professor account cascades to schedule, periods, closures, overrides and bookings",
      "DELETE FROM users WHERE user_id = 1",
      "SELECT (SELECT COUNT(*) FROM professors WHERE professor_id = 1)"
      " + (SELECT COUNT(*) FROM schedule_blocks WHERE professor_id = 1)"
+     " + (SELECT COUNT(*) FROM booking_periods WHERE professor_id = 1)"
+     " + (SELECT COUNT(*) FROM chat_closed_hours WHERE professor_id = 1)"
      " + (SELECT COUNT(*) FROM status_overrides WHERE professor_id = 1)"
      " + (SELECT COUNT(*) FROM appointments WHERE professor_id = 1)", "0"),
     ("defaults: new rows get role, locale, active flag and timestamps automatically",
@@ -201,7 +236,7 @@ def run_schema_checks(load_warnings: list[str]) -> list[tuple[bool, str, str]]:
     bad_tables = q(f"SELECT TABLE_NAME, ENGINE, TABLE_COLLATION FROM information_schema.TABLES WHERE {db} "
                    "AND TABLE_TYPE = 'BASE TABLE' AND (ENGINE <> 'InnoDB' OR TABLE_COLLATION <> 'utf8mb4_0900_ai_ci')")
     results.append((not bad_tables, "every table is InnoDB with utf8mb4_0900_ai_ci",
-                    str(bad_tables) if bad_tables else "12 tables ok"))
+                    str(bad_tables) if bad_tables else "15 tables ok"))
     bad_columns = q(f"SELECT TABLE_NAME, COLUMN_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS WHERE {db} "
                     "AND CHARACTER_SET_NAME IS NOT NULL AND CHARACTER_SET_NAME <> 'utf8mb4'")
     results.append((not bad_columns, "every text column is utf8mb4", str(bad_columns) if bad_columns else "ok"))
@@ -267,17 +302,17 @@ def run_seed_invariants() -> list[tuple[bool, str, str]]:
     def add(rows: list[list[str]], description: str, ok_detail: str = "ok") -> None:
         results.append((not rows, description, f"violations: {rows}" if rows else ok_detail))
 
-    # Rule: bookings fall inside one office_hours block, starting on the 5-minute grid,
+    # Rule: bookings fall inside one booking period, starting on the 5-minute grid,
     # a whole number of 5-minute steps long.
     # Riyadh local = UTC + 3 h; DAYOFWEEK() is 1 = Sunday, so subtract 1.
     add(q("SELECT a.appointment_id FROM appointments a "
           "WHERE MOD(MINUTE(a.starts_at), 5) <> 0 OR SECOND(a.starts_at) <> 0"
           "   OR MOD(TIMESTAMPDIFF(MINUTE, a.starts_at, a.ends_at), 5) <> 0 OR NOT EXISTS ("
-          "  SELECT 1 FROM schedule_blocks b WHERE b.professor_id = a.professor_id AND b.kind = 'office_hours'"
+          "  SELECT 1 FROM booking_periods b WHERE b.professor_id = a.professor_id"
           "  AND b.day_of_week = DAYOFWEEK(a.starts_at + INTERVAL 3 HOUR) - 1"
           "  AND b.start_time <= TIME(a.starts_at + INTERVAL 3 HOUR)"
           "  AND TIME(a.ends_at + INTERVAL 3 HOUR) <= b.end_time)"),
-        "appointments sit in one office-hours block, in 5-minute steps", "all 10 rows valid")
+        "appointments sit in one booking period, in 5-minute steps", "all 10 rows valid")
 
     # Rule: at most 2 pending/approved future appointments per student per professor.
     add(q("SELECT student_id, professor_id, COUNT(*) FROM appointments "
@@ -290,11 +325,28 @@ def run_seed_invariants() -> list[tuple[bool, str, str]]:
           "AND TIMESTAMPDIFF(MINUTE, updated_at, starts_at) < 60"),
         "cancellations happened at least 1 hour before start")
 
-    # Rule: chat only after a non-declined appointment, or with open messages.
-    add(q("SELECT c.conversation_id FROM conversations c JOIN professors p ON p.professor_id = c.professor_id "
-          "WHERE p.open_messages = FALSE AND NOT EXISTS (SELECT 1 FROM appointments a "
-          "WHERE a.student_id = c.student_id AND a.professor_id = c.professor_id AND a.status <> 'declined')"),
-        "every conversation is eligible for chat")
+    # Rule: students write only outside the professor's closed hours. Each closure is a
+    # half-open range of minutes in the week (Sunday 00:00 = 0); an end at or before the
+    # start runs into the next day, and Saturday night wraps to Sunday (checked at m and
+    # m + one week).
+    add(q("SELECT m.message_id FROM messages m "
+          "JOIN conversations c ON c.conversation_id = m.conversation_id "
+          "JOIN chat_closed_hours h ON h.professor_id = c.professor_id "
+          "CROSS JOIN (SELECT 0 AS shift UNION ALL SELECT 10080) AS w "
+          "WHERE m.sender_role = 'student' AND ("
+          "  (DAYOFWEEK(m.created_at + INTERVAL 3 HOUR) - 1) * 1440"
+          "  + HOUR(m.created_at + INTERVAL 3 HOUR) * 60 + MINUTE(m.created_at + INTERVAL 3 HOUR) + w.shift"
+          ") - (h.day_of_week * 1440 + TIME_TO_SEC(h.start_time) DIV 60)"
+          " BETWEEN 0 AND IF(h.end_time > h.start_time,"
+          "   TIME_TO_SEC(TIMEDIFF(h.end_time, h.start_time)) DIV 60,"
+          "   1440 - TIME_TO_SEC(TIMEDIFF(h.start_time, h.end_time)) DIV 60) - 1"),
+        "no student message was sent during the professor's closed hours")
+
+    # A professor's booking periods never overlap (enforced by the API).
+    add(q("SELECT a.period_id, b.period_id FROM booking_periods a JOIN booking_periods b "
+          "ON a.professor_id = b.professor_id AND a.day_of_week = b.day_of_week AND a.period_id < b.period_id "
+          "AND a.start_time < b.end_time AND b.start_time < a.end_time"),
+        "no overlapping booking periods per professor")
 
     # Participation: a conversation contains 1..N messages, none before it opened.
     add(q("SELECT c.conversation_id FROM conversations c WHERE NOT EXISTS "
@@ -321,12 +373,19 @@ def run_seed_invariants() -> list[tuple[bool, str, str]]:
           "WHERE s.professor_id = p.professor_id AND s.kind = 'office_hours')"),
         "every professor has weekly office hours")
 
+    # Every professor can be booked (a professor without booking periods cannot).
+    add(q("SELECT professor_id FROM professors p WHERE NOT EXISTS (SELECT 1 FROM booking_periods b "
+          "WHERE b.professor_id = p.professor_id)"),
+        "every professor has weekly booking periods")
+
     # Seed size: 5-10 rows per table, except the documented exceptions (seed.sql headers):
-    # users and schedule_blocks (more, by design), colleges and departments (the real list).
+    # users, schedule_blocks and booking_periods (more, by design), colleges and
+    # departments (the real list).
     sizes = reset_db.row_counts(CONFIG, CHECK_DB)
-    exceptions = {"users", "schedule_blocks", "colleges", "departments"}
+    exceptions = {"users", "schedule_blocks", "booking_periods", "colleges", "departments"}
     off = {t: n for t, n in sizes.items() if t not in exceptions and not 5 <= n <= 10}
-    results.append((not off, "5-10 seed rows per table (users, schedule_blocks, colleges, departments excepted)",
+    results.append((not off, "5-10 seed rows per table (users, schedule_blocks, booking_periods, colleges, "
+                    "departments excepted)",
                     f"out of range: {off}" if off else ", ".join(f"{t}={n}" for t, n in sizes.items())))
     return results
 

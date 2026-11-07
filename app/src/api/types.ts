@@ -44,7 +44,6 @@ export interface Me {
     honorific: Honorific;
     academic_rank: Rank;
     slot_minutes: 15 | 30;
-    open_messages: boolean;
     department: Department;
     office: Office | null;
   } | null;
@@ -130,16 +129,36 @@ export interface Block {
   label: string | null;
 }
 
+/** A weekly time the professor takes bookings in (Sunday-Thursday, Riyadh "HH:MM"). */
+export interface BookingPeriod {
+  period_id: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+/**
+ * Weekly closed hours for student messages (day 0 = Sunday ... 6 = Saturday). An end at or
+ * before the start runs into the next day; equal times close the whole day.
+ */
+export interface ChatClosure {
+  closure_id: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
 export interface ProfessorDetail extends ProfessorSummary {
   academic_rank: Rank;
   slot_minutes: 15 | 30;
-  open_messages: boolean;
   today: { date: string; day_of_week: number; now_local_time: string; blocks: Block[] };
-  /** Students only: whether the chat rule allows messaging this professor. */
-  can_message?: boolean | null;
+  /** When students can book; empty means the professor cannot be booked. */
+  booking_periods: BookingPeriod[];
+  /** Set while the professor's closed hours are on: students can write again at this time. */
+  messages_closed_until: string | null;
 }
 
-/** A possible start (every 5 minutes in office hours). */
+/** A possible start (every 5 minutes in the booking periods). */
 export interface Slot {
   starts_at: string;
   local_time: string;
@@ -179,7 +198,6 @@ export interface AdminProfessor extends Account {
   honorific: Honorific;
   academic_rank: Rank;
   slot_minutes: 15 | 30;
-  open_messages: boolean;
 }
 
 export interface AdminStudent extends Account {
@@ -208,6 +226,8 @@ export interface Conversation {
   last_message: { body: string; mine: boolean; created_at: string } | null;
   unread_count: number;
   created_at: string;
+  /** Set while the professor's closed hours are on: students can write again at this time. */
+  closed_until: string | null;
 }
 
 export type NotificationType =

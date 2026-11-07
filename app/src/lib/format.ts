@@ -181,6 +181,16 @@ export function whenText(start: Date, now: Date, t: TFunction): string {
   return t(day.key, { time: clockText(day.time, t), day: t(`weekday.${day.weekday}`) });
 }
 
+/**
+ * The time inside a sentence ("until 12:00 PM", "until Saturday 12:00 AM"): the Riyadh time
+ * alone today, otherwise with the weekday (closed message hours last at most a week).
+ */
+export function laterText(at: Date, now: Date, t: TFunction): string {
+  const time = clockText(riyadhTime(at), t);
+  if (riyadhDayDifference(at, now) === 0) return time;
+  return t('when.weekday', { day: t(`weekday.${riyadhLocal(at).getUTCDay()}`), time });
+}
+
 /** "Sunday 4/10 10:30 AM": weekday, day/month and Riyadh time, for dates outside the two weeks. */
 export function dateTimeText(start: Date, t: TFunction): string {
   const local = riyadhLocal(start);

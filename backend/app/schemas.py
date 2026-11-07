@@ -106,6 +106,24 @@ class BlockOut(Out):
     label: str | None
 
 
+class PeriodOut(Out):
+    """A weekly booking period (Sunday-Thursday)."""
+
+    period_id: int
+    day_of_week: int
+    start_time: ClockTime
+    end_time: ClockTime
+
+
+class ClosureOut(Out):
+    """Weekly closed hours for student messages; end <= start runs into the next day."""
+
+    closure_id: int
+    day_of_week: int
+    start_time: ClockTime
+    end_time: ClockTime
+
+
 # --- auth --------------------------------------------------------------------
 
 
@@ -136,7 +154,6 @@ class ProfessorProfileOut(Out):
     honorific: str
     academic_rank: str
     slot_minutes: int
-    open_messages: bool
     department: DepartmentOut
     office: OfficeOut | None
 
@@ -195,9 +212,11 @@ class TodayOut(BaseModel):
 
 class ProfessorDetailOut(ProfessorSummaryOut):
     slot_minutes: int
-    open_messages: bool
     today: TodayOut
-    can_message: bool | None = None  # set for students: whether the chat rule allows a message
+    # The weekly times students can book in; empty means the professor cannot be booked.
+    booking_periods: list[PeriodOut]
+    # Set while the professor's closed hours are on: students can write again at this time.
+    messages_closed_until: UtcDatetime | None
 
 
 class SlotOut(BaseModel):
@@ -241,9 +260,31 @@ class BlockIn(BaseModel):
         return end
 
 
+class PeriodIn(BaseModel):
+    day_of_week: int = Field(ge=0, le=4, description="0 = Sunday ... 4 = Thursday")
+    start_time: QuarterHour
+    end_time: QuarterHour
+
+    @field_validator("end_time")
+    @classmethod
+    def after_start(cls, end: time, info) -> time:
+        start = info.data.get("start_time")
+        if start is not None and end <= start:
+            raise ValueError("must be after start_time")
+        return end
+
+
+class ClosureIn(BaseModel):
+    """end_time at or before start_time means the closure runs past midnight
+    ("20:00" to "08:00"); equal times close the whole day."""
+
+    day_of_week: int = Field(ge=0, le=6, description="0 = Sunday ... 6 = Saturday")
+    start_time: QuarterHour
+    end_time: QuarterHour
+
+
 class ProfessorSettingsIn(BaseModel):
     slot_minutes: Literal[15, 30] | None = None
-    open_messages: bool | None = None
 
 
 # --- appointments ------------------------------------------------------------
@@ -352,7 +393,6 @@ class AdminProfessorIn(AccountIn):
     honorific: Honorific = "dr"
     academic_rank: Rank = "assistant_professor"
     slot_minutes: Literal[15, 30] = 15
-    open_messages: bool = False
 
 
 class AdminProfessorPatch(AccountPatch):
@@ -361,7 +401,6 @@ class AdminProfessorPatch(AccountPatch):
     honorific: Honorific | None = None
     academic_rank: Rank | None = None
     slot_minutes: Literal[15, 30] | None = None
-    open_messages: bool | None = None
 
 
 class AdminStudentIn(AccountIn):
@@ -427,7 +466,6 @@ class AdminProfessorOut(AccountOut):
     honorific: str
     academic_rank: str
     slot_minutes: int
-    open_messages: bool
 
 
 class AdminStudentOut(AccountOut):
@@ -465,6 +503,8 @@ class ConversationOut(BaseModel):
     last_message: LastMessageOut | None
     unread_count: int
     created_at: UtcDatetime
+    # Set while the professor's closed hours are on: students can write again at this time.
+    closed_until: UtcDatetime | None = None
 
 
 class ConversationIn(BaseModel):

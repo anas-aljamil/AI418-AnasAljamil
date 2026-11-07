@@ -153,6 +153,20 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
     - an empty department shown as "nobody is in".
   - Phone checks #54-#56.
 
+### After P6: booking times and open chat (owner request, 2026-11-07)
+- **Owner decisions:** each professor sets the times students can book in (not tied to office hours); chat is open to every student, and the professor can close it at weekly times (students cannot send then).
+- **Acceptance criteria:**
+  - booking inside a booking time outside office hours succeeds; outside every booking time it is INVALID_SLOT; a professor without booking times cannot be booked; overlapping booking times are refused;
+  - a student without a booking can write; during closed hours a student's message is CHAT_CLOSED while the professor can still write; chat opens again at the end; night and Saturday-to-Sunday closures work;
+  - the professor edits booking times and closed hours in Schedule; the profile, booking sheet and conversation reflect them;
+  - check_db, check_sql, pytest, Jest, typecheck and lint pass; ER diagram, normalization and queries updated.
+- **Result (2026-11-07):**
+  - **Database:** `booking_periods` and `chat_closed_hours` (PK, FK cascade, UNIQUE, CHECK on day, grid and order); `professors.open_messages` dropped; seed 21 periods and 7 closures; check_db 80/80 (new constraint tests, "no student message in closed hours", "every professor has booking times"); check_sql 43/43 (sections booking_periods and chat_closed_hours, 102 queries).
+  - **API:** `/me/booking-periods`, `/me/chat-closed-hours`; slots and booking use the periods; chat eligibility replaced by closed hours; 147 pytest tests.
+  - **App:** Schedule switch (Timetable / Booking / Messages), profile booking times and closed notice, booking sheet day strip, conversation composer during closed hours; Jest 141.
+  - **Playwright** (Windows, web build against the real API and MySQL): `p5.spec.ts` covers the feature (a student without a booking writes, checked in MySQL; Dr. Tariq's closed hours hide the composer; a professor adds a booking time outside office hours and a student sees it on the profile) and passes. Full suite: 42 of 51 passed. The failures also fail on the base commit `f4358fb` without these changes (sweep admin and student screens, the admin CRUD test, the Arabic sign-up form, status presets off by one second), except the Arabic P5 read receipt, which fails now and then (it passed in 2 of 3 runs alone) and does not touch the changed code.
+  - **Not run:** the real-phone checks.
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.

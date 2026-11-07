@@ -13,6 +13,8 @@ import type {
   AdminStudent,
   Appointment,
   Block,
+  BookingPeriod,
+  ChatClosure,
   DaySlots,
   College,
   Department,
@@ -43,6 +45,7 @@ export const queryKeys = {
   earlierStarts: (id: number) => ['appointments', id, 'earlier'] as const,
   myStatus: ['me', 'status'] as const,
   mySchedule: ['me', 'schedule'] as const,
+  myRanges: (kind: RangeKind) => ['me', kind] as const,
   admin: (resource: AdminResource) => ['admin', resource] as const,
   conversations: ['chat'] as const,
   messages: (id: number) => ['chat', id] as const,
@@ -289,6 +292,63 @@ export function useDeleteBlock() {
       client.invalidateQueries({ queryKey: queryKeys.mySchedule });
       client.invalidateQueries({ queryKey: ['professor'] });
     },
+  });
+}
+
+/** Weekly times that are not timetable blocks: booking periods and chat closed hours. */
+export type RangeKind = 'booking-periods' | 'chat-closed-hours';
+export interface WeeklyRange {
+  id: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+export type RangeInput = Omit<WeeklyRange, 'id'>;
+
+const rangeOf = (row: BookingPeriod | ChatClosure): WeeklyRange => ({
+  id: 'period_id' in row ? row.period_id : row.closure_id,
+  day_of_week: row.day_of_week,
+  start_time: row.start_time,
+  end_time: row.end_time,
+});
+
+export function useMyRanges(kind: RangeKind) {
+  return useQuery({
+    queryKey: queryKeys.myRanges(kind),
+    queryFn: () =>
+      api<Page<BookingPeriod | ChatClosure>>(`/me/${kind}?limit=100`).then((page) =>
+        page.items.map(rangeOf),
+      ),
+  });
+}
+
+function useRangeSettled(kind: RangeKind) {
+  const client = useQueryClient();
+  return () => {
+    client.invalidateQueries({ queryKey: queryKeys.myRanges(kind) });
+    // Profiles show booking periods and closed hours; conversations show closed hours.
+    client.invalidateQueries({ queryKey: ['professor'] });
+    if (kind === 'chat-closed-hours')
+      client.invalidateQueries({ queryKey: queryKeys.conversations });
+  };
+}
+
+export function useSaveRange(kind: RangeKind) {
+  const onSettled = useRangeSettled(kind);
+  return useMutation({
+    mutationFn: ({ id, range }: { id: number | null; range: RangeInput }) =>
+      id === null
+        ? api<unknown>(`/me/${kind}`, 'POST', range)
+        : api<unknown>(`/me/${kind}/${id}`, 'PUT', range),
+    onSettled,
+  });
+}
+
+export function useDeleteRange(kind: RangeKind) {
+  const onSettled = useRangeSettled(kind);
+  return useMutation({
+    mutationFn: (id: number) => api<void>(`/me/${kind}/${id}`, 'DELETE'),
+    onSettled,
   });
 }
 

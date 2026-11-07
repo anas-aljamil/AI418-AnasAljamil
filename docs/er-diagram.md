@@ -20,6 +20,8 @@ erDiagram
     USERS ||--o| PROFESSORS : "is a"
     OFFICES |o--o{ PROFESSORS : houses
     PROFESSORS ||--o{ SCHEDULE_BLOCKS : defines
+    PROFESSORS ||--o{ BOOKING_PERIODS : "opens for booking"
+    PROFESSORS ||--o{ CHAT_CLOSED_HOURS : "closes messages in"
     PROFESSORS ||--o{ STATUS_OVERRIDES : sets
     STUDENTS ||--o{ APPOINTMENTS : books
     PROFESSORS ||--o{ APPOINTMENTS : receives
@@ -81,7 +83,6 @@ erDiagram
         varchar honorific "dr | prof | mr | ms | eng"
         varchar academic_rank
         tinyint slot_minutes "usual length: 15 | 30, default 15"
-        boolean open_messages "default false"
     }
     SCHEDULE_BLOCKS {
         int block_id PK
@@ -91,6 +92,20 @@ erDiagram
         time start_time "Riyadh, 15-min grid"
         time end_time "after start_time"
         varchar label "nullable, e.g. SE 211"
+    }
+    BOOKING_PERIODS {
+        int period_id PK
+        int professor_id FK "UK (professor_id, day_of_week, start_time)"
+        tinyint day_of_week "0 Sun - 4 Thu"
+        time start_time "Riyadh, 15-min grid"
+        time end_time "after start_time"
+    }
+    CHAT_CLOSED_HOURS {
+        int closure_id PK
+        int professor_id FK "UK (professor_id, day_of_week, start_time)"
+        tinyint day_of_week "0 Sun - 6 Sat"
+        time start_time "Riyadh, 15-min grid"
+        time end_time "at or before start = next day"
     }
     STATUS_OVERRIDES {
         int override_id PK
@@ -156,6 +171,8 @@ erDiagram
 | Department **has major** Student | 1 : 0..N | Student total; Department partial | `students.department_id NOT NULL`, `ON DELETE RESTRICT` |
 | Office **houses** Professor | 0..1 : 0..N | Both partial (office 7 is empty; a professor may have no office) | `professors.office_id` nullable, `ON DELETE SET NULL` |
 | Professor **defines** ScheduleBlock | 1 : 0..N | Block total; Professor partial | `NOT NULL` FK, `ON DELETE CASCADE` |
+| Professor **opens for booking** BookingPeriod | 1 : 0..N | Period total; Professor partial (a professor without periods cannot be booked) | `NOT NULL` FK, `ON DELETE CASCADE` |
+| Professor **closes messages in** ChatClosedHours | 1 : 0..N | Closure total; Professor partial (most professors keep messages open) | `NOT NULL` FK, `ON DELETE CASCADE` |
 | Professor **sets** StatusOverride | 1 : 0..N | Override total; Professor partial | `NOT NULL` FK, `ON DELETE CASCADE` |
 | Student **books** Appointment | 1 : 0..N | Appointment total; Student partial | `NOT NULL` FK, `ON DELETE CASCADE` |
 | Professor **receives** Appointment | 1 : 0..N | Appointment total; Professor partial | `NOT NULL` FK, `ON DELETE CASCADE` |
@@ -184,9 +201,11 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | DEPARTMENT | <ins>department_id</ins>, code, name_ar, name_en, created_at | none |
 | USER | <ins>user_id</ins>, email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at | none |
 | STUDENT (subclass of USER) | inherits <ins>user_id</ins>; university_no, study_year | none |
-| PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank, slot_minutes, open_messages | effective_status, last_updated (from overrides, schedule and the clock) |
+| PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank, slot_minutes | effective_status, last_updated (from overrides, schedule and the clock); messages_closed_until (from closed hours and the clock) |
 | OFFICE | <ins>office_id</ins>, building_code, floor, room_number, created_at | none |
-| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, start_time, end_time, label | bookable_starts (every 5 minutes in an office-hours block, minus active appointments) |
+| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, start_time, end_time, label | none |
+| BOOKING_PERIOD | <ins>period_id</ins>, day_of_week, start_time, end_time | bookable_starts (every 5 minutes in the period, minus active appointments) |
+| CHAT_CLOSED_HOURS | <ins>closure_id</ins>, day_of_week, start_time, end_time | none |
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
 | APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |
@@ -200,6 +219,8 @@ Alternate keys (also unique, but not underlined):
 - STUDENT: university_no
 - OFFICE: (building_code, room_number)
 - SCHEDULE_BLOCK: (professor, day_of_week, start_time)
+- BOOKING_PERIOD: (professor, day_of_week, start_time)
+- CHAT_CLOSED_HOURS: (professor, day_of_week, start_time)
 - CONVERSATION: (student, professor)
 
 All entities are strong entities with their own keys; none is weak.
@@ -222,6 +243,8 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 | MAJORS_IN | DEPARTMENT (1) | STUDENT (N) | partial | **total** | none |
 | HOUSES | OFFICE (1) | PROFESSOR (N) | partial (an office may be empty) | partial (a professor may have no office) | none |
 | DEFINES | PROFESSOR (1) | SCHEDULE_BLOCK (N) | partial | **total** | none |
+| OPENS_BOOKING | PROFESSOR (1) | BOOKING_PERIOD (N) | partial | **total** | none |
+| CLOSES_MESSAGES | PROFESSOR (1) | CHAT_CLOSED_HOURS (N) | partial | **total** | none |
 | SETS | PROFESSOR (1) | STATUS_OVERRIDE (N) | partial | **total** | none |
 | BOOKS | STUDENT (1) | APPOINTMENT (N) | partial | **total** | none |
 | RECEIVES | PROFESSOR (1) | APPOINTMENT (N) | partial | **total** | none |

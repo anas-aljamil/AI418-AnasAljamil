@@ -22,7 +22,7 @@ from app.schemas import (
     ProfessorSummaryOut,
     SlotOut,
 )
-from app.services import chat, directory
+from app.services import directory
 from app.services.booking import ACTIVE
 from app.services.slots import STEP, booking_window_end, day_slots
 
@@ -128,16 +128,14 @@ def get_professor(
         raise not_found("Professor")
     pins = directory.pinned_ids(db, user.user_id) if user.role == "student" else None
     override = directory.latest_overrides(db, now, [professor_id]).get(professor_id)
-    out = directory.detail(found[0], override, now, pins)
-    if user.role == "student":
-        out.can_message = chat.can_chat(db, user.user_id, professor_id)
-    return out
+    return directory.detail(found[0], override, now, pins)
 
 
 @router.get(
     "/professors/{professor_id}/slots",
     response_model=DaySlotsOut,
-    summary="Bookable start times on one day (Riyadh date), each with its longest free length",
+    summary="Bookable start times on one day (Riyadh date, inside the professor's booking periods), "
+    "each with its longest free length",
 )
 def get_slots(
     professor_id: int,
@@ -162,7 +160,7 @@ def get_slots(
             Appointment.ends_at > day_start,
         )
     ).all()
-    slots = day_slots(professor.blocks, day, now, [tuple(r) for r in busy])
+    slots = day_slots(professor.booking_periods, day, now, [tuple(r) for r in busy])
     return DaySlotsOut(
         professor_id=professor_id,
         date=day,

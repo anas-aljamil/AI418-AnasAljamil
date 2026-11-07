@@ -85,7 +85,6 @@ class Professor(Base):
     honorific: Mapped[str] = mapped_column(String(5), server_default="dr")
     academic_rank: Mapped[str] = mapped_column(String(20), server_default="assistant_professor")
     slot_minutes: Mapped[int] = mapped_column(Integer, server_default="15")
-    open_messages: Mapped[bool] = mapped_column(Boolean, server_default="0")
     __table_args__ = (ForeignKeyConstraint(["professor_id", "role"], ["users.user_id", "users.role"]),)
 
     user: Mapped[User] = relationship(
@@ -95,6 +94,12 @@ class Professor(Base):
     office: Mapped[Office | None] = relationship()
     blocks: Mapped[list["ScheduleBlock"]] = relationship(
         order_by=lambda: [ScheduleBlock.day_of_week, ScheduleBlock.start_time], viewonly=True
+    )
+    booking_periods: Mapped[list["BookingPeriod"]] = relationship(
+        order_by=lambda: [BookingPeriod.day_of_week, BookingPeriod.start_time], viewonly=True
+    )
+    chat_closures: Mapped[list["ChatClosedHours"]] = relationship(
+        order_by=lambda: [ChatClosedHours.day_of_week, ChatClosedHours.start_time], viewonly=True
     )
 
 
@@ -107,6 +112,29 @@ class ScheduleBlock(Base):
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     label: Mapped[str | None] = mapped_column(String(40))
+
+
+class BookingPeriod(Base):
+    """A weekly time the professor accepts bookings in (independent of the timetable)."""
+
+    __tablename__ = "booking_periods"
+    period_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    professor_id: Mapped[int] = mapped_column(ForeignKey("professors.professor_id"))
+    day_of_week: Mapped[int] = mapped_column(Integer)
+    start_time: Mapped[time] = mapped_column(Time)
+    end_time: Mapped[time] = mapped_column(Time)
+
+
+class ChatClosedHours(Base):
+    """A weekly time students cannot write to the professor; an end at or before the start
+    runs into the next day."""
+
+    __tablename__ = "chat_closed_hours"
+    closure_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    professor_id: Mapped[int] = mapped_column(ForeignKey("professors.professor_id"))
+    day_of_week: Mapped[int] = mapped_column(Integer)
+    start_time: Mapped[time] = mapped_column(Time)
+    end_time: Mapped[time] = mapped_column(Time)
 
 
 class StatusOverride(Base):

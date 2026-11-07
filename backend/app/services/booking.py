@@ -4,8 +4,8 @@ Rules enforced here, before the database's own guards (unique active-slot
 index and overlap triggers) act as the backstop:
 * the start is on a 5-minute grid, in the future and inside the booking window;
   the length is any number of 5-minute steps (the professor's usual length by
-  default), and the whole appointment must fit inside one office-hours block
-  without overlapping another pending or approved appointment;
+  default), and the whole appointment must fit inside one of the professor's
+  booking periods without overlapping another pending or approved appointment;
 * a student holds at most 2 pending/approved future appointments per professor;
 * cancellation is allowed until 1 hour before the start;
 * transitions: pending -> approved | declined | cancelled;
@@ -24,9 +24,9 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import local_slot_to_utc, to_riyadh
 from app.core.errors import AppError, forbidden, mysql_error_number, not_found
-from app.models import Appointment, Notification, Professor, ScheduleBlock, Student, User
+from app.models import Appointment, BookingPeriod, Notification, Professor, Student, User
 from app.services.notify import notify
-from app.services.slots import booking_window_end, find_block, free_starts
+from app.services.slots import booking_window_end, find_period, free_starts
 
 ACTIVE = ("pending", "approved")
 MAX_ACTIVE_PER_PROFESSOR = 2
@@ -36,7 +36,7 @@ SLOT_TAKEN = AppError(409, "SLOT_TAKEN", "This time is already booked. Choose an
 INVALID_SLOT = AppError(
     422,
     "INVALID_SLOT",
-    "The whole appointment must fit inside the professor's office hours, in 5-minute steps.",
+    "The whole appointment must fit inside one of the professor's booking times, in 5-minute steps.",
 )
 
 
@@ -54,8 +54,8 @@ def overlapping_active(
     return db.execute(query.limit(1)).first() is not None
 
 
-def _blocks(db: Session, professor_id: int) -> list[ScheduleBlock]:
-    return list(db.scalars(select(ScheduleBlock).where(ScheduleBlock.professor_id == professor_id)).all())
+def _periods(db: Session, professor_id: int) -> list[BookingPeriod]:
+    return list(db.scalars(select(BookingPeriod).where(BookingPeriod.professor_id == professor_id)).all())
 
 
 def _busy_on(db: Session, professor_id: int, day: date, exclude_id: int) -> list[tuple[datetime, datetime]]:
@@ -78,7 +78,7 @@ def earlier_starts(db: Session, appointment: Appointment, now: datetime) -> list
     day = to_riyadh(appointment.starts_at).date()
     minutes = int((appointment.ends_at - appointment.starts_at) / timedelta(minutes=1))
     busy = _busy_on(db, appointment.professor_id, day, appointment.appointment_id)
-    starts = free_starts(_blocks(db, appointment.professor_id), day, now, busy, minutes)
+    starts = free_starts(_periods(db, appointment.professor_id), day, now, busy, minutes)
     return [start for start in starts if start < appointment.starts_at]
 
 
@@ -124,7 +124,7 @@ def book(
     if starts_at >= booking_window_end(now):
         raise AppError(422, "OUTSIDE_BOOKING_WINDOW", "Bookings are open for this week and next week only.")
     minutes = minutes or professor.slot_minutes
-    if find_block(_blocks(db, professor_id), starts_at, minutes) is None:
+    if find_period(_periods(db, professor_id), starts_at, minutes) is None:
         raise INVALID_SLOT
 
     active_future = db.scalar(
@@ -248,7 +248,7 @@ def move_earlier(
         raise AppError(422, "SLOT_IN_PAST", "This time has already passed.")
     length = appointment.ends_at - appointment.starts_at
     if (
-        find_block(_blocks(db, appointment.professor_id), starts_at, int(length / timedelta(minutes=1)))
+        find_period(_periods(db, appointment.professor_id), starts_at, int(length / timedelta(minutes=1)))
         is None
     ):
         raise INVALID_SLOT

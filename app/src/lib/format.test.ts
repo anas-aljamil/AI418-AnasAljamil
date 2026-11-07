@@ -11,6 +11,7 @@ import {
   riyadhDayDifference,
   riyadhTime,
   clockText,
+  laterText,
   untilText,
 } from './format';
 
@@ -188,6 +189,30 @@ describe('status end', () => {
 
   it('says "the rest of today" for a status that ends at Riyadh midnight', () => {
     expect(untilText(new Date('2026-10-05T21:00:00Z'), t)).toBe('prof.until_end_of_day');
+  });
+});
+
+describe('a later time inside a sentence', () => {
+  const t = ((key: string, values?: Record<string, string>) =>
+    key === 'when.weekday'
+      ? `${values?.day} ${values?.time}`
+      : key === 'time.clock'
+        ? `${values?.time} ${values?.period}`
+        : key.endsWith('am')
+          ? 'AM'
+          : key.endsWith('pm')
+            ? 'PM'
+            : key === 'weekday.6'
+              ? 'Saturday'
+              : key) as unknown as Parameters<typeof laterText>[2];
+  const now = new Date('2026-10-05T07:00:00Z'); // Monday 10:00 Riyadh
+
+  it('gives the time alone later today', () => {
+    expect(laterText(new Date('2026-10-05T09:00:00Z'), now, t)).toBe('12:00 PM');
+  });
+
+  it('adds the weekday for another day (never "Tomorrow" mid-sentence)', () => {
+    expect(laterText(new Date('2026-10-09T21:00:00Z'), now, t)).toBe('Saturday 12:00 AM');
   });
 });
 
