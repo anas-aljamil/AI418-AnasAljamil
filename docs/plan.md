@@ -167,6 +167,11 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
   - **Playwright** (Windows, web build against the real API and MySQL): `p5.spec.ts` covers the feature (a student without a booking writes, checked in MySQL; Dr. Tariq's closed hours hide the composer; a professor adds a booking time outside office hours and a student sees it on the profile) and passes. Full suite: 42 of 51 passed. The failures also fail on the base commit `f4358fb` without these changes (sweep admin and student screens, the admin CRUD test, the Arabic sign-up form, status presets off by one second), except the Arabic P5 read receipt, which fails now and then (it passed in 2 of 3 runs alone) and does not touch the changed code.
   - **Not run:** the real-phone checks.
 
+### After P6: browser version for everyone and desktop layouts (owner requests, 2026-11-10)
+- **Public link:** the API serves the browser version; a free Cloudflare quick tunnel publishes it (docs/run-on-phone.md, Section 3b; one command: scripts/public_link.py). Demo passwords are refused over the link.
+- **QA on Windows:** specs use `py`, close the browser contexts they open, and fill the visible field; the full suite passed 50 of 51 (the one failure was a Windows file lock on a screenshot). With the system Chrome some screenshots came out blank, so Playwright's own Chromium is used.
+- **Desktop and tablet layouts:** docs/desktop-plan.md (approved), checked by e2e/desktop.spec.ts at 1280 and 768 px in Arabic light and English dark, plus no sideways scrolling at 320, 768, 1024 and 1280 px.
+
 ## Checks that need a real phone
 
 These cannot be verified in this cloud sandbox (no phone or emulator) or by web screenshots. Each phase lists the relevant ones with exact steps, and they are reported as "needs a real phone" until you confirm them.

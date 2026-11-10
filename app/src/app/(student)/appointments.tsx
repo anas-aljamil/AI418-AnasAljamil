@@ -11,6 +11,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { useAppointmentAction, useAppointments } from '@/api/queries';
 import type { Appointment } from '@/api/types';
 import { Button } from '@/components/Button';
@@ -39,6 +40,7 @@ export default function AppointmentsScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const now = useNow();
   const toast = useToast();
   const [scope, setScope] = useState<Scope>('upcoming');
@@ -103,7 +105,7 @@ export default function AppointmentsScreen() {
     <>
       <FlatList
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+        contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
         data={list.data ?? []}
         keyExtractor={(appointment) => String(appointment.appointment_id)}
         ItemSeparatorComponent={() => <View style={styles.gap} />}

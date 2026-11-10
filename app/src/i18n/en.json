@@ -316,6 +316,7 @@
     "professor": "Professor"
   },
   "search": {
+    "choose": "Choose a professor to see their status, today and booking times.",
     "title": "Search",
     "status_filter": "Status",
     "department_filter": "Department",
@@ -506,6 +507,7 @@
     "day_line": "{{day}}, {{range}}"
   },
   "admin": {
+    "choose": "Choose a row to see or edit it, or add a new one.",
     "add": "Add",
     "search": "Search by name or email",
     "empty": "Nothing here yet.",
@@ -597,6 +599,7 @@
     "search_offices": "Search by building or room"
   },
   "chat": {
+    "choose": "Choose a conversation to read it.",
     "title": "Messages",
     "empty_title": "No conversations yet",
     "empty_student": "Find a professor and send them a message. Professors may close messages at some times of the week.",

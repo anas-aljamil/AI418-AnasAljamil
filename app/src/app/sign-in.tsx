@@ -17,6 +17,7 @@ import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Door } from '@/components/Door';
@@ -31,6 +32,7 @@ export default function SignInScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn('narrow');
   const { state, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,6 +71,7 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.page,
+          column,
           { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.lg },
         ]}
       >

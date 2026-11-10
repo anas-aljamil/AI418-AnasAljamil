@@ -2,7 +2,7 @@
  * Search and browse (DESIGN.md 7.3): Arabic-aware search by name or department, with filter
  * chips for status and office hours today and a department menu grouped by college. Results
  * are flat rows, in office first; a row opens the professor's profile (one tap) and has its
- * own pin button.
+ * own pin button. On desktop the profile opens in a pane beside the results (?id=).
  */
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn, useLayout } from '@/lib/layout';
 import { useDepartments, useProfessorSearch } from '@/api/queries';
 import type { ProfessorSummary } from '@/api/types';
 import { Button } from '@/components/Button';
@@ -19,7 +20,9 @@ import { SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { EmptyPane, TwoPane, useSelectedId } from '@/components/TwoPane';
 import { SectionError } from '@/features/home/HomeParts';
+import { ProfessorDetail } from '@/features/professors/ProfessorDetail';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
 import { useDebounced, useNow } from '@/lib/hooks';
@@ -36,6 +39,9 @@ export default function SearchScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const desktop = useLayout() === 'desktop';
+  const [selectedId, select] = useSelectedId();
   const now = useNow();
   const togglePin = usePinWithToast();
   const departments = useDepartments();
@@ -59,7 +65,7 @@ export default function SearchScreen() {
     setOfficeHoursToday(false);
   };
   const open = (professor: ProfessorSummary) =>
-    router.push(`/professors/${professor.professor_id}`);
+    desktop ? select(professor.professor_id) : router.push(`/professors/${professor.professor_id}`);
 
   const header = (
     <View style={styles.header}>
@@ -128,20 +134,43 @@ export default function SearchScreen() {
     </Text>
   );
 
-  return (
+  const list = (
     <FlatList
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[
+        styles.page,
+        desktop ? null : column,
+        { paddingTop: insets.top + space.lg },
+      ]}
       data={active ? (results.data ?? []) : []}
       keyExtractor={(professor) => String(professor.professor_id)}
       renderItem={({ item }) => (
-        <ProfessorRow professor={item} now={now} onPress={open} onTogglePin={togglePin} />
+        <ProfessorRow
+          professor={item}
+          now={now}
+          onPress={open}
+          onTogglePin={togglePin}
+          selected={desktop && item.professor_id === selectedId}
+        />
       )}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       automaticallyAdjustKeyboardInsets
+    />
+  );
+  if (!desktop) return list;
+  return (
+    <TwoPane
+      list={list}
+      detail={
+        selectedId ? (
+          <ProfessorDetail key={selectedId} professorId={selectedId} pane />
+        ) : (
+          <EmptyPane message={t('search.choose')} />
+        )
+      }
     />
   );
 }

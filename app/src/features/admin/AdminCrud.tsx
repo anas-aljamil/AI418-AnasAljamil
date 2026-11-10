@@ -6,7 +6,8 @@
  * Status); field rules mirror the API, so errors show next to the field before saving; the
  * API's own answer (a duplicate code or email, a department still in use) is shown above
  * Save. Deleting sits apart at the bottom and always asks first. A table may show a summary
- * first (professors), with Edit inside it.
+ * first (professors), with Edit inside it. On desktop the summary or the form sits in a pane
+ * beside the list instead of a sheet (docs/desktop-plan.md).
  */
 import { useMemo, useState } from 'react';
 import { SectionList, StyleSheet, View } from 'react-native';
@@ -14,9 +15,10 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Plus from 'lucide-react-native/icons/plus';
 
+import { useColumn, useLayout } from '@/lib/layout';
 import { useAdminList, useAdminSave, type AdminResource, type AdminRows } from '@/api/queries';
 import type { Department } from '@/api/types';
-import { BottomSheet } from '@/components/BottomSheet';
+import { BottomSheet, InlineSheets } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
@@ -26,6 +28,7 @@ import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ListRow, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { EmptyPane, TwoPane } from '@/components/TwoPane';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
@@ -140,6 +143,8 @@ export function AdminCrudScreen<R extends AdminResource>({
   const language = i18n.language;
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const desktop = useLayout() === 'desktop';
   const list = useAdminList(config.resource);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -222,66 +227,82 @@ export function AdminCrudScreen<R extends AdminResource>({
     </View>
   );
 
-  return (
+  const openId = summary ? config.idOf(summary) : formRow?.row ? config.idOf(formRow.row) : null;
+
+  const listView = (
+    <SectionList
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[
+        styles.page,
+        desktop ? null : column,
+        { paddingTop: insets.top + space.lg },
+      ]}
+      sections={sections}
+      keyExtractor={(row) => String(config.idOf(row))}
+      stickySectionHeadersEnabled={false}
+      renderSectionHeader={({ section }) =>
+        section.title ? (
+          <View style={styles.sectionHead}>
+            <Text variant="label" weight="semibold" role="heading" style={styles.grow}>
+              {section.title}
+            </Text>
+            <Text variant="caption" color="muted">
+              {t('admin.count', { count: section.data.length })}
+            </Text>
+          </View>
+        ) : null
+      }
+      renderItem={({ item }) => {
+        const off = config.inactive?.(item) ?? false;
+        const title = config.titleOf(item);
+        const subtitle = config.subtitleOf?.(item);
+        return (
+          <ListRow
+            leading={
+              config.leading.kind === 'person' ? (
+                <Initials name={title} muted={off} />
+              ) : (
+                <IconSquare icon={config.leading.icon} />
+              )
+            }
+            title={title}
+            subtitle={subtitle}
+            trailing={off ? <Pill label={t('admin.deactivated')} /> : null}
+            accessibilityLabel={spokenList(
+              [title, subtitle, off ? t('admin.deactivated') : null],
+              t,
+            )}
+            selected={desktop && config.idOf(item) === openId}
+            onPress={() => {
+              // One item at a time: opening another closes the summary or form in the pane.
+              setSummary(null);
+              setEditing(null);
+              if (renderSummary) setSummary(item);
+              else setEditing({ row: item });
+            }}
+          />
+        );
+      }}
+      ListHeaderComponent={header}
+      ListEmptyComponent={
+        list.data === undefined && !list.error ? (
+          <View>
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        ) : list.error ? (
+          <SectionError message={t(errorKey(list.error))} onRetry={() => list.refetch()} />
+        ) : (
+          <EmptyState title={t(all.length ? 'admin.no_match' : 'admin.empty')} />
+        )
+      }
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+    />
+  );
+
+  const detail = (
     <>
-      <SectionList
-        style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
-        sections={sections}
-        keyExtractor={(row) => String(config.idOf(row))}
-        stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section }) =>
-          section.title ? (
-            <View style={styles.sectionHead}>
-              <Text variant="label" weight="semibold" role="heading" style={styles.grow}>
-                {section.title}
-              </Text>
-              <Text variant="caption" color="muted">
-                {t('admin.count', { count: section.data.length })}
-              </Text>
-            </View>
-          ) : null
-        }
-        renderItem={({ item }) => {
-          const off = config.inactive?.(item) ?? false;
-          const title = config.titleOf(item);
-          const subtitle = config.subtitleOf?.(item);
-          return (
-            <ListRow
-              leading={
-                config.leading.kind === 'person' ? (
-                  <Initials name={title} muted={off} />
-                ) : (
-                  <IconSquare icon={config.leading.icon} />
-                )
-              }
-              title={title}
-              subtitle={subtitle}
-              trailing={off ? <Pill label={t('admin.deactivated')} /> : null}
-              accessibilityLabel={spokenList(
-                [title, subtitle, off ? t('admin.deactivated') : null],
-                t,
-              )}
-              onPress={() => (renderSummary ? setSummary(item) : setEditing({ row: item }))}
-            />
-          );
-        }}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
-          list.data === undefined && !list.error ? (
-            <View>
-              <SkeletonRow />
-              <SkeletonRow />
-            </View>
-          ) : list.error ? (
-            <SectionError message={t(errorKey(list.error))} onRetry={() => list.refetch()} />
-          ) : (
-            <EmptyState title={t(all.length ? 'admin.no_match' : 'admin.empty')} />
-          )
-        }
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-      />
       {summary && renderSummary
         ? renderSummary(summary, {
             edit: () => {
@@ -299,6 +320,27 @@ export function AdminCrudScreen<R extends AdminResource>({
           onClose={closeForm}
         />
       ) : null}
+    </>
+  );
+
+  if (desktop) {
+    return (
+      <TwoPane
+        list={listView}
+        detail={
+          summary || formRow ? (
+            <InlineSheets>{detail}</InlineSheets>
+          ) : (
+            <EmptyPane message={t('admin.choose')} />
+          )
+        }
+      />
+    );
+  }
+  return (
+    <>
+      {listView}
+      {detail}
     </>
   );
 }

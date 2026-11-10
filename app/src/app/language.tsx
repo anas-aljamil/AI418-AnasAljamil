@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { Button } from '@/components/Button';
 import { Door } from '@/components/Door';
 import { Text } from '@/components/Text';
@@ -26,6 +27,7 @@ export default function LanguageScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn('narrow');
   const [selected, setSelected] = useState<Language>(deviceLanguage);
   const [saving, setSaving] = useState(false);
   const inSelected = { lng: selected };
@@ -43,6 +45,7 @@ export default function LanguageScreen() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[
         styles.page,
+        column,
         { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.lg },
       ]}
     >

@@ -81,6 +81,22 @@ export const space = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24, xl: 32, xxl: 48, x
 /** Radius by hierarchy (DESIGN.md Section 3). */
 export const radii = { sheet: 20, card: 14, input: 10, pill: 999 } as const;
 
+/**
+ * Layout widths (docs/desktop-plan.md): phone below tabletMin, tablet up to desktopMin, then
+ * desktop with the side rail and two panes. Columns cap line length (DESIGN.md 4.2).
+ */
+export const layout = {
+  tabletMin: 768,
+  desktopMin: 1024,
+  tabletColumn: 720,
+  column: 760,
+  narrowColumn: 520,
+  rail: 240,
+  listPane: 380,
+  dialog: 640,
+  dialogHeight: 0.85,
+} as const;
+
 /** Minimum touch target (dp / px), and the cap on system font scaling (200%). */
 export const touchTarget = 48;
 export const maxFontScale = 2;
@@ -129,7 +145,7 @@ export const typeScale: Record<
 export const lineHeightRatio: Record<Language, number> = { ar: 1.7, en: 1.5 };
 
 /** Desktop web layout starts here (side rail, two panes, larger headings). */
-export const desktopBreakpoint = 1024;
+export const desktopBreakpoint = layout.desktopMin;
 
 /** Floating layers only (sheets, menus, toasts); everything else uses surface contrast + hairlines. */
 export const elevation: Record<ColorScheme, { floating: string }> = {

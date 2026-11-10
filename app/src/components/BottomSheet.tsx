@@ -4,8 +4,12 @@
  * - the Android back button closes it first (onRequestClose),
  * - it springs in (about 350 ms) and eases out; reduced motion shows it instantly.
  * A visible Close button is always present; there is no gesture-only dismissal.
+ * On desktop (1024 px and up) the same sheet is a centred dialog that fades in and rises a
+ * little (DESIGN.md 7.5; docs/desktop-plan.md, Section 3); Escape closes it (onRequestClose).
+ * Inside <InlineSheets> (a desktop end pane, e.g. the admin form) the sheet is drawn in place as
+ * a panel instead; sheets opened from inside it (confirmations, menus) are dialogs again.
  */
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -29,8 +33,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { layoutDirection } from '@/lib/direction';
+import { useLayout } from '@/lib/layout';
 import { useTheme } from '@/theme/ThemeProvider';
-import { durations, radii, space } from '@/theme/tokens';
+import { durations, layout, radii, space } from '@/theme/tokens';
 import { Button } from './Button';
 import { Text } from './Text';
 
@@ -41,7 +46,16 @@ interface BottomSheetProps {
   children: React.ReactNode;
 }
 
+const InlineSheetContext = createContext(false);
+
+/** Sheets directly inside are drawn in place (a desktop pane) instead of over the screen. */
+export function InlineSheets({ children }: { children: React.ReactNode }) {
+  return <InlineSheetContext.Provider value>{children}</InlineSheetContext.Provider>;
+}
+
 const OFFSCREEN = 600;
+// The dialog rises this far while it fades in, instead of sliding up from the bottom edge.
+const DIALOG_RISE = space.lg / OFFSCREEN;
 
 export function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors, shadow } = useTheme();
@@ -49,6 +63,8 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
+  const dialog = useLayout() === 'desktop';
+  const inline = useContext(InlineSheetContext);
   // Stays true while the closing animation runs; set during render when the sheet opens
   // (React's "adjust state while rendering" pattern) and cleared when the animation ends.
   const [mounted, setMounted] = useState(visible);
@@ -74,8 +90,33 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
     }
   }, [visible, reduceMotion, offset, scrim]);
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+  const sheetStyle = useAnimatedStyle(() =>
+    dialog
+      ? { opacity: scrim.value, transform: [{ translateY: offset.value * DIALOG_RISE }] }
+      : { transform: [{ translateY: offset.value }] },
+  );
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
+
+  if (inline) {
+    if (!visible) return null;
+    return (
+      <InlineSheetContext.Provider value={false}>
+        <View role="region" aria-label={title} style={styles.panel}>
+          <Text variant="title" accessibilityRole="header">
+            {title}
+          </Text>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </ScrollView>
+          <Button label={t('common.close')} variant="quiet" onPress={onClose} />
+        </View>
+      </InlineSheetContext.Provider>
+    );
+  }
 
   return (
     <Modal
@@ -86,7 +127,13 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
       statusBarTranslucent
     >
       {/* A modal starts a new layout root, so it takes the reading direction again. */}
-      <View style={[styles.root, layoutDirection(i18n.language === 'ar' ? 'ar' : 'en')]}>
+      <View
+        style={[
+          styles.root,
+          dialog && styles.dialogRoot,
+          layoutDirection(i18n.language === 'ar' ? 'ar' : 'en'),
+        ]}
+      >
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }, scrimStyle]}
         >
@@ -111,10 +158,11 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
                 paddingBottom: insets.bottom + space.md,
                 maxHeight: height * 0.92,
               },
+              dialog && [styles.dialog, { maxHeight: height * layout.dialogHeight }],
               sheetStyle,
             ]}
           >
-            <View style={[styles.grabber, { backgroundColor: colors.line }]} />
+            {!dialog && <View style={[styles.grabber, { backgroundColor: colors.line }]} />}
             <Text variant="title" accessibilityRole="header">
               {title}
             </Text>
@@ -136,17 +184,20 @@ export function BottomSheet({ visible, title, onClose, children }: BottomSheetPr
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
+  dialogRoot: { justifyContent: 'center', padding: space.lg },
   sheet: {
     borderTopLeftRadius: radii.sheet,
     borderTopRightRadius: radii.sheet,
     paddingHorizontal: space.md,
     paddingTop: space.xs,
     gap: space.sm,
-    maxWidth: 640,
+    maxWidth: layout.dialog,
     width: '100%',
     alignSelf: 'center',
   },
+  dialog: { borderRadius: radii.sheet, paddingTop: space.md, paddingBottom: space.md },
   body: { flexShrink: 1 },
+  panel: { flex: 1, padding: space.lg, gap: space.sm },
   bodyContent: { gap: space.sm },
   grabber: {
     width: 40,

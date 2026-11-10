@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn, useLayout } from '@/lib/layout';
 import { isNetworkError } from '@/api/client';
 import {
   useDepartmentProfessors,
@@ -47,7 +48,7 @@ import { greetingKey } from '@/lib/format';
 import { useDebounced, useNow, useOnline } from '@/lib/hooks';
 import { departmentName, firstName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { space, type Language } from '@/theme/tokens';
+import { layout, space, type Language } from '@/theme/tokens';
 
 interface QueryLike {
   data?: unknown;
@@ -67,6 +68,8 @@ export default function HomeScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const desktop = useLayout() === 'desktop';
   const user = useUser();
   const now = useNow();
   const online = useOnline();
@@ -102,6 +105,57 @@ export default function HomeScreen() {
     !departmentList.data.some((p) => p.status.status === 'in_office');
   const rows = searching ? (search.data ?? []) : (departmentList.data ?? []);
 
+  // "My professors": a horizontal row of nameplates on phones, a list beside the main column
+  // on desktop (docs/desktop-plan.md, Section 3).
+  const myProfessors = (
+    <View style={styles.section}>
+      <Text variant="title" role="heading">
+        {t('home.my_professors')}
+      </Text>
+      {pinsState === 'loading' ? (
+        <SkeletonRow />
+      ) : pinsState === 'error' ? (
+        <SectionError message={errorText(pins.error)} onRetry={() => pins.refetch()} />
+      ) : pins.data?.length ? (
+        desktop ? (
+          <View>
+            {pins.data.map((professor) => (
+              <ProfessorRow
+                key={professor.professor_id}
+                professor={professor}
+                now={now}
+                onPress={openProfessor}
+                onTogglePin={togglePin}
+              />
+            ))}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pinnedRow}
+          >
+            {pins.data.map((professor) => (
+              <PinnedCard
+                key={professor.professor_id}
+                professor={professor}
+                now={now}
+                onPress={openProfessor}
+              />
+            ))}
+          </ScrollView>
+        )
+      ) : (
+        <EmptyState
+          title={t('home.empty_pins_title')}
+          body={t('home.empty_pins_body')}
+          actionLabel={t('home.empty_pins_action')}
+          onAction={() => searchRef.current?.focus()}
+        />
+      )}
+    </View>
+  );
+
   const header = (
     <View style={styles.header}>
       <View style={styles.sectionHead}>
@@ -133,38 +187,7 @@ export default function HomeScreen() {
         <>
           {next.data ? <NextAppointmentCard appointment={next.data} now={now} /> : null}
 
-          <View style={styles.section}>
-            <Text variant="title" role="heading">
-              {t('home.my_professors')}
-            </Text>
-            {pinsState === 'loading' ? (
-              <SkeletonRow />
-            ) : pinsState === 'error' ? (
-              <SectionError message={errorText(pins.error)} onRetry={() => pins.refetch()} />
-            ) : pins.data?.length ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.pinnedRow}
-              >
-                {pins.data.map((professor) => (
-                  <PinnedCard
-                    key={professor.professor_id}
-                    professor={professor}
-                    now={now}
-                    onPress={openProfessor}
-                  />
-                ))}
-              </ScrollView>
-            ) : (
-              <EmptyState
-                title={t('home.empty_pins_title')}
-                body={t('home.empty_pins_body')}
-                actionLabel={t('home.empty_pins_action')}
-                onAction={() => searchRef.current?.focus()}
-              />
-            )}
-          </View>
+          {desktop ? null : myProfessors}
 
           <View style={styles.sectionHead}>
             <View style={styles.grow}>
@@ -212,10 +235,14 @@ export default function HomeScreen() {
     <Text color="muted">{t('home.no_results', { query: query.trim() })}</Text>
   ) : undefined;
 
-  return (
+  const main = (
     <FlatList
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[
+        styles.page,
+        desktop ? styles.desktopMain : column,
+        { paddingTop: insets.top + space.lg },
+      ]}
       data={rows}
       keyExtractor={(professor) => String(professor.professor_id)}
       renderItem={({ item }) => (
@@ -228,6 +255,18 @@ export default function HomeScreen() {
       automaticallyAdjustKeyboardInsets
     />
   );
+  if (!desktop) return main;
+  return (
+    <View style={[styles.columns, { backgroundColor: colors.bg }]}>
+      <View style={styles.grow}>{main}</View>
+      <ScrollView
+        style={[styles.aside, { borderColor: colors.line }]}
+        contentContainerStyle={styles.asideContent}
+      >
+        {myProfessors}
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -237,5 +276,9 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   grow: { flex: 1 },
   pinnedRow: { gap: space.sm },
+  columns: { flex: 1, flexDirection: 'row' },
+  desktopMain: { width: '100%', maxWidth: layout.column, alignSelf: 'center' },
+  aside: { width: layout.listPane, flexGrow: 0, borderStartWidth: StyleSheet.hairlineWidth },
+  asideContent: { padding: space.lg },
   visuallyHidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 });

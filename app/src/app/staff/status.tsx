@@ -3,7 +3,7 @@
  * (the current one selected), quick presets with a return time, an optional 60-character note,
  * today's timeline and the requests waiting for an answer.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
@@ -18,6 +18,7 @@ import {
   useSetStatus,
   type StatusInput,
 } from '@/api/queries';
+import { useColumn, useLayout } from '@/lib/layout';
 import type { ManualStatus } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
@@ -36,7 +37,7 @@ import { clockText, minutesOfDay, untilText } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { radii, space, type Language } from '@/theme/tokens';
+import { layout, radii, space, type Language } from '@/theme/tokens';
 
 const TILES: ManualStatus[] = ['in_office', 'in_class', 'busy', 'away'];
 const MANUAL = new Set<string>(TILES);
@@ -46,6 +47,8 @@ export default function StatusScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const desktop = useLayout() === 'desktop';
   const now = useNow();
   const toast = useToast();
   const user = useUser();
@@ -98,172 +101,198 @@ export default function StatusScreen() {
     : null;
   const pending = (requests.data ?? []).filter((a) => a.status === 'pending');
 
+  // The browser tab shows the status, so a professor can keep the tab open (DESIGN.md 7.8).
+  const tabTitle = described ? `${described.label} | ${t('app.name')}` : null;
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !tabTitle) return;
+    const before = document.title;
+    document.title = tabTitle;
+    return () => {
+      document.title = before;
+    };
+  }, [tabTitle]);
+
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[
+        styles.page,
+        desktop ? styles.wide : column,
+        { paddingTop: insets.top + space.lg },
+      ]}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets
     >
-      <View style={styles.headRow}>
-        <Text variant="heading" role="heading" style={styles.grow}>
-          {t('status_screen.title')}
-        </Text>
-        <NotificationBell />
-      </View>
-
-      {current && described ? (
-        <>
-          <View role="radiogroup" style={styles.tiles}>
-            {TILES.map((tile) => {
-              const selected = current.status === tile;
-              return (
-                <Pressable
-                  key={tile}
-                  role="radio"
-                  aria-checked={selected}
-                  accessibilityLabel={t(`status.${tile}`)}
-                  onPress={() => apply(withNote({ status: tile }))}
-                  style={({ pressed }) => [
-                    styles.tile,
-                    {
-                      backgroundColor: pressed ? colors.line : colors.surface,
-                      borderColor: selected ? colors.primary : colors.line,
-                      borderWidth: selected ? 2 : StyleSheet.hairlineWidth,
-                    },
-                  ]}
-                >
-                  <Door status={tile} size={40} />
-                  <Text variant="label" weight="semibold" style={styles.grow}>
-                    {t(`status.${tile}`)}
-                  </Text>
-                  {selected ? <Check color={colors.primary} size={20} strokeWidth={2.5} /> : null}
-                </Pressable>
-              );
-            })}
+      {/* Desktop: the status controls on the start side, today and the requests beside them. */}
+      <View style={desktop ? styles.columns : styles.stack}>
+        <View style={desktop ? styles.column : styles.stack}>
+          <View style={styles.headRow}>
+            <Text variant="heading" role="heading" style={styles.grow}>
+              {t('status_screen.title')}
+            </Text>
+            <NotificationBell />
           </View>
 
-          <View style={styles.section} accessibilityLiveRegion="polite">
-            <Text color="muted">
-              {current.source === 'override'
-                ? spokenList(
-                    [
-                      t('status_screen.manual', { updated: described.updated }),
-                      current.until ? untilText(new Date(current.until), t) : null,
-                    ],
-                    t,
-                  )
-                : t('status_screen.following_schedule', { status: described.label })}
-            </Text>
-            {current.source === 'override' ? (
-              <View style={styles.start}>
-                <Button
-                  variant="quiet"
-                  label={t('status_screen.back_to_schedule')}
-                  onPress={() => apply(null, () => setNote(''))}
-                />
+          {current && described ? (
+            <>
+              <View role="radiogroup" style={styles.tiles}>
+                {TILES.map((tile) => {
+                  const selected = current.status === tile;
+                  return (
+                    <Pressable
+                      key={tile}
+                      role="radio"
+                      aria-checked={selected}
+                      accessibilityLabel={t(`status.${tile}`)}
+                      onPress={() => apply(withNote({ status: tile }))}
+                      style={({ pressed }) => [
+                        styles.tile,
+                        {
+                          backgroundColor: pressed ? colors.line : colors.surface,
+                          borderColor: selected ? colors.primary : colors.line,
+                          borderWidth: selected ? 2 : StyleSheet.hairlineWidth,
+                        },
+                      ]}
+                    >
+                      <Door status={tile} size={40} />
+                      <Text variant="label" weight="semibold" style={styles.grow}>
+                        {t(`status.${tile}`)}
+                      </Text>
+                      {selected ? (
+                        <Check color={colors.primary} size={20} strokeWidth={2.5} />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </View>
-            ) : null}
-          </View>
 
-          <View style={styles.section}>
-            <Text variant="label" role="heading">
-              {t('status_screen.presets')}
-            </Text>
-            <View style={styles.chips}>
-              <Chip
-                label={t('status_screen.back_in_15')}
-                onPress={() => apply(withNote({ status: 'away', expires_at: inMinutes(15) }))}
-              />
-              <Chip
-                label={t('status_screen.back_in_30')}
-                onPress={() => apply(withNote({ status: 'away', expires_at: inMinutes(30) }))}
-              />
-              {officeEnd && today ? (
-                <Chip
-                  label={t('status_screen.in_office_until', { time: clockText(officeEnd, t) })}
-                  onPress={() =>
-                    apply(
-                      withNote({
-                        status: 'in_office',
-                        expires_at: new Date(`${today.date}T${officeEnd}:00+03:00`).toISOString(),
-                      }),
-                    )
-                  }
+              <View style={styles.section} accessibilityLiveRegion="polite">
+                <Text color="muted">
+                  {current.source === 'override'
+                    ? spokenList(
+                        [
+                          t('status_screen.manual', { updated: described.updated }),
+                          current.until ? untilText(new Date(current.until), t) : null,
+                        ],
+                        t,
+                      )
+                    : t('status_screen.following_schedule', { status: described.label })}
+                </Text>
+                {current.source === 'override' ? (
+                  <View style={styles.start}>
+                    <Button
+                      variant="quiet"
+                      label={t('status_screen.back_to_schedule')}
+                      onPress={() => apply(null, () => setNote(''))}
+                    />
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.section}>
+                <Text variant="label" role="heading">
+                  {t('status_screen.presets')}
+                </Text>
+                <View style={styles.chips}>
+                  <Chip
+                    label={t('status_screen.back_in_15')}
+                    onPress={() => apply(withNote({ status: 'away', expires_at: inMinutes(15) }))}
+                  />
+                  <Chip
+                    label={t('status_screen.back_in_30')}
+                    onPress={() => apply(withNote({ status: 'away', expires_at: inMinutes(30) }))}
+                  />
+                  {officeEnd && today ? (
+                    <Chip
+                      label={t('status_screen.in_office_until', { time: clockText(officeEnd, t) })}
+                      onPress={() =>
+                        apply(
+                          withNote({
+                            status: 'in_office',
+                            expires_at: new Date(
+                              `${today.date}T${officeEnd}:00+03:00`,
+                            ).toISOString(),
+                          }),
+                        )
+                      }
+                    />
+                  ) : null}
+                  <Chip
+                    label={t('status_screen.away_today')}
+                    onPress={() => apply(withNote({ status: 'away' }))}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <TextField
+                  label={t('status_screen.note_label')}
+                  helper={t('status_screen.note_helper')}
+                  value={note}
+                  onChangeText={setNote}
+                  maxLength={60}
                 />
-              ) : null}
-              <Chip
-                label={t('status_screen.away_today')}
-                onPress={() => apply(withNote({ status: 'away' }))}
-              />
+                <View style={styles.start}>
+                  <Button
+                    variant="secondary"
+                    label={t('status_screen.save_note')}
+                    onPress={() =>
+                      apply(
+                        withNote({
+                          status: MANUAL.has(current.status)
+                            ? (current.status as ManualStatus)
+                            : 'away',
+                          expires_at: current.source === 'override' ? current.until : null,
+                        }),
+                        () => toast(t('status_screen.note_saved')),
+                      )
+                    }
+                  />
+                </View>
+              </View>
+            </>
+          ) : (
+            <View>
+              <SkeletonRow />
+              <SkeletonRow />
             </View>
+          )}
+        </View>
+
+        <View style={desktop ? styles.column : styles.stack}>
+          <View style={styles.section}>
+            <Text variant="title" role="heading">
+              {t('prof.today')}
+            </Text>
+            {today ? (
+              <TodayTimeline blocks={today.blocks} now={today.now_local_time} />
+            ) : (
+              <SkeletonRow />
+            )}
           </View>
 
           <View style={styles.section}>
-            <TextField
-              label={t('status_screen.note_label')}
-              helper={t('status_screen.note_helper')}
-              value={note}
-              onChangeText={setNote}
-              maxLength={60}
-            />
+            <Text variant="title" role="heading">
+              {t('status_screen.waiting', { count: pending.length })}
+            </Text>
+            {pending.slice(0, 3).map((appointment) => (
+              <AppointmentCard
+                key={appointment.appointment_id}
+                appointment={appointment}
+                now={now}
+                perspective="professor"
+              >
+                <RequestActions appointment={appointment} now={now} />
+              </AppointmentCard>
+            ))}
             <View style={styles.start}>
               <Button
-                variant="secondary"
-                label={t('status_screen.save_note')}
-                onPress={() =>
-                  apply(
-                    withNote({
-                      status: MANUAL.has(current.status)
-                        ? (current.status as ManualStatus)
-                        : 'away',
-                      expires_at: current.source === 'override' ? current.until : null,
-                    }),
-                    () => toast(t('status_screen.note_saved')),
-                  )
-                }
+                variant="quiet"
+                label={t('status_screen.all_requests')}
+                onPress={() => router.navigate('/staff/requests')}
               />
             </View>
           </View>
-        </>
-      ) : (
-        <View>
-          <SkeletonRow />
-          <SkeletonRow />
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <Text variant="title" role="heading">
-          {t('prof.today')}
-        </Text>
-        {today ? (
-          <TodayTimeline blocks={today.blocks} now={today.now_local_time} />
-        ) : (
-          <SkeletonRow />
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text variant="title" role="heading">
-          {t('status_screen.waiting', { count: pending.length })}
-        </Text>
-        {pending.slice(0, 3).map((appointment) => (
-          <AppointmentCard
-            key={appointment.appointment_id}
-            appointment={appointment}
-            now={now}
-            perspective="professor"
-          >
-            <RequestActions appointment={appointment} now={now} />
-          </AppointmentCard>
-        ))}
-        <View style={styles.start}>
-          <Button
-            variant="quiet"
-            label={t('status_screen.all_requests')}
-            onPress={() => router.navigate('/staff/requests')}
-          />
         </View>
       </View>
     </ScrollView>
@@ -272,6 +301,10 @@ export default function StatusScreen() {
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: space.lg },
+  stack: { gap: space.lg },
+  wide: { paddingHorizontal: space.xl },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xl },
+  column: { flex: 1, gap: space.lg, maxWidth: layout.column },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   tile: {
     flexGrow: 1,

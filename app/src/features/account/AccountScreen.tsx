@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { useAuth, useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
@@ -25,6 +26,7 @@ export function AccountScreen() {
   const { t, i18n } = useTranslation();
   const { colors, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const { signOut } = useAuth();
   const user = useUser();
   const { textSize, setTextSize, notifications, setNotifications } = useSettings();
@@ -38,7 +40,7 @@ export function AccountScreen() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
     >
       <Text variant="heading" role="heading">
         {/* Named like its tab: "Profile" for students, "Account" for professors and admins. */}

@@ -6,6 +6,7 @@ import { SectionList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { useRequests } from '@/api/queries';
 import { SkeletonRow } from '@/components/Placeholders';
 import { Text } from '@/components/Text';
@@ -21,6 +22,7 @@ export default function RequestsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const now = useNow();
   const requests = useRequests();
   const all = requests.data ?? [];
@@ -32,7 +34,7 @@ export default function RequestsScreen() {
   return (
     <SectionList
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
       sections={sections}
       keyExtractor={(appointment) => String(appointment.appointment_id)}
       stickySectionHeadersEnabled={false}

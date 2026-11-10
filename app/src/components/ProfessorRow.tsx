@@ -20,9 +20,17 @@ interface ProfessorRowProps {
   /** Opens the professor's profile (one tap from Home or Search). */
   onPress?: (professor: ProfessorSummary) => void;
   onTogglePin?: (professor: ProfessorSummary, pin: boolean) => void;
+  /** Open in the pane beside the list (desktop Search). */
+  selected?: boolean;
 }
 
-export function ProfessorRow({ professor, now, onPress, onTogglePin }: ProfessorRowProps) {
+export function ProfessorRow({
+  professor,
+  now,
+  onPress,
+  onTogglePin,
+  selected,
+}: ProfessorRowProps) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
@@ -53,6 +61,7 @@ export function ProfessorRow({ professor, now, onPress, onTogglePin }: Professor
         />
       }
       onPress={onPress ? () => onPress(professor) : undefined}
+      selected={selected}
       accessibilityLabel={spokenList([name, department, label, updated], t)}
       after={
         onTogglePin ? (
