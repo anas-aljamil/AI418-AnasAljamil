@@ -152,6 +152,14 @@ Anyone with the link can use Mawjood from any phone or computer, on any network,
 
 It works only while this computer is on and steps 2-4 keep running. The link changes every time the tunnel starts, so share the new one each time.
 
+**One command** (after the one-time install in step 1, with MySQL running):
+```bash
+python scripts/public_link.py
+```
+It rebuilds the browser version only when the app changed (`--build` forces it), uses the API already running on port 8000 or starts it, opens the tunnel over HTTP/2 and prints the link. Ctrl+C stops what it started. `--local` skips the public link. On Windows use `py` instead of `python` if `python` is not found.
+
+The same steps by hand:
+
 1. Once: install the tunnel tool with `winget install --id Cloudflare.cloudflared` (Windows) or `brew install cloudflared` (macOS), then open a new terminal.
 2. Build the browser version (again after every code change):
    ```bash
