@@ -9,12 +9,14 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { PYTHON } from './python';
+
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z'); // Monday 10:00 AM in Riyadh
 const POLL_MS = 20_000;
 
 function sql(query: string): string {
   return execFileSync(
-    'python3',
+    PYTHON,
     [
       '-c',
       'import sys, mysql_cli as m; c = m.load_config(); print(m.scalar(sys.argv[1], c, c.database))',
@@ -40,7 +42,18 @@ async function open(browser: Browser, email: string, language: 'ar' | 'en' = 'en
 // These flows change rows the other tests read (statuses, Saad's appointments, Noura's
 // schedule), so each starts from the seed, and the later specs find it unchanged.
 const reseed = () =>
-  execFileSync('python3', ['scripts/reset_db.py'], { cwd: path.resolve(__dirname, '../..') });
+  execFileSync(PYTHON, ['scripts/reset_db.py'], { cwd: path.resolve(__dirname, '../..') });
+// Close the browser contexts this test opened: the browser is shared by every spec (one
+// worker), so pages left open would keep polling the API and slow the later tests down.
+test.afterEach(async ({ browser, context }) => {
+  await Promise.all(
+    browser
+      .contexts()
+      .filter((c) => c !== context)
+      .map((c) => c.close()),
+  );
+});
+
 test.beforeEach(reseed);
 test.afterAll(reseed);
 

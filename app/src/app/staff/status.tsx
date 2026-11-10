@@ -73,7 +73,12 @@ export default function StatusScreen() {
     });
   };
   const withNote = (input: StatusInput): StatusInput => ({ ...input, note: note.trim() || null });
-  const inMinutes = (minutes: number) => new Date(now.getTime() + minutes * 60_000).toISOString();
+  // Whole minutes, so the status ends at exactly the time it shows ("until 10:15 AM", not 10:15:40).
+  const inMinutes = (minutes: number) => {
+    const end = new Date(now.getTime() + minutes * 60_000);
+    end.setSeconds(0, 0);
+    return end.toISOString();
+  };
 
   // "In office until …": the end of the current or next office-hours block today.
   const today = profile.data?.today;
