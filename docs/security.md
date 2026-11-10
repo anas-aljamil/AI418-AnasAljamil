@@ -36,11 +36,12 @@ How the tokens behave:
 - **The cookie is only sent with requests from our own site** (`SameSite=Strict`), and only to `/api/v1/auth/*` (its path).
 - **Requests that rely on the cookie** (`/auth/refresh` and `/auth/logout`) must also send `X-Requested-With: mawjood`. Without it the API returns 403 `CSRF_CHECK_FAILED`.
   - A cross-site HTML form cannot set custom headers.
-  - A cross-site script would need a CORS preflight, which the API refuses for origins outside `CORS_ORIGINS`.
+  - A cross-site script would need a CORS preflight, which the API refuses for origins outside `CORS_ORIGINS` and `CORS_ORIGIN_REGEX`.
 - **The native app sends no cookies,** so CSRF does not apply there.
 
 ## CORS
-- **Allowed origins:** only those in `CORS_ORIGINS`. The default is the Expo web dev server, `http://localhost:8081`.
+- **Allowed origins:** those in `CORS_ORIGINS` (default: the Expo web dev server, `http://localhost:8081`), plus `CORS_ORIGIN_REGEX`: the browser version opened from a phone on the same Wi-Fi, i.e. `http://<private address>:8081` (10.x, 172.16-31.x, 192.168.x; added 2026-11-10). Public addresses, other ports and look-alike hosts are refused (`test_api_conventions.py`).
+- **Why a private-network pattern is acceptable:** it only lets a page served on port 8081 by a device on the local network call the API; every request still needs a valid sign-in. The refresh cookie stays `SameSite=Strict`, so a page on another host never receives or sends it.
 - **Credentials** are allowed only for those origins (for the refresh cookie).
 - **The native app** is not a browser and is unaffected by CORS.
 

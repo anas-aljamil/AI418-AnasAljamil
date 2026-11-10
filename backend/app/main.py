@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,
+        allow_origin_regex=get_settings().cors_origin_regex,
         allow_credentials=True,  # the web build's refresh cookie
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-Requested-With"],

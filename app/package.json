@@ -54,6 +54,7 @@
     "lint": "eslint .",
     "format": "prettier --check \"src/**/*.{ts,tsx,json}\" \"e2e/**/*.ts\" jest.setup.ts eslint.config.js app.json",
     "export:web": "expo export --platform web",
+    "phones": "expo export --platform web && expo serve --port 8081",
     "screenshots": "playwright test -c e2e"
   },
   "private": true,

@@ -50,13 +50,24 @@ def test_openapi_docs_are_served(client):
     assert "/api/v1/professors" in paths and "/api/v1/appointments/{appointment_id}/{action}" in paths
 
 
-def test_cors_allows_the_expo_web_dev_server_only(client):
+def test_cors_allows_the_expo_web_dev_server_and_the_browser_version_on_the_wifi(client):
     preflight = {"Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "Authorization"}
     allowed = client.options("/api/v1/professors", headers={"Origin": "http://localhost:8081", **preflight})
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:8081"
     assert allowed.headers["access-control-allow-credentials"] == "true"
-    other = client.options("/api/v1/professors", headers={"Origin": "https://evil.example", **preflight})
-    assert "access-control-allow-origin" not in other.headers
+    # A phone's browser on the same Wi-Fi: the web build at a private address, port 8081.
+    for origin in ("http://10.1.214.168:8081", "http://192.168.1.26:8081", "http://172.20.0.5:8081"):
+        lan = client.options("/api/v1/professors", headers={"Origin": origin, **preflight})
+        assert lan.headers.get("access-control-allow-origin") == origin, origin
+    for origin in (
+        "https://evil.example",
+        "http://8.8.8.8:8081",  # a public address
+        "http://192.168.1.26:3000",  # another port on the network
+        "http://172.32.0.5:8081",  # outside the 172.16-31 private block
+        "http://10.1.214.168:8081.evil.example",
+    ):
+        other = client.options("/api/v1/professors", headers={"Origin": origin, **preflight})
+        assert "access-control-allow-origin" not in other.headers, origin
 
 
 def test_models_match_the_mysql_schema(db):
