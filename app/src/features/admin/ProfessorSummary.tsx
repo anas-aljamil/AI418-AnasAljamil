@@ -117,7 +117,7 @@ export function ProfessorSummary({ professor, onEdit, onClose }: ProfessorSummar
           onPress={onEdit}
           block
         />
-        <Button variant="quiet" label={t('common.close')} onPress={onClose} block />
+        {/* No Close here: every sheet (and the desktop pane) already ends with one. */}
       </View>
     </BottomSheet>
   );
