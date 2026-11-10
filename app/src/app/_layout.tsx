@@ -18,7 +18,8 @@ import {
   IBMPlexSans_500Medium,
   IBMPlexSans_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-sans';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { enableScreens } from 'react-native-screens';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -30,6 +31,11 @@ import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 import { layoutDirection } from '@/lib/direction';
+
+// In the browser the navigators keep every visited screen in the page. With screens enabled,
+// a screen that is not shown gets display: none and the hidden attribute, so the Tab key and
+// screen readers cannot reach it (they could, behind the open tab). Phones already have this.
+if (Platform.OS === 'web') enableScreens(true);
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
