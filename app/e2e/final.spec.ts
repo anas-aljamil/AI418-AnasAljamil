@@ -6,6 +6,9 @@
  */
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { navTab } from './nav';
+
+import { painted } from './paint';
 
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/final');
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
@@ -86,11 +89,12 @@ for (const [language, theme] of [
       await signIn(page, email, language, theme);
       const problems: string[] = [];
       for (const [index, tab] of tabs[language].entries()) {
-        await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+        await navTab(page, tab).click();
         // Let the screen's data arrive before measuring (skeletons are narrower than rows).
         await page.waitForLoadState('networkidle');
         problems.push(...(await overflowing(page)).map((p) => `${tab}: ${p}`));
         if (theme === 'dark') {
+          await painted(page);
           await page.screenshot({ path: `${SHOTS}/${language}-${theme}-${role}-${index + 1}.png` });
         }
       }
@@ -112,6 +116,7 @@ test('student pushed screens fit 320 px: profile and booking sheet', async ({ pa
   await expect(page.getByRole('dialog', { name: /^احجز مع/ })).toBeVisible();
   await page.waitForTimeout(800); // the sheet slides up; measure it in place
   problems.push(...(await overflowing(page)).map((p) => `booking sheet: ${p}`));
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/ar-light-student-booking-320.png` });
   expect(problems).toEqual([]);
 });
@@ -122,18 +127,19 @@ test('professor pushed screens fit 320 px: notifications and a conversation', as
   await page.waitForLoadState('networkidle');
   const problems = (await overflowing(page)).map((p) => `notifications: ${p}`);
   await page.goBack();
-  await page.getByRole('tab', { name: /^الرسائل/ }).click();
+  await navTab(page, 'الرسائل').click();
   await page.getByRole('button', { name: /^سعد المطيري/ }).click();
   await expect(page).toHaveURL(/\/conversations\/\d+$/);
   await page.waitForLoadState('networkidle');
   problems.push(...(await overflowing(page)).map((p) => `conversation: ${p}`));
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/ar-light-professor-thread-320.png` });
   expect(problems).toEqual([]);
 });
 
 test('the schedule time picker fits 320 px and reads on the 12-hour clock', async ({ page }) => {
   await signIn(page, ROLES.professor.email, 'en', 'light');
-  await page.getByRole('tab', { name: 'Schedule' }).click();
+  await navTab(page, 'Schedule').click();
   await expect(page.getByText(/^10:00 AM–12:00 PM Office hours/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Add a block' }).click();
   const sheet = page.getByRole('dialog', { name: 'New block' });
@@ -144,6 +150,7 @@ test('the schedule time picker fits 320 px and reads on the 12-hour clock', asyn
   await expect(sheet.getByText('1:30 PM', { exact: true })).toBeVisible();
   await page.waitForTimeout(800); // the sheet slides up; measure it in place
   const problems = (await overflowing(page)).map((p) => `schedule sheet: ${p}`);
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/en-light-professor-time-picker-320.png` });
   expect(problems).toEqual([]);
 });

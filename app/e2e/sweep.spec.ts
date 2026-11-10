@@ -6,6 +6,8 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
+import { navTab } from './nav';
+
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
 
 const ACCOUNTS = {
@@ -63,7 +65,7 @@ async function signIn(page: Page, email: string, language: 'ar' | 'en') {
 
 async function visitTabs(page: Page, tabs: readonly string[]) {
   for (const tab of tabs) {
-    await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+    await navTab(page, tab).click();
     await page.waitForLoadState('networkidle');
   }
 }
@@ -74,7 +76,7 @@ for (const language of ['en', 'ar'] as const) {
     await signIn(page, ACCOUNTS.student, language);
     await visitTabs(page, TABS.student[language]);
     // A professor's profile, the booking sheet, notifications and a conversation.
-    await page.getByRole('tab', { name: new RegExp(`^${TABS.student[language][0]}`) }).click();
+    await navTab(page, TABS.student[language][0]).click();
     await page
       .getByRole('button', {
         name: language === 'ar' ? /^د\. نورة الحربي/ : /^Dr\. Noura Al-Harbi/,
@@ -93,7 +95,7 @@ for (const language of ['en', 'ar'] as const) {
       .click();
     await page.waitForLoadState('networkidle');
     await page.goBack();
-    await page.getByRole('tab', { name: new RegExp(`^${TABS.student[language][3]}`) }).click();
+    await navTab(page, TABS.student[language][3]).click();
     await page
       .getByRole('button', {
         name: language === 'ar' ? /^د\. نورة الحربي/ : /^Dr\. Noura Al-Harbi/,
@@ -108,7 +110,7 @@ for (const language of ['en', 'ar'] as const) {
     const problems = watch(page);
     await signIn(page, ACCOUNTS.professor, language);
     await visitTabs(page, TABS.professor[language]);
-    await page.getByRole('tab', { name: new RegExp(`^${TABS.professor[language][0]}`) }).click();
+    await navTab(page, TABS.professor[language][0]).click();
     await page
       .getByRole('button', { name: language === 'ar' ? /^الإشعارات/ : /^Notifications/ })
       .first()
@@ -123,7 +125,7 @@ for (const language of ['en', 'ar'] as const) {
     await visitTabs(page, TABS.admin[language]);
     // Every form opens (Campus, Professors, Students), and a professor's quick view.
     for (const tab of TABS.admin[language].slice(1, 4)) {
-      await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+      await navTab(page, tab).click();
       await page
         .getByRole('button', { name: language === 'ar' ? 'إضافة' : 'Add', exact: true })
         .click();
@@ -133,7 +135,7 @@ for (const language of ['en', 'ar'] as const) {
         .last()
         .click();
     }
-    await page.getByRole('tab', { name: new RegExp(`^${TABS.admin[language][2]}`) }).click();
+    await navTab(page, TABS.admin[language][2]).click();
     await page
       .getByRole('button', { name: language === 'ar' ? /^نورة الحربي/ : /^Noura Al-Harbi/ })
       .first()

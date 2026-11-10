@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+
+import { painted } from './paint';
 import path from 'node:path';
 
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/p3b');
@@ -39,6 +41,7 @@ for (const combo of combos) {
           ),
         );
         await page.setViewportSize({ width, height: Math.min(height, 12000) });
+        await painted(page);
         await page.screenshot({ path: `${SHOTS}/${combo.name}-${width}.png` });
       });
     }
@@ -104,6 +107,7 @@ test('with reduced motion the sheet appears instantly, fully in place', async ({
   // No slide: the sheet's bottom edge already sits at the bottom of the screen.
   const box = await dialog.boundingBox();
   expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(900);
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/en-light-sheet-390.png` });
 });
 

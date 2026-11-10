@@ -5,6 +5,8 @@
  * matches. Seed accounts use the password Mawjood-Demo-2026 (fictional demo data).
  */
 import { expect, test, type Page } from '@playwright/test';
+
+import { painted } from './paint';
 import path from 'node:path';
 
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/p3c');
@@ -55,6 +57,7 @@ async function shoot(page: Page, name: string) {
     ),
   );
   await page.setViewportSize({ width: 360, height: Math.min(height, 4000) });
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
   await page.setViewportSize({ width: 360, height: 800 });
 }

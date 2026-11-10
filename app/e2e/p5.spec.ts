@@ -7,6 +7,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { painted } from './paint';
+
 import { PYTHON } from './python';
 
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/p5');
@@ -47,6 +49,7 @@ const shown = (page: Page, text: string | RegExp) =>
   page.getByText(text, { exact: typeof text === 'string' }).filter({ visible: true });
 
 async function shoot(page: Page, name: string) {
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 

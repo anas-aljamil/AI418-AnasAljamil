@@ -6,6 +6,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { painted } from './paint';
+
 import { PYTHON } from './python';
 
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/signup');
@@ -53,6 +55,7 @@ async function openDepartmentMenu(page: Page) {
 
 async function shoot(page: Page, name: string) {
   await page.waitForTimeout(600); // let the sheet finish sliding up
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 
@@ -143,6 +146,7 @@ test('Arabic sign-up form, and the domain rule', async ({ browser }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await field(page, 'البريد الجامعي').fill('4519002@gmail.com');
   await page.setViewportSize({ width: 360, height: 1500 }); // the whole form in one picture
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/ar-sign-up.png` });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.getByLabel('الاسم بالعربية').fill('رنا');
