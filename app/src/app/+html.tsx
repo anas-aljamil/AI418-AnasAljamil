@@ -5,15 +5,18 @@
  * browser instead of Expo Go): "Add to Home Screen" on iPhone and Android gives it the
  * Mawjood icon and name, and opens it full screen without the browser bars.
  * The page language and direction are set at runtime from the chosen language (i18n).
+ * Since Expo SDK 58 the bundle's scripts and styles reach the page only through
+ * useServerDocumentContext (headNodes, bodyNodes); without them the exported page is blank.
  */
 import type { PropsWithChildren } from 'react';
-import { ScrollViewStyleReset } from 'expo-router/html';
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 
 import { palettes } from '@/theme/tokens';
 
 export default function Root({ children }: PropsWithChildren) {
+  const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } = useServerDocumentContext();
   return (
-    <html lang="en">
+    <html lang="en" {...htmlAttributes}>
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -36,8 +39,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content={palettes.dark.bg} />
 
         <ScrollViewStyleReset />
+        {headNodes}
       </head>
-      <body>{children}</body>
+      <body {...bodyAttributes}>
+        {children}
+        {bodyNodes}
+      </body>
     </html>
   );
 }
