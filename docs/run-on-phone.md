@@ -146,6 +146,28 @@ The same app runs in Safari or Chrome, and can be saved to the home screen, wher
 
 The API accepts the browser version from any private network address on port 8081 (10.x, 172.16-31.x, 192.168.x; `CORS_ORIGIN_REGEX`), so it keeps working when the computer's address changes. Not available in the browser: vibration (haptics). The refresh token is kept in an httpOnly cookie instead of the phone's secure storage (docs/security.md).
 
+## 3b. A public link anyone can open (free, any network)
+
+Anyone with the link can use Mawjood from any phone or computer, on any network, for free and without an account anywhere (owner decision 2026-11-10: "something that can work with anyone", free). The API serves the browser version itself, and a free Cloudflare quick tunnel gives this computer a public `https://` address. MySQL stays on this computer.
+
+It works only while this computer is on and steps 2-4 keep running. The link changes every time the tunnel starts, so share the new one each time.
+
+1. Once: install the tunnel tool with `winget install --id Cloudflare.cloudflared` (Windows) or `brew install cloudflared` (macOS), then open a new terminal.
+2. Build the browser version (again after every code change):
+   ```bash
+   cd app
+   npm run export:web
+   ```
+3. Start the API (Section 2). It now also serves the app: `http://localhost:8000` opens Mawjood on this computer.
+4. In another terminal, start the tunnel:
+   ```bash
+   cloudflared tunnel --protocol http2 --url http://localhost:8000
+   ```
+   `--protocol http2` uses ordinary HTTPS. Without it cloudflared first tries QUIC (UDP), which many networks block ("failed to dial to edge with quic"). If the terminal says `cloudflared` is not recognised, open a new terminal after installing, or run `& "C:\Program Files (x86)\cloudflared\cloudflared.exe"` instead.
+5. Copy the `https://….trycloudflare.com` address it prints and share it. On a phone it can be saved to the home screen (Section 3a, step 6).
+
+Demo accounts (Section 1) share a published password, the admin included, so they sign in only on this computer or its Wi-Fi, never through the public link (`DEMO_ACCOUNT_LOCAL_ONLY`). People on the link create their own account (sign-up, @upm.edu.sa). An admin activates professors from this computer at `http://localhost:8000`. Over the link the refresh cookie is `Secure` automatically, and rate limits count each visitor's own address (docs/security.md).
+
 ## 3. The app on your phone (Expo Go)
 
 1. Install **Expo Go** from the Play Store or the App Store.

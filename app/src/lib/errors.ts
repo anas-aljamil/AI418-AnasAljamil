@@ -4,6 +4,7 @@ import { ApiError } from '@/api/client';
 const KNOWN = [
   'INVALID_CREDENTIALS',
   'ACCOUNT_DISABLED',
+  'DEMO_ACCOUNT_LOCAL_ONLY',
   'RATE_LIMITED',
   'NETWORK',
   'SLOT_TAKEN',

@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.core import schema_check
 from app.core.errors import AppError, install_error_handlers
 from app.db import get_engine
+from app.web import mount_web_build
 
 
 @asynccontextmanager
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     for module in (auth, professors, me, appointments, conversations, notifications, admin):
         api.include_router(module.router)
     app.include_router(api)
+    mount_web_build(app, get_settings().web_dir)  # pages for paths no route matched
     return app
 
 

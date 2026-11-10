@@ -36,6 +36,10 @@ class Settings(BaseSettings):
         r"^http://(10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}):8081$"
     )
 
+    # The exported browser version (cd app && npm run export:web), served by the API at /
+    # when present, so the page and the API share one address (the public link needs this).
+    web_dir: Path = REPO_ROOT / "app" / "dist"
+
     login_attempts_per_minute: int = 5
     signups_per_minute: int = 5
     # Self sign-up accepts only addresses at this domain (there is no email verification).
