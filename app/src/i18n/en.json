@@ -168,12 +168,8 @@
     "afternoon": "Good afternoon, {{name}}",
     "evening": "Good evening, {{name}}"
   },
-  "language": {
-    "title": "Choose your language",
-    "hint": "You can change it later in your profile.",
-    "continue": "Continue"
-  },
   "signin": {
+    "language": "Change the language to {{language}}",
     "title": "Sign in",
     "subtitle": "Use your university email. Your account decides whether you see the student or professor screens.",
     "email": "University email",

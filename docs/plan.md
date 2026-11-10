@@ -170,6 +170,7 @@ Revised 2026-10-05 for two changes: the client is an Expo (React Native) app, an
 ### After P6: browser version for everyone and desktop layouts (owner requests, 2026-11-10)
 - **Public link:** the API serves the browser version; a free Cloudflare quick tunnel publishes it (docs/run-on-phone.md, Section 3b; one command: scripts/public_link.py). Demo passwords are refused over the link.
 - **QA on Windows:** specs use `py`, close the browser contexts they open, and fill the visible field; the full suite passed 50 of 51 (the one failure was a Windows file lock on a screenshot). With the system Chrome some screenshots came out blank, so Playwright's own Chromium is used.
+- **No language screen:** the app opens on sign-in; a language button sits in its top corner (owner decision). The first-launch language screen of P3c is removed.
 - **Desktop and tablet layouts:** docs/desktop-plan.md (approved), checked by e2e/desktop.spec.ts at 1280 and 768 px in Arabic light and English dark, plus no sideways scrolling at 320, 768, 1024 and 1280 px.
 
 ## Checks that need a real phone

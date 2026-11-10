@@ -145,10 +145,10 @@ for (const language of ['en', 'ar'] as const) {
   });
 }
 
-test('sign-up and language screens open cleanly', async ({ page }) => {
+test('sign-in and sign-up screens open cleanly', async ({ page }) => {
   const problems = watch(page);
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto('/language');
+  await page.goto('/sign-in');
   await page.waitForLoadState('networkidle');
   await page.goto('/sign-up');
   await page.waitForLoadState('networkidle');

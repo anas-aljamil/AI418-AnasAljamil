@@ -102,7 +102,7 @@ Keyboard: an input never sits under the on-screen keyboard (KeyboardAvoidingView
 Each screen defines its purpose, key content, primary action, and loading, empty, error, and offline states.
 
 7.1 Language and sign-in
-First launch asks for language (العربية / English) before anything else; the device language (expo-localization) is preselected, never auto-applied.
+The app opens on sign-in in the device language (expo-localization); a language button in the top corner of sign-in switches to the other language in one tap (revised 2026-11-10, owner decision; there is no separate language screen). Profile and Account keep the language setting.
 Changing language switches layout direction with I18nManager.forceRTL and then reloads the app cleanly (expo-updates reloadAsync) after a one-line explanation, returning the user to the same screen; on the web build the document dir attribute changes without a reload.
 Sign in with a university email. The role comes from the account, not from a user choice.
 7.2 Student home ("Now")
@@ -246,6 +246,8 @@ Append entries as: date, decision, reason.
 2026-11-10, A selected list row has a plate background, a primary bar at the start edge and the screen-reader "selected" state, Reason: the open item must be findable in the list without relying on colour.
 2026-11-10, On desktop the profile's Book, Message and Pin sit in a row under the nameplate instead of a sticky bottom bar, Reason: thumb reach does not apply to a mouse, and a bar across a wide pane separates the actions from the professor they belong to.
 2026-11-10, My status shows the status in the browser tab title ("Away | Mawjood"), Reason: Section 7.8, professors keep the tab open; the favicon is unchanged because one icon per status would add four assets for a small gain.
+
+2026-11-10, No language screen: the app opens on sign-in in the device language, with a language button (icon plus the other language's name, "العربية" / "English") in the top corner of sign-in; its accessible name is "Change the language to …", Reason: owner decision ("make the first page sign-in, with the language choice as a button in the top corner"); one screen fewer before the student reaches a status, and the switch is still one tap.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

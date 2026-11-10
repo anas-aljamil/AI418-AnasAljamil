@@ -16,7 +16,6 @@ const SAAD = 's.almutairi@university.example';
 
 const strings = {
   ar: {
-    continue: 'متابعة',
     email: 'البريد الجامعي',
     password: 'كلمة المرور',
     signIn: 'تسجيل الدخول',
@@ -24,7 +23,6 @@ const strings = {
     khalid: /^أ\.د\. خالد العتيبي، في المكتب \(غير مؤكد\)/,
   },
   en: {
-    continue: 'Continue',
     email: 'University email',
     password: 'Password',
     signIn: 'Sign in',
@@ -66,16 +64,19 @@ for (const [language, theme] of [
   ['ar', 'light'],
   ['en', 'dark'],
 ] as const) {
-  test(`first launch in ${language}-${theme}: language, sign-in, home`, async ({ page }) => {
+  test(`first launch in ${language}-${theme}: sign-in, home`, async ({ page }) => {
     const s = strings[language];
     await start(page, theme);
     await page.goto('/');
-    await expect(page).toHaveURL(/\/language$/);
-    await page.getByRole('radio', { name: language === 'ar' ? 'العربية' : 'English' }).click();
-    await shoot(page, `${language}-${theme}-1-language`);
-    await page.getByRole('button', { name: s.continue }).click();
-
+    // The app opens on sign-in in the browser's language (English here); the language switch
+    // sits in the top corner (owner decision 2026-11-10).
     await expect(page).toHaveURL(/\/sign-in$/);
+    const toArabic = page.getByRole('button', { name: 'Change the language to العربية' });
+    expect((await toArabic.boundingBox())!.y).toBeLessThan(120);
+    if (language === 'ar') {
+      await toArabic.click();
+      await expect(page.getByRole('button', { name: 'غيّر اللغة إلى English' })).toBeVisible();
+    }
     expect(await page.evaluate(() => document.documentElement.dir)).toBe(
       language === 'ar' ? 'rtl' : 'ltr',
     );

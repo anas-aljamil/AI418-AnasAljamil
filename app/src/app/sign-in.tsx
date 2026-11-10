@@ -16,6 +16,7 @@ import {
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Languages from 'lucide-react-native/icons/languages';
 
 import { useColumn } from '@/lib/layout';
 import { useAuth } from '@/auth/AuthProvider';
@@ -75,11 +76,23 @@ export default function SignInScreen() {
           { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.lg },
         ]}
       >
-        <View style={styles.brand}>
-          <Door status="in_office" size={40} />
-          <Text variant="title" color="primary">
-            {t('app.name')}
-          </Text>
+        {/* The app opens here; the language switch sits in the top corner (owner, 2026-11-10). */}
+        <View style={styles.top}>
+          <View style={styles.brand}>
+            <Door status="in_office" size={40} />
+            <Text variant="title" color="primary">
+              {t('app.name')}
+            </Text>
+          </View>
+          <Button
+            variant="quiet"
+            label={t(`settings.language_${otherLanguage}`)}
+            accessibilityLabel={t('signin.language', {
+              language: t(`settings.language_${otherLanguage}`),
+            })}
+            icon={<Languages color={colors.primary} size={20} strokeWidth={1.75} />}
+            onPress={() => switchLanguage(otherLanguage)}
+          />
         </View>
 
         <View style={styles.intro}>
@@ -142,14 +155,6 @@ export default function SignInScreen() {
             onPress={() => router.push('/sign-up')}
           />
         </View>
-
-        <View style={styles.language}>
-          <Button
-            variant="quiet"
-            label={t(`settings.language_${otherLanguage}`)}
-            onPress={() => switchLanguage(otherLanguage)}
-          />
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -158,9 +163,14 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   page: { flexGrow: 1, paddingHorizontal: space.md, gap: space.xl },
+  top: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.sm,
+  },
   brand: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   intro: { gap: space.xs },
   form: { gap: space.sm },
   reveal: { alignItems: 'flex-start' },
-  language: { alignItems: 'center', marginTop: 'auto' },
 });

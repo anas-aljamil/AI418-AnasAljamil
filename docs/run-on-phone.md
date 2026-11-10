@@ -189,7 +189,7 @@ Demo accounts (Section 1) share a published password, the admin included, so the
 4. Scan the QR code:
    - **Android:** with the Expo Go app;
    - **iPhone:** with the Camera app. If Expo Go says you are signed in to Expo Go but not to Expo CLI, sign out in Expo Go (account icon, Log out) or run `npx expo login` with the same account on the computer. Also allow **Local Network** for Expo Go in the iPhone's Settings.
-5. The app opens in Expo Go: first the language screen, then sign-in. Use a demo account (Section 1, *Demo accounts*); students land on Home. If sign-in says it can't reach the server, see Section 4.
+5. The app opens in Expo Go on sign-in, in the phone's language (the button in the top corner switches it). Use a demo account (Section 1, *Demo accounts*); students land on Home. If sign-in says it can't reach the server, see Section 4.
 6. Press `w` in the terminal to open the web build in a browser too.
 
 What to try on the phone, step by step: [phone-checklist.md](phone-checklist.md).
