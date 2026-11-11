@@ -6,7 +6,8 @@
   it ends at the next Riyadh midnight. Only the latest override counts: a newer
   update replaces an older one even after the newer one expires.
 * Schedule: inside an office_hours block -> in_office, inside a class block ->
-  in_class, outside every block -> away; a professor with no blocks -> unknown.
+  in_class, inside a meeting block -> busy, outside every block -> away; a
+  professor with no blocks -> unknown.
 * Staleness: when the schedule says in_office, the result is in_office, and the
   last manual update is older than 4 hours (or never happened), the status is
   reported as not confirmed.
@@ -19,6 +20,7 @@ from typing import Protocol
 from app.core.clock import from_riyadh, riyadh_day_of_week, riyadh_midnight_after, to_riyadh
 
 STALE_AFTER = timedelta(hours=4)
+BLOCK_STATUS = {"office_hours": "in_office", "class": "in_class", "meeting": "busy"}
 
 
 class BlockLike(Protocol):
@@ -62,7 +64,7 @@ def schedule_status(blocks: list[BlockLike], now: datetime) -> str:
     block = current_block(blocks, now)
     if block is None:
         return "away"
-    return "in_office" if block.kind == "office_hours" else "in_class"
+    return BLOCK_STATUS[block.kind]
 
 
 def effective_status(

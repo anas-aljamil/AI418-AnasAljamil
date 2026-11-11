@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { Block } from '@/api/types';
+import { BLOCK_STATUS, blockKindKey } from '@/lib/blocks';
 import { clockText, minutesOfDay } from '@/lib/format';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -71,8 +72,8 @@ export function TodayTimeline({ blocks, now }: TodayTimelineProps) {
 function BlockRow({ block, stage }: { block: Block; stage: Stage }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const office = block.kind === 'office_hours';
-  const name = office ? t('prof.office_hours') : t('prof.class');
+  const status = BLOCK_STATUS[block.kind];
+  const name = t(blockKindKey(block.kind));
   const title = block.label ? `${name} (${block.label})` : name;
   const start = clockText(block.start_time, t);
   const end = clockText(block.end_time, t);
@@ -101,15 +102,10 @@ function BlockRow({ block, stage }: { block: Block; stage: Stage }) {
           {end}
         </Text>
       </View>
-      <View
-        style={[
-          styles.rail,
-          { backgroundColor: office ? colors.status.in_office : colors.status.in_class },
-        ]}
-      />
+      <View style={[styles.rail, { backgroundColor: colors.status[status] }]} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
-          <Door status={office ? 'in_office' : 'in_class'} size={24} />
+          <Door status={status} size={24} />
           <Text weight={stage === 'now' ? 'semibold' : 'medium'} style={styles.grow}>
             {title}
           </Text>

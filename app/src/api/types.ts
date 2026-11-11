@@ -120,9 +120,11 @@ export type Topic = 'assignment' | 'exam_review' | 'advising' | 'other';
 export type Rank = 'lecturer' | 'assistant_professor' | 'associate_professor' | 'professor';
 export type ManualStatus = 'in_office' | 'in_class' | 'busy' | 'away';
 
+export type BlockKind = 'office_hours' | 'class' | 'meeting';
+
 export interface Block {
   block_id: number;
-  kind: 'office_hours' | 'class';
+  kind: BlockKind;
   day_of_week: number; // 0 = Sunday ... 4 = Thursday
   start_time: string; // "HH:MM", Riyadh
   end_time: string;

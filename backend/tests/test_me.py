@@ -49,6 +49,26 @@ def test_in_office_is_not_confirmed_more_than_4_hours_after_the_last_update(clie
     assert (status["status"], status["confirmed"]) == ("in_office", False)
 
 
+def test_a_meeting_in_the_timetable_shows_students_busy(client, auth, clock):
+    # Huda's Monday office hours end at 12:00 Riyadh; she adds a meeting right after them.
+    added = client.post(
+        SCHEDULE,
+        json={"kind": "meeting", "day_of_week": 1, "start_time": "12:00", "end_time": "13:00"},
+        headers=auth(HUDA),
+    )
+    assert added.status_code == 201 and added.json()["kind"] == "meeting"
+    clock.at = datetime(2026, 10, 5, 9, 15)  # 12:15 Riyadh
+    status = client.get(f"/api/v1/professors/{HUDA}", headers=auth(SAAD)).json()["status"]
+    assert (status["status"], status["source"]) == ("busy", "schedule")
+    assert status["until"] == "2026-10-05T10:00:00Z"  # the meeting ends 13:00 Riyadh
+    unknown = client.post(
+        SCHEDULE,
+        json={"kind": "lunch", "day_of_week": 1, "start_time": "13:00", "end_time": "14:00"},
+        headers=auth(HUDA),
+    )
+    assert unknown.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
 def test_clearing_the_status_returns_to_the_schedule(client, auth):
     headers = auth(KHALID)
     client.post(STATUS, json={"status": "away"}, headers=headers)

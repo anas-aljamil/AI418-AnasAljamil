@@ -58,3 +58,18 @@ it('reads in Arabic', async () => {
   expect(screen.getByText('الآن، حتى 12:00 م')).toBeTruthy();
   expect(screen.getByText('خارج المكتب، 12:00 م–1:00 م')).toBeTruthy();
 });
+
+it('names a meeting block and draws it with the busy door', async () => {
+  const meeting: Block = {
+    block_id: 33,
+    kind: 'meeting',
+    day_of_week: 1,
+    start_time: '12:00',
+    end_time: '13:00',
+    label: 'Department council',
+  };
+  await renderWithProviders(<TodayTimeline blocks={[...blocks, meeting]} now="12:30" />);
+  expect(
+    screen.getByLabelText('12:00 PM–1:00 PM, Meeting (Department council), Now, until 1:00 PM'),
+  ).toBeTruthy();
+});

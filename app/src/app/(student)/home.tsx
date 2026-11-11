@@ -30,6 +30,7 @@ import {
 import type { ProfessorSummary } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
+import { AppBar } from '@/components/AppBar';
 import { NotificationBell } from '@/components/NotificationBell';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
@@ -158,12 +159,12 @@ export default function HomeScreen() {
 
   const header = (
     <View style={styles.header}>
-      <View style={styles.sectionHead}>
-        <Text variant="heading" role="heading" style={styles.grow}>
-          {t(greetingKey(now), { name: firstName(user, language) })}
-        </Text>
+      <AppBar>
         <NotificationBell />
-      </View>
+      </AppBar>
+      <Text variant="heading" role="heading">
+        {t(greetingKey(now), { name: firstName(user, language) })}
+      </Text>
       <TextField
         ref={searchRef}
         label={t('home.search_label')}

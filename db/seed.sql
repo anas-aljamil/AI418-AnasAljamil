@@ -112,9 +112,10 @@ INSERT INTO professors (professor_id, department_id, office_id, honorific,
     (8, 5, 8, 'dr',   'associate_professor', 15);
 
 -- -----------------------------------------------------------------------------
--- schedule_blocks (32): a realistic weekly timetable for every professor.
+-- schedule_blocks (33): a realistic weekly timetable for every professor.
 -- More than 10 rows on purpose: 8 professors x 3-5 weekly blocks is the
 -- minimum for the schedule-derived status to be meaningful in a demo.
+-- Block 33 is a meeting (shown to students as "Busy").
 -- Times are Riyadh local; day 0 = Sunday ... 4 = Thursday.
 -- -----------------------------------------------------------------------------
 INSERT INTO schedule_blocks (block_id, professor_id, kind, day_of_week, start_time, end_time, label) VALUES
@@ -134,6 +135,7 @@ INSERT INTO schedule_blocks (block_id, professor_id, kind, day_of_week, start_ti
     (11, 3, 'office_hours', 1, '10:00', '12:00', NULL),
     (12, 3, 'class',        2, '10:00', '11:30', 'CYB 230'),
     (13, 3, 'office_hours', 4, '09:00', '10:00', NULL),
+    (33, 3, 'meeting',      3, '12:00', '13:00', 'Department council'),
     -- 4 Omar Bin Salem (AI)
     (14, 4, 'class',        0, '10:00', '11:30', 'AI 312'),
     (15, 4, 'class',        2, '10:00', '11:30', 'AI 312'),

@@ -10,11 +10,6 @@ export const STEP = 5;
 /** One-tap lengths, shown when they fit. */
 export const QUICK_LENGTHS = [10, 15, 20, 30, 45, 60];
 
-/** The hours (0-23) that have starts, in order. */
-export function hoursOf(slots: Slot[]): number[] {
-  return [...new Set(slots.map((s) => Number(s.local_time.slice(0, 2))))];
-}
-
 /** The free stretches of the day, "HH:MM" to "HH:MM" (Riyadh), for the summary line. */
 export function freeWindows(slots: Slot[]): { start: string; end: string }[] {
   const windows: { start: string; end: string }[] = [];

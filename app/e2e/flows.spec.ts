@@ -180,8 +180,8 @@ test('a cancellation frees time and the next student moves earlier in one tap', 
   await lama.getByRole('button', { name: 'Book', exact: true }).click();
   const sheet = lama.getByRole('dialog', { name: /^Book with/ });
   await sheet.getByRole('button', { name: 'Sun 11', exact: true }).click();
-  await sheet.getByRole('button', { name: '10 AM', exact: true }).click();
-  await sheet.getByRole('button', { name: '10:00 AM', exact: true }).click();
+  await sheet.getByRole('combobox', { name: 'Start' }).selectOption({ label: '10:00 AM' });
+  await sheet.getByRole('button', { name: 'Change length', exact: true }).click();
   await sheet.getByRole('button', { name: '30 minutes', exact: true }).click();
   await expect(sheet.getByText('30 min, until 10:30 AM', { exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Book 10:00 AM, 30 min', exact: true }).click();

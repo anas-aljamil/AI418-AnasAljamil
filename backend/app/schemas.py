@@ -62,6 +62,8 @@ NameAr = Annotated[str, Field(min_length=2, max_length=100)]
 NameEn = Annotated[str, Field(min_length=2, max_length=100)]
 
 StatusValue = Literal["in_office", "in_class", "busy", "away"]
+# Timetable block kinds: office hours -> in_office, class -> in_class, meeting -> busy.
+BlockKind = Literal["office_hours", "class", "meeting"]
 Topic = Literal["assignment", "exam_review", "advising", "other"]
 Locale = Literal["ar", "en"]
 Honorific = Literal["dr", "prof", "mr", "ms", "eng"]
@@ -99,7 +101,7 @@ class OfficeOut(Out):
 
 class BlockOut(Out):
     block_id: int
-    kind: Literal["office_hours", "class"]
+    kind: BlockKind
     day_of_week: int
     start_time: ClockTime
     end_time: ClockTime
@@ -245,7 +247,7 @@ class StatusIn(BaseModel):
 
 
 class BlockIn(BaseModel):
-    kind: Literal["office_hours", "class"] = "office_hours"
+    kind: BlockKind = "office_hours"
     day_of_week: int = Field(ge=0, le=4, description="0 = Sunday ... 4 = Thursday")
     start_time: QuarterHour
     end_time: QuarterHour

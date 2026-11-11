@@ -71,6 +71,7 @@ combined AS (
                                 WHERE any_block.professor_id = p.professor_id) THEN 'unknown'
                WHEN cb.kind = 'office_hours' THEN 'in_office'
                WHEN cb.kind = 'class'        THEN 'in_class'
+               WHEN cb.kind = 'meeting'      THEN 'busy'
                ELSE 'away'
            END AS schedule_status,
            cb.end_time AS block_end,
