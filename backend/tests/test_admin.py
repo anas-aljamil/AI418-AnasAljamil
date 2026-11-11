@@ -79,7 +79,6 @@ def test_professor_account_lifecycle(client, auth):
         "full_name_en": "Adel Al-Saleh",
         "department_id": 1,
         "office_id": 7,
-        "slot_minutes": 30,
     }
     created = client.post(f"{ADMIN}/professors", json=new, headers=headers)
     assert created.status_code == 201, created.text
@@ -87,7 +86,7 @@ def test_professor_account_lifecycle(client, auth):
     assert created.json()["office"]["room_number"] == "410"
 
     signed_in = client.post("/api/v1/auth/login", json={"email": new["email"], "password": new["password"]})
-    assert signed_in.json()["user"]["professor"]["slot_minutes"] == 30
+    assert signed_in.json()["user"]["professor"]["office"]["room_number"] == "410"
 
     edited = client.patch(
         f"{ADMIN}/professors/{professor_id}",

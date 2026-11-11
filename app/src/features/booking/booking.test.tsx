@@ -9,6 +9,9 @@ import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 
 import { api, ApiError } from '@/api/client';
 import type { ProfessorDetail } from '@/api/types';
+import i18n from '@/i18n';
+import { dateText } from '@/lib/dates';
+import { bookingDays } from '@/lib/format';
 import { renderWithProviders, testDepartment } from '@/test-utils';
 import { BookingSheet } from './BookingSheet';
 
@@ -34,9 +37,20 @@ const noura = {
   },
   has_office_hours_today: true,
   is_pinned: false,
-  slot_minutes: 15,
   today: { date: '2026-10-05', day_of_week: 1, now_local_time: '10:00', blocks: [] },
-  booking_periods: [{ period_id: 1, day_of_week: 3, start_time: '10:00', end_time: '12:00' }],
+  booking_periods: [
+    {
+      period_id: 1,
+      day_of_week: 3,
+      on_date: null,
+      ends_on: null,
+      skipped_dates: [],
+      start_time: '10:00',
+      end_time: '12:00',
+    },
+  ],
+  // Every day of the booking window has a booking time here (the slots below are mocked).
+  booking_days: bookingDays(new Date()).map((day) => day.date),
   messages_closed_until: null,
 } as ProfessorDetail;
 
@@ -45,7 +59,7 @@ const at = (minutes: number) => new Date(inTwoDays + minutes * 60_000).toISOStri
 const slots = {
   professor_id: 1,
   date: '2026-10-07',
-  slot_minutes: 15,
+  default_minutes: 15,
   step_minutes: 5,
   slots: [
     { starts_at: at(0), local_time: '10:00', available: true, reason: null, max_minutes: 15 },
@@ -133,7 +147,7 @@ it('shows the free stretches and lets the student choose any length that fits', 
   await chooseStart('11:00 AM');
   // Length is optional: the professor's usual 15 minutes, folded until the student changes it.
   expect(screen.getByText('15 min, until 11:15 AM')).toBeTruthy();
-  expect(screen.getByText("The professor's usual length")).toBeTruthy();
+  expect(screen.getByText('The suggested length')).toBeTruthy();
   expect(screen.queryByRole('button', { name: '5 minutes longer' })).toBeNull();
   await fireEvent.press(screen.getByRole('button', { name: 'Change length' }));
   // Then 5 minutes longer, up to 60.
@@ -180,4 +194,24 @@ it('lists every start under its hour; a taken one says so and cannot be chosen',
   await fireEvent.press(screen.getByRole('radio', { name: '10:05 AM' }));
   expect(screen.getByRole('button', { name: 'Start, 10:05 AM' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Book 10:05 AM, 10 min' })).toBeEnabled();
+});
+
+it('opens the calendar on the first day with a booking time and dims the others', async () => {
+  serve(() => {
+    throw new Error('not booked in this test');
+  });
+  const days = bookingDays(new Date());
+  const only = days[days.length - 1]!.date; // just the last day of next week
+  await renderWithProviders(
+    <BookingSheet
+      professor={{ ...noura, booking_days: [only] }}
+      visible
+      onClose={() => undefined}
+    />,
+  );
+  const t = i18n.t.bind(i18n);
+  expect(await screen.findByRole('radio', { name: dateText(only, t) })).toBeChecked();
+  const first = days[0]!.date;
+  const name = new RegExp(`^${dateText(first, t)}, .*unavailable$`);
+  expect(screen.getByRole('radio', { name })).toBeDisabled();
 });

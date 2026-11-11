@@ -1,17 +1,16 @@
-"""Bookable times: any start on a 5-minute grid inside one of the professor's booking periods,
-with any length in 5-minute steps that stays inside the period and clear of other bookings."""
+"""Bookable times: any start on a 5-minute grid inside one of the professor's booking periods
+that happens that day (weekly or dated, services/occurrence.py), with any length in 5-minute
+steps that stays inside the period and clear of other bookings."""
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Protocol
 
 from app.core.clock import from_riyadh, riyadh_day_of_week, to_riyadh
+from app.services.occurrence import Repeating, occurs_on
 
-
-class PeriodLike(Protocol):
-    day_of_week: int
-    start_time: time
-    end_time: time
+PeriodLike = Repeating
+# The length offered first (owner decision 2026-11-11: no per-professor usual length).
+DEFAULT_MINUTES = 15
 
 
 @dataclass(frozen=True)
@@ -45,9 +44,9 @@ def find_period(periods: list[PeriodLike], starts_at: datetime, minutes: int) ->
     length = timedelta(minutes=minutes)
     if not on_grid(local) or length <= timedelta(0) or length % STEP:
         return None
-    day, start, end = riyadh_day_of_week(local), local, local + length
+    start, end = local, local + length
     for period in periods:
-        if period.day_of_week != day:
+        if not occurs_on(period, local.date()):
             continue
         period_start = datetime.combine(local.date(), period.start_time)
         period_end = datetime.combine(local.date(), period.end_time)
@@ -67,7 +66,7 @@ def day_slots(
     there: up to the next booking or the end of the booking period."""
     slots = []
     for period in sorted(periods, key=lambda p: p.start_time):
-        if period.day_of_week != riyadh_day_of_week(day):
+        if not occurs_on(period, day):
             continue
         local = datetime.combine(day, period.start_time)
         period_end = from_riyadh(datetime.combine(day, period.end_time))
@@ -84,6 +83,17 @@ def day_slots(
             slots.append(Slot(start, local.time(), reason is None, reason, max_minutes))
             local += STEP
     return slots
+
+
+def booking_days(periods: list[PeriodLike], now: datetime) -> list[date]:
+    """The days from today to the end of the booking window with at least one booking period."""
+    day, end = to_riyadh(now).date(), to_riyadh(booking_window_end(now)).date()
+    days = []
+    while day < end:
+        if any(occurs_on(p, day) for p in periods):
+            days.append(day)
+        day += timedelta(days=1)
+    return days
 
 
 def free_starts(

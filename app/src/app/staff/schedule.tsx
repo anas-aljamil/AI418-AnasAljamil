@@ -1,13 +1,14 @@
 /**
  * Weekly schedule editor, in three views behind one switch:
- * - Timetable: office hours and classes for Sunday to Thursday (they drive the live status),
- *   plus the usual appointment length (15 or 30 minutes);
+ * - Timetable: office hours, classes and meetings on working days (they drive the live status);
  * - Booking: the times students can book in, inside or outside office hours;
  * - Messages: the weekly hours when students cannot write.
  * Each view is a week (WeekAgenda: a list per day on phones, a week grid on desktop), and each
  * item is added, edited and deleted in a sheet. Times are Riyadh times on a 15-minute grid,
  * picked as a start and a length from two menus (TimeRangePicker); a new item may go on
- * several days at once. Overlaps are refused by the API.
+ * several days at once. Each repeats every week, every week until a date, or happens on one
+ * date (WhenPicker, 2026-11-11); a saved weekly item can leave out single dates. Overlaps are
+ * refused by the API. (The usual appointment length setting was removed on 2026-11-11.)
  */
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
@@ -16,16 +17,9 @@ import Plus from 'lucide-react-native/icons/plus';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  useDeleteBlock,
-  useMySchedule,
-  useSaveBlock,
-  useSlotLength,
-  type BlockInput,
-} from '@/api/queries';
+import { useDeleteBlock, useMySchedule, useSaveBlock, type BlockInput } from '@/api/queries';
 import { useColumn } from '@/lib/layout';
 import type { Block } from '@/api/types';
-import { useUser } from '@/auth/AuthProvider';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
@@ -38,8 +32,16 @@ import { TextField } from '@/components/TextField';
 import { TimeRangePicker } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
-import { DayChips, saveEachDay } from '@/features/schedule/days';
 import { WeekAgenda } from '@/features/schedule/WeekAgenda';
+import {
+  saveWhen,
+  SkipDates,
+  whenError,
+  whenLine,
+  whenOf,
+  WhenPicker,
+  type WhenDraft,
+} from '@/features/schedule/WhenPicker';
 import { WeeklyRanges } from '@/features/schedule/WeeklyRanges';
 import { BLOCK_KINDS, BLOCK_PATTERN, BLOCK_STATUS, blockKindKey } from '@/lib/blocks';
 import { errorKey } from '@/lib/errors';
@@ -53,6 +55,8 @@ const VIEWS: ScheduleView[] = ['timetable', 'booking', 'chat'];
 const EMPTY: BlockInput = {
   kind: 'office_hours',
   day_of_week: 0,
+  on_date: null,
+  ends_on: null,
   // A sensible first guess; the pickers change it in a tap or two.
   start_time: '10:00',
   end_time: '11:00',
@@ -64,16 +68,12 @@ export default function ScheduleScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const column = useColumn();
-  const toast = useToast();
-  const user = useUser();
   // ?view=booking or ?view=chat opens that view (links from elsewhere in the app).
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<ScheduleView>(
     VIEWS.find((option) => option === params.view) ?? 'timetable',
   );
   const schedule = useMySchedule();
-  const slotLength = useSlotLength();
-  const [minutes, setMinutes] = useState(user.professor?.slot_minutes ?? 15);
   const [editing, setEditing] = useState<{ id: number | null; block: BlockInput } | null>(null);
 
   const line = (block: BlockInput) =>
@@ -82,18 +82,6 @@ export default function ScheduleScreen() {
       end: clockText(block.end_time, t),
       kind: t(blockKindKey(block.kind)),
     }) + (block.label ? ` (${block.label})` : '');
-
-  const changeLength = (value: 15 | 30) => {
-    const previous = minutes;
-    setMinutes(value);
-    slotLength.mutate(value, {
-      onSuccess: () => toast(t('schedule.slot_saved')),
-      onError: (error) => {
-        setMinutes(previous);
-        toast(t(errorKey(error)));
-      },
-    });
-  };
 
   return (
     <>
@@ -118,22 +106,6 @@ export default function ScheduleScreen() {
           <WeeklyRanges kind="chat-closed-hours" />
         ) : (
           <>
-            <View style={styles.section}>
-              <Text variant="label" role="heading">
-                {t('schedule.slot_length')}
-              </Text>
-              <View style={styles.chips}>
-                {([15, 30] as const).map((value) => (
-                  <Chip
-                    key={value}
-                    label={t(`schedule.minutes_${value}`)}
-                    selected={minutes === value}
-                    onPress={() => changeLength(value)}
-                  />
-                ))}
-              </View>
-            </View>
-
             <View style={styles.start}>
               <Button
                 label={t('schedule.add')}
@@ -194,24 +166,26 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
   const save = useSaveBlock();
   const remove = useDeleteBlock();
   const [block, setBlock] = useState<BlockInput>(initial);
-  const [days, setDays] = useState([initial.day_of_week]);
+  const [when, setWhen] = useState<WhenDraft>(whenOf(initial));
+  // The saved block as the list has it now, for its skipped dates.
+  const live = useMySchedule().data?.find((b) => b.block_id === id);
   const [showErrors, setShowErrors] = useState(false);
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const update = (patch: Partial<BlockInput>) => setBlock((current) => ({ ...current, ...patch }));
 
-  const daysError = days.length === 0 ? t('schedule.days_missing') : undefined;
+  const missing = whenError(when);
 
   const submit = async () => {
     setShowErrors(true);
-    if (daysError) return;
+    if (missing) return;
     setServerError(null);
     setSaving(true);
     const label = block.label?.trim() || null;
-    const result = await saveEachDay(
-      days,
-      (day) => save.mutateAsync({ id, block: { ...block, label, day_of_week: day } }),
+    const result = await saveWhen(
+      when,
+      (fields) => save.mutateAsync({ id, block: { ...block, label, ...fields } }),
       t,
     );
     setSaving(false);
@@ -223,7 +197,7 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
     // Keep only the days that still need saving, so trying again does not add duplicates.
     if (result.saved.length > 0)
       toast(t('schedule.saved_for', { days: daysText(result.saved, t) }));
-    setDays(result.failed);
+    setWhen({ ...when, days: result.failed });
     setServerError(result.message);
   };
 
@@ -248,12 +222,12 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
         title={t(id === null ? 'schedule.new_title' : 'schedule.edit_title')}
         onClose={onClose}
       >
-        <DayChips
-          days={DAYS}
-          value={days}
-          onChange={setDays}
+        <WhenPicker
+          value={when}
+          onChange={setWhen}
+          workingDays
           multiple={id === null}
-          error={showErrors ? daysError : undefined}
+          showErrors={showErrors}
         />
         <Text variant="label" role="heading">
           {t('schedule.kind')}
@@ -276,15 +250,18 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
           onChangeText={(value) => update({ label: value })}
           maxLength={40}
         />
-        {days.length > 0 ? (
+        {!missing ? (
           <Text weight="medium" accessibilityLiveRegion="polite">
-            {t('schedule.day_line', { day: daysText(days, t), range: line(block) })}
+            {whenLine(when, line(block), t)}
           </Text>
         ) : null}
         <View accessibilityLiveRegion="polite" role={serverError ? 'alert' : undefined}>
           {serverError ? <Text color="danger">{serverError}</Text> : null}
         </View>
         <Button label={t('schedule.save')} onPress={submit} disabled={saving} block />
+        {id !== null && live && live.day_of_week !== null && when.repeat !== 'once' ? (
+          <SkipDates path="schedule" id={id} row={live} />
+        ) : null}
         {id !== null ? (
           <Button
             variant="danger"

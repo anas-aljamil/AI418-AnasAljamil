@@ -24,7 +24,7 @@ from app.schemas import (
 )
 from app.services import directory
 from app.services.booking import ACTIVE
-from app.services.slots import STEP, booking_window_end, day_slots
+from app.services.slots import DEFAULT_MINUTES, STEP, booking_window_end, day_slots
 
 router = APIRouter(tags=["professors"])
 
@@ -164,7 +164,7 @@ def get_slots(
     return DaySlotsOut(
         professor_id=professor_id,
         date=day,
-        slot_minutes=professor.slot_minutes,
+        default_minutes=DEFAULT_MINUTES,
         step_minutes=int(STEP / timedelta(minutes=1)),
         slots=[
             SlotOut(

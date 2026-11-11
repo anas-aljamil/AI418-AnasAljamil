@@ -32,6 +32,7 @@ import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
+import { dateText, shortDateText } from '@/lib/dates';
 import { clockText, laterText, untilText } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
@@ -208,15 +209,24 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
                 {t('prof.booking_times')}
               </Text>
               {bookable ? (
-                data.booking_periods.map((period) => (
-                  <Text key={period.period_id}>
-                    {t('prof.period_line', {
-                      day: t(`weekday.${period.day_of_week}`),
-                      start: clockText(period.start_time, t),
-                      end: clockText(period.end_time, t),
-                    })}
-                  </Text>
-                ))
+                // Weekly times by their day (with a last date when they end); a dated one by
+                // its date, from today on (2026-11-11).
+                data.booking_periods
+                  .filter((period) => !period.on_date || period.on_date >= data.today.date)
+                  .map((period) => (
+                    <Text key={period.period_id}>
+                      {t('prof.period_line', {
+                        day: period.on_date
+                          ? dateText(period.on_date, t)
+                          : t(`weekday.${period.day_of_week}`),
+                        start: clockText(period.start_time, t),
+                        end: clockText(period.end_time, t),
+                      }) +
+                        (period.ends_on
+                          ? t('prof.period_until', { date: shortDateText(period.ends_on, t) })
+                          : '')}
+                    </Text>
+                  ))
               ) : (
                 <Text color="muted">{t('prof.no_booking_times', { name })}</Text>
               )}

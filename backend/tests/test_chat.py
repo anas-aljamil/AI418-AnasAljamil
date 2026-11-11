@@ -1,6 +1,6 @@
 """Chat and notifications (CLAUDE.md Sections 4 and 8; docs/plan.md P5)."""
 
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 from types import SimpleNamespace
 
 from sqlalchemy import select
@@ -9,6 +9,12 @@ from app.api.v1.conversations import message_limiter
 from app.models import Appointment, Message, Notification, User
 from app.services import chat
 from tests.conftest import ADMIN_EMAIL, FAISAL, HESSA, LAMA, NORA, SAAD, TARIQ, YOUSEF
+
+
+def weekly(**fields):
+    """A weekly closure without an end date or skipped dates."""
+    return SimpleNamespace(on_date=None, ends_on=None, skipped_dates=[], **fields)
+
 
 CONV = "/api/v1/conversations"
 NOTES = "/api/v1/notifications"
@@ -76,8 +82,8 @@ def test_back_to_back_closures_count_as_one_stretch():
     # Noura: Thursday 16:00 -> midnight, then all of Friday. On Thursday 17:00 Riyadh
     # students can write again only at Saturday 00:00 Riyadh.
     closures = [
-        SimpleNamespace(day_of_week=4, start_time=time(16), end_time=time(0)),
-        SimpleNamespace(day_of_week=5, start_time=time(0), end_time=time(0)),
+        weekly(day_of_week=4, start_time=time(16), end_time=time(0)),
+        weekly(day_of_week=5, start_time=time(0), end_time=time(0)),
     ]
     thursday_17 = datetime(2026, 10, 8, 14, 0)
     assert chat.closed_until(closures, thursday_17) == datetime(2026, 10, 9, 21, 0)
@@ -85,7 +91,7 @@ def test_back_to_back_closures_count_as_one_stretch():
 
 
 def test_a_saturday_night_closure_still_holds_on_sunday_morning():
-    closures = [SimpleNamespace(day_of_week=6, start_time=time(22), end_time=time(7))]
+    closures = [weekly(day_of_week=6, start_time=time(22), end_time=time(7))]
     sunday_3am = datetime(2026, 10, 4, 0, 0)  # Sunday 03:00 Riyadh
     assert chat.closed_until(closures, sunday_3am) == datetime(2026, 10, 4, 4, 0)  # 07:00 Riyadh
     assert chat.closed_until(closures, datetime(2026, 10, 4, 4, 0)) is None
@@ -192,3 +198,21 @@ def test_a_new_message_notification_names_the_sender(client, auth):
     assert note["type"] == "new_message" and note["conversation_id"] == 2
     assert note["actor"]["full_name_en"] == "Lama Al-Shehri"
     assert note["starts_at"] is None
+
+
+def test_dated_and_skipped_closed_hours():
+    thursday_10am = datetime(2026, 10, 15, 7, 0)  # Thursday 15 October, 10:00 Riyadh
+    whole_day = SimpleNamespace(
+        day_of_week=None,
+        on_date=date(2026, 10, 15),
+        ends_on=None,
+        skipped_dates=[],
+        start_time=time(0),
+        end_time=time(0),
+    )
+    assert chat.closed_until([whole_day], thursday_10am) == datetime(2026, 10, 15, 21, 0)  # midnight
+    assert chat.closed_until([whole_day], thursday_10am + timedelta(days=7)) is None  # once only
+    evenings = weekly(day_of_week=4, start_time=time(9), end_time=time(12))
+    evenings.skipped_dates = [date(2026, 10, 15)]
+    assert chat.closed_until([evenings], thursday_10am) is None  # skipped this Thursday
+    assert chat.closed_until([evenings], thursday_10am + timedelta(days=7)) == datetime(2026, 10, 22, 9, 0)

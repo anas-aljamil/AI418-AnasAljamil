@@ -33,7 +33,7 @@ QUERIES = ROOT / "db" / "queries.sql"
 TABLES = [
     "colleges",
     "departments", "users", "offices", "students", "professors", "schedule_blocks",
-    "booking_periods", "chat_closed_hours", "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
+    "booking_periods", "chat_closed_hours", "skipped_dates", "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
 ]
 MIN_QUERIES, MIN_AGGREGATES = 5, 2
 AGGREGATE = re.compile(r"\b(COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT)\s*\(", re.IGNORECASE)
@@ -182,7 +182,8 @@ def result_checks(statements: list[Statement]) -> list[tuple[bool, str, str]]:
     for prefix, what in (("U7.", "users without their subtype row"),
                          ("C3.", "student messages sent during closed hours"),
                          ("BP5.", "professors without booking times"),
-                         ("N6.", "notifications sent to an outsider")):
+                         ("N6.", "notifications sent to an outsider"),
+                         ("SK5.", "skipped dates off their row's dates")):
         found = rows_of(statements, prefix)
         checks.append((not found, f"data quality ({prefix[:-1]}): no {what}", f"{len(found)} rows"))
     return checks

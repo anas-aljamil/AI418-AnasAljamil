@@ -8,9 +8,13 @@
  *   between two ranges is marked; consecutive empty days share one line.
  * - Desktop: a week grid, one column per day and the hours down the side, each range a block
  *   of its length (the familiar calendar week). A range past midnight is drawn on both days.
+ * Weekly rows fill the week; a weekly row's last date and coming skipped dates are added to its
+ * row ("until 31 December, not on 18 October"). Rows on one date (2026-11-11) are listed under
+ * "On one date", by date, from today on.
  */
 import { Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -18,6 +22,7 @@ import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { Pill } from '@/components/Surfaces';
 import { Rail, type RailPattern } from '@/components/Rail';
 import { Text } from '@/components/Text';
+import { dateText, shortDateText, todayKey } from '@/lib/dates';
 import { insetStart } from '@/lib/direction';
 import { clockText, daysText, durationText, hourText, timeOfDay } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
@@ -25,11 +30,11 @@ import { useLayout } from '@/lib/layout';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space } from '@/theme/tokens';
-import { DAY, dayParts, span, weekMinute, type WeekRange } from './week';
+import { DAY, dayParts, span, weekMinute, type DatedRange, type WeekRange } from './week';
 
 export interface AgendaItem {
   key: string;
-  range: WeekRange;
+  range: DatedRange;
   title: string;
   /** A short tag after the title, e.g. the course code. */
   label?: string | null;
@@ -55,24 +60,95 @@ const AXIS_WIDTH = space.xxxl;
 const STRIP_HEIGHT = space.xxxl;
 const MIN_BLOCK = space.lg;
 
+/** A weekly row's last date and coming skipped dates, after its own note. */
+function repeatNote(item: AgendaItem, today: string, t: TFunction): string | null {
+  const { ends_on, skipped_dates } = item.range;
+  const upcoming = skipped_dates.filter((date) => date >= today);
+  const notOn = upcoming.length
+    ? t('schedule.not_on', {
+        dates:
+          upcoming
+            .slice(0, 2)
+            .map((date) => shortDateText(date, t))
+            .join(t('days.separator')) +
+          (upcoming.length > 2 ? t('schedule.and_more', { count: upcoming.length - 2 }) : ''),
+      })
+    : null;
+  const shown = [
+    item.note,
+    ends_on ? t('schedule.until_date', { date: shortDateText(ends_on, t) }) : null,
+    notOn,
+  ].filter((part): part is string => !!part);
+  return shown.length ? spokenList(shown, t) : null;
+}
+
 export function WeekAgenda({ days, items, overnight = false, overview = false }: WeekAgendaProps) {
+  const { t } = useTranslation();
   const desktop = useLayout() === 'desktop';
-  const today = Math.floor(weekMinute(useNow(60_000)) / DAY);
-  const parts = items.flatMap((item) =>
-    dayParts(item.range, overnight).map((part) => ({ ...part, item })),
+  const now = useNow(60_000);
+  const today = Math.floor(weekMinute(now) / DAY);
+  const todayDate = todayKey(now);
+  const weekly = items
+    .filter((item) => item.range.day_of_week !== null)
+    .map((item) => ({ ...item, note: repeatNote(item, todayDate, t) }));
+  const dated = items
+    .filter((item) => item.range.on_date !== null && item.range.on_date >= todayDate)
+    .sort((a, b) =>
+      `${a.range.on_date}${a.range.start_time}`.localeCompare(
+        `${b.range.on_date}${b.range.start_time}`,
+      ),
+    );
+  const parts = weekly.flatMap((item) =>
+    dayParts(item.range as WeekRange, overnight).map((part) => ({ ...part, item })),
   );
   // The hours shown: whole hours around everything, or a working day when there is nothing.
   const first = parts.length ? Math.floor(Math.min(...parts.map((p) => p.from)) / 60) * 60 : 8 * 60;
   const last = parts.length ? Math.ceil(Math.max(...parts.map((p) => p.to)) / 60) * 60 : 17 * 60;
   const window = { first, last };
 
-  if (desktop) return <WeekGrid days={days} parts={parts} today={today} window={window} />;
+  const datedList = dated.length ? <DatedList items={dated} overnight={overnight} /> : null;
+  if (desktop)
+    return (
+      <View style={styles.list}>
+        <WeekGrid days={days} parts={parts} today={today} window={window} />
+        {datedList}
+      </View>
+    );
   return (
     <View style={styles.list}>
-      {overview && items.length > 0 ? (
+      {overview && weekly.length > 0 ? (
         <WeekStrip days={days} parts={parts} today={today} window={window} />
       ) : null}
-      <DayList days={days} items={items} overnight={overnight} today={today} />
+      <DayList days={days} items={weekly} overnight={overnight} today={today} />
+      {datedList}
+    </View>
+  );
+}
+
+/** Rows on one date, by date. */
+function DatedList({ items, overnight }: { items: AgendaItem[]; overnight: boolean }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <View style={styles.section}>
+      <Text variant="title" role="heading">
+        {t('schedule.once_heading')}
+      </Text>
+      {items.map((item) => {
+        const { start, length } = span(item.range, overnight);
+        return (
+          <View key={item.key} style={styles.section}>
+            <Text variant="label" weight="semibold">
+              {dateText(item.range.on_date!, t)}
+            </Text>
+            <View
+              style={[styles.rows, { borderColor: colors.line, backgroundColor: colors.surface }]}
+            >
+              <AgendaRow item={item} start={start} length={length} />
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }

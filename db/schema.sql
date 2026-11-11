@@ -162,8 +162,8 @@ CREATE TABLE students (
 
 -- -----------------------------------------------------------------------------
 -- professors: subtype of users (1:1), same role guard as students.
--- slot_minutes is the professor's usual appointment length, which the app
--- offers first (students may choose any length in 5-minute steps).
+-- (slot_minutes, the usual appointment length, was removed on 2026-11-11:
+-- students choose any length, and the app offers 15 minutes first.)
 -- -----------------------------------------------------------------------------
 CREATE TABLE professors (
     professor_id   INT         NOT NULL,
@@ -173,7 +173,6 @@ CREATE TABLE professors (
     office_id      INT         NULL,
     honorific      VARCHAR(5)  COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'dr',
     academic_rank  VARCHAR(20) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'assistant_professor',
-    slot_minutes   TINYINT     NOT NULL DEFAULT 15,
     PRIMARY KEY (professor_id),
     KEY ix_professors_user (professor_id, role),
     KEY ix_professors_department (department_id),
@@ -188,8 +187,7 @@ CREATE TABLE professors (
         REFERENCES offices (office_id) ON DELETE SET NULL ON UPDATE RESTRICT,
     CONSTRAINT ck_professors_honorific CHECK (honorific IN ('dr', 'prof', 'mr', 'ms', 'eng')),
     CONSTRAINT ck_professors_rank      CHECK (academic_rank IN ('lecturer', 'assistant_professor',
-                                                               'associate_professor', 'professor')),
-    CONSTRAINT ck_professors_slot      CHECK (slot_minutes IN (15, 30))
+                                                               'associate_professor', 'professor'))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
@@ -199,17 +197,24 @@ CREATE TABLE professors (
 -- Bookings are not tied to these blocks: see booking_periods.
 -- Block times sit on a 15-minute grid (whole 5-minute steps).
 -- Overlapping blocks for one professor are rejected by the API.
+-- When (owner decision 2026-11-11): a row happens either every week on
+-- day_of_week, optionally until ends_on (its last date), or once on on_date;
+-- exactly one of day_of_week and on_date is set. A weekly row that should not
+-- happen on one date has a row in skipped_dates.
 -- -----------------------------------------------------------------------------
 CREATE TABLE schedule_blocks (
     block_id      INT         NOT NULL AUTO_INCREMENT,
     professor_id  INT         NOT NULL,
     kind          VARCHAR(12) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'office_hours',
-    day_of_week   TINYINT     NOT NULL,
+    day_of_week   TINYINT     NULL,
+    on_date       DATE        NULL,
+    ends_on       DATE        NULL,
     start_time    TIME        NOT NULL,
     end_time      TIME        NOT NULL,
     label         VARCHAR(40) NULL,
     PRIMARY KEY (block_id),
     CONSTRAINT uq_schedule_blocks_start UNIQUE (professor_id, day_of_week, start_time),
+    CONSTRAINT uq_schedule_blocks_date  UNIQUE (professor_id, on_date, start_time),
     CONSTRAINT fk_schedule_blocks_professor FOREIGN KEY (professor_id)
         REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
     CONSTRAINT ck_schedule_blocks_kind  CHECK (kind IN ('office_hours', 'class', 'meeting')),
@@ -219,7 +224,11 @@ CREATE TABLE schedule_blocks (
     CONSTRAINT ck_schedule_blocks_grid  CHECK (
         MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
         AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0),
-    CONSTRAINT ck_schedule_blocks_label CHECK (CHAR_LENGTH(label) >= 1)
+    CONSTRAINT ck_schedule_blocks_label CHECK (CHAR_LENGTH(label) >= 1),
+    CONSTRAINT ck_schedule_blocks_when  CHECK ((day_of_week IS NULL) <> (on_date IS NULL)),
+    CONSTRAINT ck_schedule_blocks_ends  CHECK (ends_on IS NULL OR day_of_week IS NOT NULL),
+    -- DAYOFWEEK: 1 = Sunday ... 5 = Thursday (working days only).
+    CONSTRAINT ck_schedule_blocks_on_date CHECK (on_date IS NULL OR DAYOFWEEK(on_date) BETWEEN 1 AND 5)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
@@ -234,11 +243,14 @@ CREATE TABLE schedule_blocks (
 CREATE TABLE booking_periods (
     period_id     INT     NOT NULL AUTO_INCREMENT,
     professor_id  INT     NOT NULL,
-    day_of_week   TINYINT NOT NULL,
+    day_of_week   TINYINT NULL,
+    on_date       DATE    NULL,
+    ends_on       DATE    NULL,
     start_time    TIME    NOT NULL,
     end_time      TIME    NOT NULL,
     PRIMARY KEY (period_id),
     CONSTRAINT uq_booking_periods_start UNIQUE (professor_id, day_of_week, start_time),
+    CONSTRAINT uq_booking_periods_date  UNIQUE (professor_id, on_date, start_time),
     CONSTRAINT fk_booking_periods_professor FOREIGN KEY (professor_id)
         REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
     CONSTRAINT ck_booking_periods_day   CHECK (day_of_week BETWEEN 0 AND 4),
@@ -246,7 +258,10 @@ CREATE TABLE booking_periods (
     CONSTRAINT ck_booking_periods_order CHECK (start_time < end_time),
     CONSTRAINT ck_booking_periods_grid  CHECK (
         MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
-        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0)
+        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0),
+    CONSTRAINT ck_booking_periods_when  CHECK ((day_of_week IS NULL) <> (on_date IS NULL)),
+    CONSTRAINT ck_booking_periods_ends  CHECK (ends_on IS NULL OR day_of_week IS NOT NULL),
+    CONSTRAINT ck_booking_periods_on_date CHECK (on_date IS NULL OR DAYOFWEEK(on_date) BETWEEN 1 AND 5)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
@@ -256,15 +271,23 @@ CREATE TABLE booking_periods (
 -- 15-minute grid. An end at or before the start runs past midnight into the
 -- next day ('20:00' -> '08:00' closes the night; '00:00' -> '00:00' closes the
 -- whole day). The API rejects overlapping closures for one professor.
+-- When (owner decision 2026-11-11): a row happens either every week on
+-- day_of_week, optionally until ends_on (its last date), or once on on_date;
+-- exactly one of day_of_week and on_date is set. A weekly row that should not
+-- happen on one date has a row in skipped_dates.
+-- A dated closure may fall on any day, Friday and Saturday included.
 -- -----------------------------------------------------------------------------
 CREATE TABLE chat_closed_hours (
     closure_id    INT     NOT NULL AUTO_INCREMENT,
     professor_id  INT     NOT NULL,
-    day_of_week   TINYINT NOT NULL,
+    day_of_week   TINYINT NULL,
+    on_date       DATE    NULL,
+    ends_on       DATE    NULL,
     start_time    TIME    NOT NULL,
     end_time      TIME    NOT NULL,
     PRIMARY KEY (closure_id),
     CONSTRAINT uq_chat_closed_hours_start UNIQUE (professor_id, day_of_week, start_time),
+    CONSTRAINT uq_chat_closed_hours_date  UNIQUE (professor_id, on_date, start_time),
     CONSTRAINT fk_chat_closed_hours_professor FOREIGN KEY (professor_id)
         REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
     CONSTRAINT ck_chat_closed_hours_day   CHECK (day_of_week BETWEEN 0 AND 6),
@@ -272,7 +295,37 @@ CREATE TABLE chat_closed_hours (
                                                  AND end_time >= '00:00:00' AND end_time < '24:00:00'),
     CONSTRAINT ck_chat_closed_hours_grid  CHECK (
         MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
-        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0)
+        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0),
+    CONSTRAINT ck_chat_closed_hours_when  CHECK ((day_of_week IS NULL) <> (on_date IS NULL)),
+    CONSTRAINT ck_chat_closed_hours_ends  CHECK (ends_on IS NULL OR day_of_week IS NOT NULL)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------------------------------
+-- skipped_dates: one date on which a weekly row does not happen (owner
+-- decision 2026-11-11), e.g. no office hours on 20 October. Each row belongs
+-- to exactly one weekly schedule block, booking period or chat closure (the
+-- triggers below enforce "exactly one": MySQL forbids a CHECK on columns
+-- whose foreign key action can change them, CASCADE here). That the date is
+-- one of the parent's dates is checked by the API.
+-- -----------------------------------------------------------------------------
+CREATE TABLE skipped_dates (
+    skip_id     INT      NOT NULL AUTO_INCREMENT,
+    block_id    INT      NULL,
+    period_id   INT      NULL,
+    closure_id  INT      NULL,
+    skip_date   DATE     NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+    PRIMARY KEY (skip_id),
+    CONSTRAINT uq_skipped_dates_block   UNIQUE (block_id, skip_date),
+    CONSTRAINT uq_skipped_dates_period  UNIQUE (period_id, skip_date),
+    CONSTRAINT uq_skipped_dates_closure UNIQUE (closure_id, skip_date),
+    CONSTRAINT fk_skipped_dates_block FOREIGN KEY (block_id)
+        REFERENCES schedule_blocks (block_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT fk_skipped_dates_period FOREIGN KEY (period_id)
+        REFERENCES booking_periods (period_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT fk_skipped_dates_closure FOREIGN KEY (closure_id)
+        REFERENCES chat_closed_hours (closure_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT ck_skipped_dates_created CHECK (created_at >= '2026-01-01 00:00:00')
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
@@ -479,6 +532,28 @@ BEGIN
     ) THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'SLOT_TAKEN: overlapping appointment for this professor';
+    END IF;
+END$$
+
+-- A skipped date belongs to exactly one parent: a schedule block, a booking
+-- period or a chat closure.
+CREATE TRIGGER trg_skipped_dates_one_parent_insert
+BEFORE INSERT ON skipped_dates
+FOR EACH ROW
+BEGIN
+    IF (NEW.block_id IS NOT NULL) + (NEW.period_id IS NOT NULL) + (NEW.closure_id IS NOT NULL) <> 1 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'SKIP_PARENT: a skipped date needs exactly one block, period or closure';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_skipped_dates_one_parent_update
+BEFORE UPDATE ON skipped_dates
+FOR EACH ROW
+BEGIN
+    IF (NEW.block_id IS NOT NULL) + (NEW.period_id IS NOT NULL) + (NEW.closure_id IS NOT NULL) <> 1 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'SKIP_PARENT: a skipped date needs exactly one block, period or closure';
     END IF;
 END$$
 

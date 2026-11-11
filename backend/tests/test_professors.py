@@ -73,13 +73,19 @@ def test_profile_has_office_location_and_todays_timeline(client, auth):
     assert [(b["start_time"], b["end_time"], b["kind"]) for b in nora["today"]["blocks"]] == [
         ("13:00", "14:30", "class")
     ]
-    assert nora["status"]["status"] == "away" and nora["slot_minutes"] == 15
+    assert nora["status"]["status"] == "away" and "slot_minutes" not in nora
+    # The booking calendar's days: Noura books on Sundays, Mondays and Tuesdays (weekly), this
+    # week from today and all of next week.
+    assert nora["booking_days"] == ["2026-10-05", "2026-10-06", "2026-10-11", "2026-10-12", "2026-10-13"]
+    # Huda also takes bookings once, on Wednesday 7 October (period 22).
+    huda = client.get(f"/api/v1/professors/{HUDA}", headers=auth(SAAD)).json()
+    assert "2026-10-07" in huda["booking_days"] and "2026-10-14" not in huda["booking_days"]
 
 
 def test_slots_are_5_minute_starts_with_the_longest_free_length(client, auth):
     headers = auth(SAAD)
     next_monday = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-12", headers=headers).json()
-    assert (next_monday["slot_minutes"], next_monday["step_minutes"]) == (15, 5)
+    assert (next_monday["default_minutes"], next_monday["step_minutes"]) == (15, 5)
     slots = next_monday["slots"]
     assert len(slots) == 24  # 10:00-12:00 in 5-minute starts
     first = slots[0]
@@ -94,10 +100,15 @@ def test_slots_are_5_minute_starts_with_the_longest_free_length(client, auth):
     assert (slots[3]["local_time"], slots[3]["max_minutes"]) == ("10:15", 105)  # to 12:00
     today = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-05", headers=headers).json()
     assert today["slots"][0]["reason"] == "past"  # 10:00 is now
-    # Reem (10:00-12:00, 30-minute usual length) has an appointment at 10:30-11:00.
+    # Reem (10:00-12:00) has an appointment at 10:30-11:00.
     reem = client.get(f"/api/v1/professors/{REEM}/slots?date=2026-10-12", headers=headers).json()
     longest = {s["local_time"]: s["max_minutes"] for s in reem["slots"]}
-    assert (reem["slot_minutes"], longest["10:00"], longest["10:25"], longest["10:30"]) == (30, 30, 5, 0)
+    assert (longest["10:00"], longest["10:25"], longest["10:30"]) == (30, 5, 0)
+    # A dated booking time opens its day only: Huda on Wednesday 7 October, 13:00-14:00.
+    dated = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-07", headers=headers).json()
+    assert (dated["slots"][0]["local_time"], len(dated["slots"])) == ("13:00", 12)
+    later = client.get(f"/api/v1/professors/{HUDA}/slots?date=2026-10-14", headers=headers).json()
+    assert later["slots"] == []
     assert longest["11:00"] == 60
 
 

@@ -56,10 +56,10 @@ def load_files(config: Config, name: str) -> list[str]:
 
 
 def timestamp_columns(config: Config, name: str) -> dict[str, list[str]]:
-    """Every stored DATETIME column per table (generated columns excluded)."""
+    """Every stored DATETIME and DATE column per table (generated columns excluded)."""
     rows = run(
         "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS "
-        f"WHERE TABLE_SCHEMA = '{check_identifier(name)}' AND DATA_TYPE = 'datetime' "
+        f"WHERE TABLE_SCHEMA = '{check_identifier(name)}' AND DATA_TYPE IN ('datetime', 'date') "
         # Generated columns have an expression. EXTRA is no test: MySQL 8 also marks a column
         # with an expression default, DEFAULT (UTC_TIMESTAMP()), as DEFAULT_GENERATED, and
         # filtering on it left every created_at unmoved.

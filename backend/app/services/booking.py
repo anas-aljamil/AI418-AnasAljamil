@@ -26,7 +26,7 @@ from app.core.clock import local_slot_to_utc, to_riyadh
 from app.core.errors import AppError, forbidden, mysql_error_number, not_found
 from app.models import Appointment, BookingPeriod, Notification, Professor, Student, User
 from app.services.notify import notify
-from app.services.slots import booking_window_end, find_period, free_starts
+from app.services.slots import DEFAULT_MINUTES, booking_window_end, find_period, free_starts
 
 ACTIVE = ("pending", "approved")
 MAX_ACTIVE_PER_PROFESSOR = 2
@@ -123,7 +123,7 @@ def book(
         raise AppError(422, "SLOT_IN_PAST", "This time has already passed.")
     if starts_at >= booking_window_end(now):
         raise AppError(422, "OUTSIDE_BOOKING_WINDOW", "Bookings are open for this week and next week only.")
-    minutes = minutes or professor.slot_minutes
+    minutes = minutes or DEFAULT_MINUTES
     if find_period(_periods(db, professor_id), starts_at, minutes) is None:
         raise INVALID_SLOT
 

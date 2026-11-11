@@ -53,7 +53,6 @@ MUST_FAIL = [
     ("students: role is generated and cannot be written",
      "INSERT INTO students (student_id, role, university_no, department_id) VALUES (16, 'admin', 'S9999', 1)",
      GENERATED_VALUE),
-    ("professors: usual length must be 15 or 30", "UPDATE professors SET slot_minutes = 20 WHERE professor_id = 1", CHECK_FAILED),
     ("departments: code must be upper case",
      "INSERT INTO departments (college_id, code, name_ar, name_en) VALUES (1, 'phys', 'الفيزياء', 'Physics')",
      CHECK_FAILED),
@@ -78,6 +77,31 @@ MUST_FAIL = [
     ("schedule_blocks: a block cannot run past midnight",
      "INSERT INTO schedule_blocks (professor_id, day_of_week, start_time, end_time) VALUES (1, 3, '23:00', '24:30')",
      CHECK_FAILED),
+    # Weekly or dated rows (2026-11-11): exactly one of day_of_week and on_date.
+    ("schedule_blocks: a block is weekly or dated, not both",
+     "INSERT INTO schedule_blocks (professor_id, day_of_week, on_date, start_time, end_time) "
+     "VALUES (1, 3, '2026-10-07', '15:00', '16:00')", CHECK_FAILED),
+    ("schedule_blocks: a block needs a weekday or a date",
+     "INSERT INTO schedule_blocks (professor_id, start_time, end_time) VALUES (1, '15:00', '16:00')",
+     CHECK_FAILED),
+    ("schedule_blocks: a dated block is on a working day (9 October 2026 is a Friday)",
+     "INSERT INTO schedule_blocks (professor_id, on_date, start_time, end_time) "
+     "VALUES (1, '2026-10-09', '15:00', '16:00')", CHECK_FAILED),
+    ("schedule_blocks: only a weekly block has a last date",
+     "INSERT INTO schedule_blocks (professor_id, on_date, ends_on, start_time, end_time) "
+     "VALUES (1, '2026-10-07', '2026-12-31', '15:00', '16:00')", CHECK_FAILED),
+    ("booking_periods: a dated booking time is on a working day (10 October 2026 is a Saturday)",
+     "INSERT INTO booking_periods (professor_id, on_date, start_time, end_time) "
+     "VALUES (1, '2026-10-10', '15:00', '16:00')", CHECK_FAILED),
+    ("chat_closed_hours: closed hours are weekly or dated, not both",
+     "INSERT INTO chat_closed_hours (professor_id, day_of_week, on_date, start_time, end_time) "
+     "VALUES (2, 5, '2026-10-09', '00:00', '00:00')", CHECK_FAILED),
+    ("skipped_dates: a skipped date belongs to exactly one row (trigger)",
+     "INSERT INTO skipped_dates (block_id, period_id, skip_date) VALUES (2, 1, '2026-10-25')", SIGNAL),
+    ("skipped_dates: a skipped date needs a row (trigger)",
+     "INSERT INTO skipped_dates (skip_date) VALUES ('2026-10-25')", SIGNAL),
+    ("skipped_dates: one row skips a date once",
+     "INSERT INTO skipped_dates (block_id, skip_date) VALUES (2, '2026-10-18')", DUPLICATE),
     ("booking_periods: Friday is not a working day",
      "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 5, '10:00', '11:00')",
      CHECK_FAILED),
@@ -254,8 +278,10 @@ def run_schema_checks(load_warnings: list[str]) -> list[tuple[bool, str, str]]:
                     f"reserved: {reserved}" if reserved else "none"))
     triggers = q(f"SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '{CHECK_DB}' "
                  "ORDER BY TRIGGER_NAME")
-    expected = [["trg_appointments_no_overlap_insert"], ["trg_appointments_no_overlap_update"]]
-    results.append((triggers == expected, "double-booking triggers exist", ", ".join(t[0] for t in triggers)))
+    expected = [["trg_appointments_no_overlap_insert"], ["trg_appointments_no_overlap_update"],
+                ["trg_skipped_dates_one_parent_insert"], ["trg_skipped_dates_one_parent_update"]]
+    results.append((triggers == expected, "double-booking and skipped-date triggers exist",
+                    ", ".join(t[0] for t in triggers)))
     checks = scalar(f"SELECT COUNT(*) FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '{CHECK_DB}'", CONFIG)
     results.append((int(checks) >= 40, "CHECK constraints are installed and enforced", f"{checks} CHECK constraints"))
     return results

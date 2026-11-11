@@ -37,13 +37,31 @@ import { TimeRangePicker, type TimeRange } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
+import { occursOn } from '@/lib/dates';
 import { clockText, daysText, minutesOfDay, timeOfDay } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
-import { DayChips, saveEachDay } from './days';
 import { WeekAgenda } from './WeekAgenda';
-import { current, DAY, dayParts, overlap, untilNext, weekMinute, type WeekRange } from './week';
+import {
+  current,
+  DAY,
+  overlap,
+  span,
+  stretches,
+  untilNext,
+  weekMinute,
+  type DatedRange,
+} from './week';
+import {
+  saveWhen,
+  SkipDates,
+  whenError,
+  whenLine,
+  whenOf,
+  WhenPicker,
+  type WhenDraft,
+} from './WhenPicker';
 
 const WORKING_DAYS = [0, 1, 2, 3, 4];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -89,7 +107,10 @@ const KINDS = {
 } as const;
 
 /** "10:00 AM–12:00 PM", "8:00 PM to 8:00 AM the next day", "4:00 PM until midnight", "All day". */
-export function rangeLine(range: RangeInput, t: TFunction): string {
+export function rangeLine(
+  range: Pick<RangeInput, 'start_time' | 'end_time'>,
+  t: TFunction,
+): string {
   const start = minutesOfDay(range.start_time);
   const end = minutesOfDay(range.end_time);
   const times = { start: clockText(range.start_time, t), end: clockText(range.end_time, t) };
@@ -116,21 +137,27 @@ export function atText(
   return t('schedule.at_day', { day: t(`weekday.${Math.floor(target / DAY) % 7}`), time });
 }
 
-/** What holds now for booking times or closed message hours, as one sentence. */
-export function nowLine(kind: RangeKind, ranges: WeekRange[], now: Date, t: TFunction): string {
+/**
+ * What holds now for booking times or closed message hours, as one sentence. Looks at the
+ * actual dates from yesterday to a week ahead (dated rows and skipped dates count).
+ */
+export function nowLine(kind: RangeKind, ranges: DatedRange[], now: Date, t: TFunction): string {
   const overnight = KINDS[kind].overnight;
   const at = weekMinute(now);
-  const live = current(ranges, overnight, at);
-  const next = untilNext(ranges, overnight, at);
+  const stretched = stretches(ranges, overnight, now);
+  const live = current(stretched, at);
+  const next = untilNext(stretched, at);
   if (kind === 'booking-periods') {
-    if (next === null) return t('schedule.booking_none');
+    if (ranges.length === 0) return t('schedule.booking_none');
     if (live) return t('schedule.booking_open_now', { when: atText(live.to, at, t) });
+    if (next === null) return t('schedule.booking_later');
     return t('schedule.booking_next', {
       when: atText(at + next, at, t, 'schedule.today_at'),
     });
   }
-  if (next === null) return t('schedule.chat_always_open');
+  if (ranges.length === 0) return t('schedule.chat_always_open');
   if (live) return t('schedule.chat_closed_now', { when: atText(live.to, at, t) });
+  if (next === null) return t('schedule.chat_open_plain');
   return t('schedule.chat_open_now', { when: atText(at + next, at, t) });
 }
 
@@ -145,13 +172,24 @@ export function WeeklyRanges({ kind }: { kind: RangeKind }) {
   const [editing, setEditing] = useState<{ id: number | null; range: RangeInput } | null>(null);
   const booking = kind === 'booking-periods';
 
+  // A weekly booking time is compared with the weekly office hours of its day, a dated one with
+  // the office hours that happen on its date.
   const officeNote = (range: WeeklyRange): string | null => {
     if (!booking || !schedule.data) return null;
-    const [part] = dayParts(range, false);
-    if (!part) return null;
+    const mine = span(range, false);
+    const part = { from: mine.start, to: mine.start + mine.length };
     const inside = schedule.data
-      .filter((b) => b.kind === 'office_hours' && b.day_of_week === range.day_of_week)
-      .reduce((sum, b) => sum + overlap(part, dayParts(b, false)[0]!), 0);
+      .filter(
+        (b) =>
+          b.kind === 'office_hours' &&
+          (range.on_date !== null
+            ? occursOn(b, range.on_date)
+            : b.on_date === null && b.day_of_week === range.day_of_week),
+      )
+      .reduce((sum, b) => {
+        const theirs = span(b, false);
+        return sum + overlap(part, { from: theirs.start, to: theirs.start + theirs.length });
+      }, 0);
     if (inside === 0) return t('schedule.outside_office');
     return inside >= part.to - part.from
       ? t('schedule.inside_office')
@@ -173,7 +211,12 @@ export function WeeklyRanges({ kind }: { kind: RangeKind }) {
           onPress={() =>
             setEditing({
               id: null,
-              range: { day_of_week: config.days[0] ?? 0, ...config.defaults },
+              range: {
+                day_of_week: config.days[0] ?? 0,
+                on_date: null,
+                ends_on: null,
+                ...config.defaults,
+              },
             })
           }
         />
@@ -231,7 +274,9 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
   const config = KINDS[kind];
   const save = useSaveRange(kind);
   const remove = useDeleteRange(kind);
-  const [days, setDays] = useState([initial.day_of_week]);
+  const [when, setWhen] = useState<WhenDraft>(whenOf(initial));
+  // The saved item as the list has it now, for its skipped dates.
+  const live = useMyRanges(kind).data?.find((r) => r.id === id);
   const [times, setTimes] = useState<TimeRange>({
     start_time: initial.start_time,
     end_time: initial.end_time,
@@ -241,21 +286,17 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const daysError = days.length === 0 ? t('schedule.days_missing') : undefined;
-  const line = (on: number[], range: TimeRange) =>
-    t('schedule.day_line', {
-      day: daysText(on, t),
-      range: rangeLine({ day_of_week: on[0] ?? 0, ...range }, t),
-    });
+  const missing = whenError(when);
+  const line = (draft: WhenDraft, range: TimeRange) => whenLine(draft, rangeLine(range, t), t);
 
   const submit = async () => {
     setShowErrors(true);
-    if (daysError) return;
+    if (missing) return;
     setServerError(null);
     setSaving(true);
-    const result = await saveEachDay(
-      days,
-      (day) => save.mutateAsync({ id, range: { day_of_week: day, ...times } }),
+    const result = await saveWhen(
+      when,
+      (fields) => save.mutateAsync({ id, range: { ...fields, ...times } }),
       t,
     );
     setSaving(false);
@@ -267,7 +308,7 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
     // Keep only the days that still need saving, so trying again does not add duplicates.
     if (result.saved.length > 0)
       toast(t('schedule.saved_for', { days: daysText(result.saved, t) }));
-    setDays(result.failed);
+    setWhen({ ...when, days: result.failed });
     setServerError(result.message);
   };
 
@@ -292,23 +333,26 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
         title={t(id === null ? config.keys.newTitle : config.keys.editTitle)}
         onClose={onClose}
       >
-        <DayChips
-          days={config.days}
-          value={days}
-          onChange={setDays}
+        <WhenPicker
+          value={when}
+          onChange={setWhen}
+          workingDays={!config.overnight}
           multiple={id === null}
-          error={showErrors ? daysError : undefined}
+          showErrors={showErrors}
         />
         <TimeRangePicker value={times} onChange={setTimes} overnight={config.overnight} />
-        {days.length > 0 ? (
+        {!missing ? (
           <Text weight="medium" accessibilityLiveRegion="polite">
-            {line(days, times)}
+            {line(when, times)}
           </Text>
         ) : null}
         <View accessibilityLiveRegion="polite" role={serverError ? 'alert' : undefined}>
           {serverError ? <Text color="danger">{serverError}</Text> : null}
         </View>
         <Button label={t(config.keys.save)} onPress={submit} disabled={saving} block />
+        {id !== null && live && live.day_of_week !== null && when.repeat !== 'once' ? (
+          <SkipDates path={kind} id={id} row={live} />
+        ) : null}
         {id !== null ? (
           <Button
             variant="danger"
@@ -321,7 +365,7 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
       <ConfirmSheet
         visible={confirming}
         title={t(config.keys.confirmTitle)}
-        body={t(config.keys.confirmBody, { line: line([initial.day_of_week], initial) })}
+        body={t(config.keys.confirmBody, { line: line(whenOf(initial), initial) })}
         confirmLabel={t(config.keys.delete)}
         cancelLabel={t('common.cancel')}
         onConfirm={confirmDelete}

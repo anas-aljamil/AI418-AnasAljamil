@@ -20,6 +20,7 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 | `User` is named `users` | Plural table names throughout; `USER` is also a MySQL keyword and SQL-standard reserved word. `scripts/check_db.py` verifies that no identifier is a MySQL reserved word. |
 | New `offices` table | Storing building, floor and room on `professors` creates the transitive dependency `professor_id -> (building, room) -> floor`. Shared offices would also repeat the same location on several rows (an update anomaly). |
 | `OfficeHourSlot` becomes `schedule_blocks` with `kind` | The status rule needs to know when a professor is *teaching* ("In class") or in a *meeting* ("Busy", kind `meeting` since 2026-11-11, owner request), not only when they hold office hours. A new kind is one more value in the `kind` CHECK, not a new table: every kind has the same attributes. |
+| New `skipped_dates` table (owner decision 2026-11-11) | A weekly row can be left out on single dates (no office hours on a conference day). Those dates are a multi-valued fact about the row, so they cannot be columns of it (1NF); one row per (parent, date). A single table serves blocks, booking periods and closures with three nullable foreign keys, exactly one set (triggers): the alternative, three tables with the same two columns, would repeat one design three times. FDs: `skip_id -> block_id, period_id, closure_id, skip_date, created_at`; candidate keys `(block_id, skip_date)`, `(period_id, skip_date)`, `(closure_id, skip_date)` among rows with that parent. 3NF: every determinant is a key. |
 | New `booking_periods` table (owner decision 2026-11-07) | When students may book is the professor's own choice and no longer the same as office hours (a professor may take bookings outside them, or not in all of them). It is a separate fact about the professor and the week, so it gets its own table; a `bookable` flag on `schedule_blocks` could not express a period outside every block. Bookable times are still not stored: every 5-minute start inside a period, minus the active appointments, is fully determined by the periods and the appointments. |
 | New `chat_closed_hours` table; `professors.open_messages` removed (owner decision 2026-11-07) | Chat no longer depends on an appointment: every student may write, except during weekly hours the professor closes. Those hours are a multi-valued fact about the professor (several per week), so they cannot be a column on `professors` without repeating groups (1NF); one row per closure keeps them atomic. The old `open_messages` flag has no meaning under the new rule and was dropped rather than kept unused. |
 | New `conversations` table; `messages.sender_role` replaces sender/recipient ids | Storing both `sender_id` and `recipient_id` on each message repeats the pair on every row, and allows a message whose participants contradict its thread. With a conversation row, the pair is stored once, and `sender_role` identifies the sender among exactly two participants. |
@@ -62,13 +63,13 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### professors
 - Candidate key: **professor_id**.
-- FDs: `professor_id -> department_id, office_id, honorific, academic_rank, slot_minutes`.
+- FDs: `professor_id -> department_id, office_id, honorific, academic_rank` (`slot_minutes`, the usual length, was removed on 2026-11-11: students choose any length and the app offers 15 minutes first).
 - Office location, department names and the professor's own name all live in their own tables.
 - **3NF/BCNF**, with the same `role` note as students (Section 5).
 
 ### schedule_blocks
 - Candidate keys: **block_id**, `(professor_id, day_of_week, start_time)`.
-- FDs: `block_id -> professor_id, kind, day_of_week, start_time, end_time, label`.
+- FDs: `block_id -> professor_id, kind, day_of_week, on_date, ends_on, start_time, end_time, label`. A row is weekly (`day_of_week`, optionally `ends_on`) or dated (`on_date`): exactly one of `day_of_week` and `on_date` is set (`ck_schedule_blocks_when`), so the weekday is never stored next to a date it could be derived from, and no `repeats` flag repeats what the NULLs already say. The same holds for `booking_periods` and `chat_closed_hours`.
 - 1NF: the weekly timetable is one row per block, not repeating columns such as `sun_start` or `mon_start`.
 - `label` (a course code such as `SE 211`) has no dependent attributes. If course titles were ever needed, a `courses` table would be added rather than storing titles here.
 - **BCNF**.

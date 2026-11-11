@@ -7,27 +7,26 @@
   update replaces an older one even after the newer one expires.
 * Schedule: inside an office_hours block -> in_office, inside a class block ->
   in_class, inside a meeting block -> busy, outside every block -> away; a
-  professor with no blocks -> unknown.
+  professor with no blocks -> unknown. A block counts on the dates it happens
+  (weekly until its end date, or once; not on a skipped date: services/occurrence.py).
 * Staleness: when the schedule says in_office, the result is in_office, and the
   last manual update is older than 4 hours (or never happened), the status is
   reported as not confirmed.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import Protocol
 
-from app.core.clock import from_riyadh, riyadh_day_of_week, riyadh_midnight_after, to_riyadh
+from app.core.clock import from_riyadh, riyadh_midnight_after, to_riyadh
+from app.services.occurrence import Repeating, occurs_on
 
 STALE_AFTER = timedelta(hours=4)
 BLOCK_STATUS = {"office_hours": "in_office", "class": "in_class", "meeting": "busy"}
 
 
-class BlockLike(Protocol):
+class BlockLike(Repeating, Protocol):
     kind: str
-    day_of_week: int
-    start_time: time
-    end_time: time
 
 
 class OverrideLike(Protocol):
@@ -54,8 +53,8 @@ def override_end(override: OverrideLike) -> datetime:
 
 def current_block(blocks: list[BlockLike], now: datetime) -> BlockLike | None:
     local = to_riyadh(now)
-    day, clock_time = riyadh_day_of_week(local), local.time()
-    return next((b for b in blocks if b.day_of_week == day and b.start_time <= clock_time < b.end_time), None)
+    day, clock_time = local.date(), local.time()
+    return next((b for b in blocks if occurs_on(b, day) and b.start_time <= clock_time < b.end_time), None)
 
 
 def schedule_status(blocks: list[BlockLike], now: datetime) -> str:

@@ -49,7 +49,6 @@ export function ProfessorSummary({ professor, onEdit, onClose }: ProfessorSummar
     [t('admin.department'), `${departmentName(professor.department, language)}, ${college}`],
     [t('admin.office'), professor.office ? officeFull(professor.office, t) : t('admin.no_office')],
     [t('admin.email'), professor.email],
-    [t('admin.summary_length'), t('admin.summary_minutes', { minutes: professor.slot_minutes })],
     [
       t('admin.summary_upcoming'),
       upcoming.data

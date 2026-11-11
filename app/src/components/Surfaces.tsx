@@ -106,20 +106,23 @@ interface IconButtonProps {
   label: string;
   onPress: () => void;
   selected?: boolean;
+  disabled?: boolean;
 }
 
 /** A 48 x 48 icon-only button (DESIGN.md Section 6 touch targets). */
-export function IconButton({ icon, label, onPress, selected }: IconButtonProps) {
+export function IconButton({ icon, label, onPress, selected, disabled }: IconButtonProps) {
   const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-selected={selected}
+      aria-disabled={!!disabled}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        { backgroundColor: pressed ? colors.line : 'transparent' },
+        { backgroundColor: pressed ? colors.line : 'transparent', opacity: disabled ? 0.35 : 1 },
       ]}
     >
       {icon}

@@ -22,6 +22,9 @@ erDiagram
     PROFESSORS ||--o{ SCHEDULE_BLOCKS : defines
     PROFESSORS ||--o{ BOOKING_PERIODS : "opens for booking"
     PROFESSORS ||--o{ CHAT_CLOSED_HOURS : "closes messages in"
+    SCHEDULE_BLOCKS |o--o{ SKIPPED_DATES : "is not on"
+    BOOKING_PERIODS |o--o{ SKIPPED_DATES : "is not on"
+    CHAT_CLOSED_HOURS |o--o{ SKIPPED_DATES : "is not on"
     PROFESSORS ||--o{ STATUS_OVERRIDES : sets
     STUDENTS ||--o{ APPOINTMENTS : books
     PROFESSORS ||--o{ APPOINTMENTS : receives
@@ -82,30 +85,43 @@ erDiagram
         int office_id FK "nullable, SET NULL"
         varchar honorific "dr | prof | mr | ms | eng"
         varchar academic_rank
-        tinyint slot_minutes "usual length: 15 | 30, default 15"
     }
     SCHEDULE_BLOCKS {
         int block_id PK
-        int professor_id FK "UK (professor_id, day_of_week, start_time)"
+        int professor_id FK "UK (professor_id, day_of_week, start_time), UK (professor_id, on_date, start_time)"
         varchar kind "office_hours | class | meeting"
-        tinyint day_of_week "0 Sun - 4 Thu"
+        tinyint day_of_week "nullable: 0 Sun - 4 Thu; exactly one of day_of_week, on_date"
+        date on_date "nullable: the date of a one-time row"
+        date ends_on "nullable: last date of a weekly row"
         time start_time "Riyadh, 15-min grid"
         time end_time "after start_time"
         varchar label "nullable, e.g. SE 211"
     }
     BOOKING_PERIODS {
         int period_id PK
-        int professor_id FK "UK (professor_id, day_of_week, start_time)"
-        tinyint day_of_week "0 Sun - 4 Thu"
+        int professor_id FK "UK (professor_id, day_of_week, start_time), UK (professor_id, on_date, start_time)"
+        tinyint day_of_week "nullable: 0 Sun - 4 Thu; exactly one of day_of_week, on_date"
+        date on_date "nullable: the date of a one-time row"
+        date ends_on "nullable: last date of a weekly row"
         time start_time "Riyadh, 15-min grid"
         time end_time "after start_time"
     }
     CHAT_CLOSED_HOURS {
         int closure_id PK
-        int professor_id FK "UK (professor_id, day_of_week, start_time)"
-        tinyint day_of_week "0 Sun - 6 Sat"
+        int professor_id FK "UK (professor_id, day_of_week, start_time), UK (professor_id, on_date, start_time)"
+        tinyint day_of_week "nullable: 0 Sun - 6 Sat; exactly one of day_of_week, on_date"
+        date on_date "nullable: the date of a one-time row"
+        date ends_on "nullable: last date of a weekly row"
         time start_time "Riyadh, 15-min grid"
         time end_time "at or before start = next day"
+    }
+    SKIPPED_DATES {
+        int skip_id PK
+        int block_id FK "nullable, CASCADE; UK (block_id, skip_date)"
+        int period_id FK "nullable, CASCADE; UK (period_id, skip_date)"
+        int closure_id FK "nullable, CASCADE; UK (closure_id, skip_date); exactly one of the three ids (triggers)"
+        date skip_date "a date the weekly row does not happen"
+        datetime created_at
     }
     STATUS_OVERRIDES {
         int override_id PK
@@ -201,11 +217,12 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | DEPARTMENT | <ins>department_id</ins>, code, name_ar, name_en, created_at | none |
 | USER | <ins>user_id</ins>, email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at | none |
 | STUDENT (subclass of USER) | inherits <ins>user_id</ins>; university_no, study_year | none |
-| PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank, slot_minutes | effective_status, last_updated (from overrides, schedule and the clock); messages_closed_until (from closed hours and the clock) |
+| PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank | effective_status, last_updated (from overrides, schedule and the clock); messages_closed_until (from closed hours and the clock) |
 | OFFICE | <ins>office_id</ins>, building_code, floor, room_number, created_at | none |
-| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, start_time, end_time, label | none |
-| BOOKING_PERIOD | <ins>period_id</ins>, day_of_week, start_time, end_time | bookable_starts (every 5 minutes in the period, minus active appointments) |
-| CHAT_CLOSED_HOURS | <ins>closure_id</ins>, day_of_week, start_time, end_time | none |
+| SCHEDULE_BLOCK | <ins>block_id</ins>, kind, day_of_week, on_date, ends_on, start_time, end_time, label | dates (every day_of_week until ends_on, or on_date, minus skipped dates) |
+| BOOKING_PERIOD | <ins>period_id</ins>, day_of_week, on_date, ends_on, start_time, end_time | dates (as for SCHEDULE_BLOCK); bookable_starts (every 5 minutes in the period, minus active appointments) |
+| CHAT_CLOSED_HOURS | <ins>closure_id</ins>, day_of_week, on_date, ends_on, start_time, end_time | dates (as for SCHEDULE_BLOCK) |
+| SKIPPED_DATE | <ins>skip_id</ins>, skip_date, created_at | none |
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
 | APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |
@@ -221,6 +238,8 @@ Alternate keys (also unique, but not underlined):
 - SCHEDULE_BLOCK: (professor, day_of_week, start_time)
 - BOOKING_PERIOD: (professor, day_of_week, start_time)
 - CHAT_CLOSED_HOURS: (professor, day_of_week, start_time)
+- SCHEDULE_BLOCK, BOOKING_PERIOD, CHAT_CLOSED_HOURS: also (professor, on_date, start_time)
+- SKIPPED_DATE: (schedule block, skip_date), (booking period, skip_date), (chat closed hours, skip_date)
 - CONVERSATION: (student, professor)
 
 All entities are strong entities with their own keys; none is weak.
@@ -245,6 +264,9 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 | DEFINES | PROFESSOR (1) | SCHEDULE_BLOCK (N) | partial | **total** | none |
 | OPENS_BOOKING | PROFESSOR (1) | BOOKING_PERIOD (N) | partial | **total** | none |
 | CLOSES_MESSAGES | PROFESSOR (1) | CHAT_CLOSED_HOURS (N) | partial | **total** | none |
+| SKIPS_BLOCK | SCHEDULE_BLOCK (1) | SKIPPED_DATE (N) | partial | partial (only block skips) | none |
+| SKIPS_PERIOD | BOOKING_PERIOD (1) | SKIPPED_DATE (N) | partial | partial (only booking skips) | none |
+| SKIPS_CLOSURE | CHAT_CLOSED_HOURS (1) | SKIPPED_DATE (N) | partial | partial (only closure skips) | none |
 | SETS | PROFESSOR (1) | STATUS_OVERRIDE (N) | partial | **total** | none |
 | BOOKS | STUDENT (1) | APPOINTMENT (N) | partial | **total** | none |
 | RECEIVES | PROFESSOR (1) | APPOINTMENT (N) | partial | **total** | none |
@@ -259,6 +281,7 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 Constraints to note beside the diagram:
 - **CONVERSATION** together with STARTS and ANSWERS forms at most one conversation per student-professor pair (`UNIQUE (student_id, professor_id)`). It is drawn as an entity rather than an M:N diamond because MESSAGE and NOTIFICATION relate to it.
 - **NOTIFICATION** takes part in exactly one of ABOUT_APPOINTMENT and ABOUT_CONVERSATION, chosen by its type (`ck_notifications_reference`).
+- **SKIPPED_DATE** takes part in exactly one of SKIPS_BLOCK, SKIPS_PERIOD and SKIPS_CLOSURE (triggers `trg_skipped_dates_one_parent_*`; a CHECK is not allowed on columns with a CASCADE action), and only for a weekly parent.
 - **PINS** is the only relationship with its own attribute. In the relational schema it becomes the `pins` table with composite key (student_id, professor_id).
 
 ## 4. Specialization in the relational schema

@@ -8,8 +8,12 @@ import type { Block } from '@/api/types';
 import { renderWithProviders } from '@/test-utils';
 import { TodayTimeline } from './TodayTimeline';
 
+// Weekly blocks with no end date or skipped dates.
+const weekly = { on_date: null, ends_on: null, skipped_dates: [] };
+
 const blocks: Block[] = [
   {
+    ...weekly,
     block_id: 3,
     kind: 'class',
     day_of_week: 1,
@@ -18,6 +22,7 @@ const blocks: Block[] = [
     label: 'SE 340',
   },
   {
+    ...weekly,
     block_id: 1,
     kind: 'class',
     day_of_week: 1,
@@ -26,6 +31,7 @@ const blocks: Block[] = [
     label: 'SE 211',
   },
   {
+    ...weekly,
     block_id: 2,
     kind: 'office_hours',
     day_of_week: 1,
@@ -61,6 +67,7 @@ it('reads in Arabic', async () => {
 
 it('names a meeting block and draws it with the busy door', async () => {
   const meeting: Block = {
+    ...weekly,
     block_id: 33,
     kind: 'meeting',
     day_of_week: 1,

@@ -18,6 +18,8 @@ from app.schemas import (
     TodayOut,
 )
 from app.services.chat import closed_until
+from app.services.occurrence import occurs_on
+from app.services.slots import booking_days
 from app.services.status import EffectiveStatus, effective_status
 
 
@@ -83,8 +85,8 @@ def status_out(status: EffectiveStatus) -> StatusOut:
 
 
 def has_office_hours_today(professor: Professor, now: datetime) -> bool:
-    today = riyadh_day_of_week(to_riyadh(now))
-    return any(b.kind == "office_hours" and b.day_of_week == today for b in professor.blocks)
+    today = to_riyadh(now).date()
+    return any(b.kind == "office_hours" and occurs_on(b, today) for b in professor.blocks)
 
 
 def summary(
@@ -111,13 +113,16 @@ def detail(
     today = riyadh_day_of_week(local)
     return ProfessorDetailOut(
         **summary(professor, override, now, pins).model_dump(),
-        slot_minutes=professor.slot_minutes,
         today=TodayOut(
             date=local.date(),
             day_of_week=today,
             now_local_time=local.time(),
-            blocks=[BlockOut.model_validate(b) for b in professor.blocks if b.day_of_week == today],
+            blocks=sorted(
+                (BlockOut.model_validate(b) for b in professor.blocks if occurs_on(b, local.date())),
+                key=lambda b: b.start_time,
+            ),
         ),
         booking_periods=[PeriodOut.model_validate(p) for p in professor.booking_periods],
+        booking_days=booking_days(professor.booking_periods, now),
         messages_closed_until=closed_until(professor.chat_closures, now),
     )
