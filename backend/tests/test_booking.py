@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
-from app.models import Appointment, Notification
+from app.models import Appointment, BookingPeriod, Notification
 from app.services import booking
 from tests.conftest import HUDA, KHALID, LAMA, MAHA, NORA, OMAR, REEM, SAAD, YOUSEF
 
@@ -91,9 +91,9 @@ def test_past_and_cancelled_appointments_do_not_count_toward_the_limit(client, a
     assert book(client, headers, NORA, "2026-10-13T10:30:00+03:00").status_code == 201
 
 
-def test_any_5_minute_start_and_length_that_fits_the_office_hours(client, auth):
+def test_any_5_minute_start_and_length_that_fits_a_booking_period(client, auth):
     headers = auth(LAMA)
-    # Noura's Sunday office hours are 10:00-12:00; Saad holds 10:30-10:45.
+    # Noura takes bookings on Sunday 10:00-12:00; Saad holds 10:30-10:45.
     twenty = book(client, headers, NORA, "2026-10-11T10:05:00+03:00", minutes=25)
     assert twenty.status_code == 201, twenty.text
     assert (twenty.json()["starts_at"], twenty.json()["ends_at"]) == (
@@ -107,18 +107,56 @@ def test_any_5_minute_start_and_length_that_fits_the_office_hours(client, auth):
     assert (default.status_code, default.json()["ends_at"]) == (201, "2026-10-12T08:35:00Z")
 
 
-def test_start_and_length_must_stay_on_the_grid_inside_office_hours(client, auth):
+def test_start_and_length_must_stay_on_the_grid_inside_a_booking_period(client, auth):
     headers = auth(LAMA)
     off_grid = book(client, headers, NORA, "2026-10-11T10:07:00+03:00")
-    outside_hours = book(client, headers, NORA, "2026-10-11T12:00:00+03:00")  # block ends at 12:00
+    outside_hours = book(client, headers, NORA, "2026-10-11T12:00:00+03:00")  # period ends at 12:00
     runs_past_the_end = book(client, headers, NORA, "2026-10-11T11:50:00+03:00", minutes=15)
-    class_time = book(client, headers, NORA, "2026-10-11T08:00:00+03:00")  # a class block
+    class_time = book(client, headers, NORA, "2026-10-11T08:00:00+03:00")  # a class, no period
     friday = book(client, headers, NORA, "2026-10-09T10:00:00+03:00")
     for response in (off_grid, outside_hours, runs_past_the_end, class_time, friday):
         assert (response.status_code, code(response)) == (422, "INVALID_SLOT")
     for minutes in (0, 7, 605):
         response = book(client, headers, NORA, "2026-10-11T10:00:00+03:00", minutes=minutes)
         assert code(response) == "VALIDATION_ERROR", minutes
+
+
+def test_a_booking_period_outside_office_hours_is_bookable(client, auth):
+    # Noura has no office hours on Monday, but takes bookings 11:00-12:00.
+    slots = client.get(f"/api/v1/professors/{NORA}/slots", params={"date": "2026-10-12"}, headers=auth(LAMA))
+    starts = [s["local_time"] for s in slots.json()["slots"]]
+    assert (starts[0], starts[-1], len(starts)) == ("11:00", "11:55", 12)
+    response = book(client, auth(LAMA), NORA, "2026-10-12T11:15:00+03:00", minutes=45)
+    assert response.status_code == 201, response.text
+    assert response.json()["ends_at"] == "2026-10-12T09:00:00Z"  # 12:00 Riyadh, the period's end
+
+
+def test_office_hours_without_a_booking_period_are_not_bookable(client, auth, db):
+    db.delete(db.get(BookingPeriod, 1))  # Noura's Sunday 10:00-12:00
+    db.flush()
+    response = book(client, auth(LAMA), NORA, "2026-10-11T10:15:00+03:00")
+    assert (response.status_code, code(response)) == (422, "INVALID_SLOT")
+    slots = client.get(f"/api/v1/professors/{NORA}/slots", params={"date": "2026-10-11"}, headers=auth(LAMA))
+    assert slots.json()["slots"] == []
+
+
+def test_a_professor_without_booking_periods_cannot_be_booked(client, auth, db):
+    for period in db.scalars(select(BookingPeriod).where(BookingPeriod.professor_id == KHALID)):
+        db.delete(period)
+    db.flush()
+    profile = client.get(f"/api/v1/professors/{KHALID}", headers=auth(LAMA)).json()
+    assert profile["booking_periods"] == []
+    response = book(client, auth(LAMA), KHALID, "2026-10-12T09:00:00+03:00")  # his office hours
+    assert code(response) == "INVALID_SLOT"
+
+
+def test_the_profile_lists_the_weekly_booking_periods(client, auth):
+    periods = client.get(f"/api/v1/professors/{NORA}", headers=auth(LAMA)).json()["booking_periods"]
+    assert [(p["day_of_week"], p["start_time"], p["end_time"]) for p in periods] == [
+        (0, "10:00", "12:00"),
+        (1, "11:00", "12:00"),
+        (2, "10:00", "11:30"),
+    ]
 
 
 def test_a_longer_appointment_cannot_overlap_the_next_booking(client, auth):

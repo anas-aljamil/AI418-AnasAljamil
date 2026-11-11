@@ -11,11 +11,13 @@ from app.schemas import (
     BlockOut,
     DepartmentOut,
     OfficeOut,
+    PeriodOut,
     ProfessorDetailOut,
     ProfessorSummaryOut,
     StatusOut,
     TodayOut,
 )
+from app.services.chat import closed_until
 from app.services.status import EffectiveStatus, effective_status
 
 
@@ -50,7 +52,11 @@ def load_professors(db: Session, ids: list[int] | None = None, active_only: bool
         select(Professor)
         .join(User, User.user_id == Professor.professor_id)
         .options(
-            joinedload(Professor.department), joinedload(Professor.office), selectinload(Professor.blocks)
+            joinedload(Professor.department),
+            joinedload(Professor.office),
+            selectinload(Professor.blocks),
+            selectinload(Professor.booking_periods),
+            selectinload(Professor.chat_closures),
         )
     )
     if active_only:
@@ -106,11 +112,12 @@ def detail(
     return ProfessorDetailOut(
         **summary(professor, override, now, pins).model_dump(),
         slot_minutes=professor.slot_minutes,
-        open_messages=professor.open_messages,
         today=TodayOut(
             date=local.date(),
             day_of_week=today,
             now_local_time=local.time(),
             blocks=[BlockOut.model_validate(b) for b in professor.blocks if b.day_of_week == today],
         ),
+        booking_periods=[PeriodOut.model_validate(p) for p in professor.booking_periods],
+        messages_closed_until=closed_until(professor.chat_closures, now),
     )

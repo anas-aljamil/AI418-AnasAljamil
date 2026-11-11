@@ -82,7 +82,7 @@ How the tokens behave:
 
 ## Chat (P5)
 
-- **Who may chat:** only the student and the professor of a conversation; anyone else gets 404. Eligibility (a non-declined appointment, or the professor accepts messages from everyone) is checked when the conversation opens and again on every message, so a later decline closes the chat.
+- **Who may chat:** only the student and the professor of a conversation; anyone else gets 404. Any student may open a conversation with any active professor (revised 2026-11-07); an inactive professor answers 404. Every student message is checked against the professor's weekly closed hours (403 CHAT_CLOSED), so a closure that starts mid-conversation stops new student messages at once. Professors can always write.
 - **Admins** cannot read conversations (403).
 - **Message bodies** are plain text, 1-1000 characters, stored as given and rendered as text (never as HTML).
 

@@ -1,4 +1,5 @@
-"""The signed-in user's own data: professor status, schedule and settings; student pins."""
+"""The signed-in user's own data: professor status, schedule, booking periods, chat closed
+hours and settings; student pins."""
 
 from datetime import timedelta
 
@@ -11,10 +12,14 @@ from app.core.errors import AppError, not_found
 from app.core.pagination import Page, PageParams, page_params, paginate
 from app.db import get_db
 from app.deps import current_professor, current_student
-from app.models import Pin, Professor, ScheduleBlock, StatusOverride, User
+from app.models import BookingPeriod, ChatClosedHours, Pin, Professor, ScheduleBlock, StatusOverride, User
 from app.schemas import (
     BlockIn,
     BlockOut,
+    ClosureIn,
+    ClosureOut,
+    PeriodIn,
+    PeriodOut,
     ProfessorProfileOut,
     ProfessorSettingsIn,
     ProfessorSummaryOut,
@@ -22,7 +27,7 @@ from app.schemas import (
     StatusOut,
 )
 from app.services import directory
-from app.services.schedule import ensure_no_overlap
+from app.services.schedule import ensure_closure_free, ensure_no_overlap, ensure_period_free
 from app.services.status import effective_status, override_end
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -152,10 +157,132 @@ def delete_block(
     return Response(status_code=204)
 
 
+# --- professor: booking periods (when students can book) ---------------------
+
+
+def _own_period(db: Session, user: User, period_id: int) -> BookingPeriod:
+    period = db.get(BookingPeriod, period_id)
+    if period is None or period.professor_id != user.user_id:
+        raise not_found("Booking period")
+    return period
+
+
+@router.get("/booking-periods", response_model=Page[PeriodOut], summary="My weekly booking periods")
+def my_periods(
+    page: PageParams = Depends(page_params),
+    user: User = Depends(current_professor),
+    db: Session = Depends(get_db),
+) -> Page[PeriodOut]:
+    rows = db.scalars(
+        select(BookingPeriod)
+        .where(BookingPeriod.professor_id == user.user_id)
+        .order_by(BookingPeriod.day_of_week, BookingPeriod.start_time)
+    ).all()
+    return paginate([PeriodOut.model_validate(r) for r in rows], page)
+
+
+@router.post("/booking-periods", response_model=PeriodOut, status_code=201, summary="Add a booking period")
+def add_period(
+    body: PeriodIn, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> PeriodOut:
+    ensure_period_free(db, user.user_id, body.day_of_week, body.start_time, body.end_time)
+    period = BookingPeriod(professor_id=user.user_id, **body.model_dump())
+    db.add(period)
+    db.commit()
+    return PeriodOut.model_validate(period)
+
+
+@router.put("/booking-periods/{period_id}", response_model=PeriodOut, summary="Replace a booking period")
+def update_period(
+    period_id: int, body: PeriodIn, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> PeriodOut:
+    period = _own_period(db, user, period_id)
+    ensure_period_free(
+        db, user.user_id, body.day_of_week, body.start_time, body.end_time, exclude_period_id=period_id
+    )
+    for field, value in body.model_dump().items():
+        setattr(period, field, value)
+    db.commit()
+    return PeriodOut.model_validate(period)
+
+
+@router.delete(
+    "/booking-periods/{period_id}",
+    status_code=204,
+    summary="Delete a booking period (existing appointments stay)",
+)
+def delete_period(
+    period_id: int, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> Response:
+    db.delete(_own_period(db, user, period_id))
+    db.commit()
+    return Response(status_code=204)
+
+
+# --- professor: chat closed hours (when students cannot write) ----------------
+
+
+def _own_closure(db: Session, user: User, closure_id: int) -> ChatClosedHours:
+    closure = db.get(ChatClosedHours, closure_id)
+    if closure is None or closure.professor_id != user.user_id:
+        raise not_found("Closed hours")
+    return closure
+
+
+@router.get("/chat-closed-hours", response_model=Page[ClosureOut], summary="My weekly chat closed hours")
+def my_closures(
+    page: PageParams = Depends(page_params),
+    user: User = Depends(current_professor),
+    db: Session = Depends(get_db),
+) -> Page[ClosureOut]:
+    rows = db.scalars(
+        select(ChatClosedHours)
+        .where(ChatClosedHours.professor_id == user.user_id)
+        .order_by(ChatClosedHours.day_of_week, ChatClosedHours.start_time)
+    ).all()
+    return paginate([ClosureOut.model_validate(r) for r in rows], page)
+
+
+@router.post(
+    "/chat-closed-hours", response_model=ClosureOut, status_code=201, summary="Close chat at a weekly time"
+)
+def add_closure(
+    body: ClosureIn, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> ClosureOut:
+    ensure_closure_free(db, user.user_id, body.day_of_week, body.start_time, body.end_time)
+    closure = ChatClosedHours(professor_id=user.user_id, **body.model_dump())
+    db.add(closure)
+    db.commit()
+    return ClosureOut.model_validate(closure)
+
+
+@router.put("/chat-closed-hours/{closure_id}", response_model=ClosureOut, summary="Replace closed hours")
+def update_closure(
+    closure_id: int, body: ClosureIn, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> ClosureOut:
+    closure = _own_closure(db, user, closure_id)
+    ensure_closure_free(
+        db, user.user_id, body.day_of_week, body.start_time, body.end_time, exclude_closure_id=closure_id
+    )
+    for field, value in body.model_dump().items():
+        setattr(closure, field, value)
+    db.commit()
+    return ClosureOut.model_validate(closure)
+
+
+@router.delete("/chat-closed-hours/{closure_id}", status_code=204, summary="Delete closed hours")
+def delete_closure(
+    closure_id: int, user: User = Depends(current_professor), db: Session = Depends(get_db)
+) -> Response:
+    db.delete(_own_closure(db, user, closure_id))
+    db.commit()
+    return Response(status_code=204)
+
+
 @router.patch(
     "/professor-settings",
     response_model=ProfessorProfileOut,
-    summary="Change my slot length or open messages",
+    summary="Change my usual appointment length",
 )
 def update_settings(
     body: ProfessorSettingsIn, user: User = Depends(current_professor), db: Session = Depends(get_db)

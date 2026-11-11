@@ -33,7 +33,7 @@ QUERIES = ROOT / "db" / "queries.sql"
 TABLES = [
     "colleges",
     "departments", "users", "offices", "students", "professors", "schedule_blocks",
-    "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
+    "booking_periods", "chat_closed_hours", "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
 ]
 MIN_QUERIES, MIN_AGGREGATES = 5, 2
 AGGREGATE = re.compile(r"\b(COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT)\s*\(", re.IGNORECASE)
@@ -171,12 +171,17 @@ def result_checks(statements: list[Statement]) -> list[tuple[bool, str, str]]:
     checks.append((rejected and accepted, "trigger demo: overlaps rejected (1, 2, 4), others accepted (3, 5)",
                    "; ".join(f"{n}: {demo.get(n)}" for n in sorted(demo))))
 
+    closed = [row[0] for row in rows_of(statements, "CH3.")]
+    checks.append((closed == ["Tariq Haddad"], "CH3: messages closed at the demo moment",
+                   f"{closed} (expected ['Tariq Haddad'], Monday 08:00-12:00)"))
+
     left = rows_of(statements, "T5.")
     checks.append((left == [["0"]], "trigger demo rolled back: none of its rows is left",
                    f"{left[0][0] if left else '?'} rows left"))
 
     for prefix, what in (("U7.", "users without their subtype row"),
-                         ("C3.", "conversations that break the chat rule"),
+                         ("C3.", "student messages sent during closed hours"),
+                         ("BP5.", "professors without booking times"),
                          ("N6.", "notifications sent to an outsider")):
         found = rows_of(statements, prefix)
         checks.append((not found, f"data quality ({prefix[:-1]}): no {what}", f"{len(found)} rows"))

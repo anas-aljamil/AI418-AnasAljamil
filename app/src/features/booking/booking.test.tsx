@@ -34,8 +34,9 @@ const noura = {
   has_office_hours_today: true,
   is_pinned: false,
   slot_minutes: 15,
-  open_messages: false,
   today: { date: '2026-10-05', day_of_week: 1, now_local_time: '10:00', blocks: [] },
+  booking_periods: [{ period_id: 1, day_of_week: 3, start_time: '10:00', end_time: '12:00' }],
+  messages_closed_until: null,
 } as ProfessorDetail;
 
 const inTwoDays = Date.now() + 2 * 86_400_000;

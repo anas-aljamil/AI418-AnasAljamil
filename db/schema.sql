@@ -33,6 +33,8 @@ DROP TABLE IF EXISTS conversations;
 DROP TABLE IF EXISTS pins;
 DROP TABLE IF EXISTS appointments;
 DROP TABLE IF EXISTS status_overrides;
+DROP TABLE IF EXISTS chat_closed_hours;
+DROP TABLE IF EXISTS booking_periods;
 DROP TABLE IF EXISTS schedule_blocks;
 DROP TABLE IF EXISTS professors;
 DROP TABLE IF EXISTS students;
@@ -161,8 +163,7 @@ CREATE TABLE students (
 -- -----------------------------------------------------------------------------
 -- professors: subtype of users (1:1), same role guard as students.
 -- slot_minutes is the professor's usual appointment length, which the app
--- offers first (students may choose any length in 5-minute steps);
--- open_messages lets any student start a chat without an appointment.
+-- offers first (students may choose any length in 5-minute steps).
 -- -----------------------------------------------------------------------------
 CREATE TABLE professors (
     professor_id   INT         NOT NULL,
@@ -173,7 +174,6 @@ CREATE TABLE professors (
     honorific      VARCHAR(5)  COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'dr',
     academic_rank  VARCHAR(20) COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'assistant_professor',
     slot_minutes   TINYINT     NOT NULL DEFAULT 15,
-    open_messages  BOOLEAN     NOT NULL DEFAULT FALSE,
     PRIMARY KEY (professor_id),
     KEY ix_professors_user (professor_id, role),
     KEY ix_professors_department (department_id),
@@ -189,15 +189,13 @@ CREATE TABLE professors (
     CONSTRAINT ck_professors_honorific CHECK (honorific IN ('dr', 'prof', 'mr', 'ms', 'eng')),
     CONSTRAINT ck_professors_rank      CHECK (academic_rank IN ('lecturer', 'assistant_professor',
                                                                'associate_professor', 'professor')),
-    CONSTRAINT ck_professors_slot      CHECK (slot_minutes IN (15, 30)),
-    CONSTRAINT ck_professors_open      CHECK (open_messages IN (0, 1))
+    CONSTRAINT ck_professors_slot      CHECK (slot_minutes IN (15, 30))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
 -- schedule_blocks: a professor's recurring weekly timetable.
--- 'office_hours' blocks are bookable and derive "In office";
--- 'class' blocks derive "In class". Bookable times are computed, not stored:
--- any 5-minute start inside an office_hours block, for any length that fits.
+-- 'office_hours' blocks derive "In office"; 'class' blocks derive "In class".
+-- Bookings are not tied to these blocks: see booking_periods.
 -- Block times sit on a 15-minute grid (whole 5-minute steps).
 -- Overlapping blocks for one professor are rejected by the API.
 -- -----------------------------------------------------------------------------
@@ -221,6 +219,59 @@ CREATE TABLE schedule_blocks (
         MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
         AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0),
     CONSTRAINT ck_schedule_blocks_label CHECK (CHAR_LENGTH(label) >= 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------------------------------
+-- booking_periods: the weekly times a professor accepts bookings in (owner
+-- decision 2026-11-07). Chosen by the professor and independent of the
+-- timetable: a period may lie inside office hours or outside them, and it does
+-- not change the derived status. Bookable times are computed, not stored: any
+-- 5-minute start inside a period, for any length that fits in that period.
+-- A professor with no periods cannot be booked. Times are Riyadh local on the
+-- 15-minute grid, Sunday to Thursday; the API rejects overlapping periods.
+-- -----------------------------------------------------------------------------
+CREATE TABLE booking_periods (
+    period_id     INT     NOT NULL AUTO_INCREMENT,
+    professor_id  INT     NOT NULL,
+    day_of_week   TINYINT NOT NULL,
+    start_time    TIME    NOT NULL,
+    end_time      TIME    NOT NULL,
+    PRIMARY KEY (period_id),
+    CONSTRAINT uq_booking_periods_start UNIQUE (professor_id, day_of_week, start_time),
+    CONSTRAINT fk_booking_periods_professor FOREIGN KEY (professor_id)
+        REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT ck_booking_periods_day   CHECK (day_of_week BETWEEN 0 AND 4),
+    CONSTRAINT ck_booking_periods_range CHECK (start_time >= '00:00:00' AND end_time < '24:00:00'),
+    CONSTRAINT ck_booking_periods_order CHECK (start_time < end_time),
+    CONSTRAINT ck_booking_periods_grid  CHECK (
+        MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
+        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------------------------------
+-- chat_closed_hours: weekly times when students cannot send this professor a
+-- message (owner decision 2026-11-07; outside them chat is open to every
+-- student). Any day of the week (0 = Sunday ... 6 = Saturday), Riyadh local,
+-- 15-minute grid. An end at or before the start runs past midnight into the
+-- next day ('20:00' -> '08:00' closes the night; '00:00' -> '00:00' closes the
+-- whole day). The API rejects overlapping closures for one professor.
+-- -----------------------------------------------------------------------------
+CREATE TABLE chat_closed_hours (
+    closure_id    INT     NOT NULL AUTO_INCREMENT,
+    professor_id  INT     NOT NULL,
+    day_of_week   TINYINT NOT NULL,
+    start_time    TIME    NOT NULL,
+    end_time      TIME    NOT NULL,
+    PRIMARY KEY (closure_id),
+    CONSTRAINT uq_chat_closed_hours_start UNIQUE (professor_id, day_of_week, start_time),
+    CONSTRAINT fk_chat_closed_hours_professor FOREIGN KEY (professor_id)
+        REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT ck_chat_closed_hours_day   CHECK (day_of_week BETWEEN 0 AND 6),
+    CONSTRAINT ck_chat_closed_hours_range CHECK (start_time >= '00:00:00' AND start_time < '24:00:00'
+                                                 AND end_time >= '00:00:00' AND end_time < '24:00:00'),
+    CONSTRAINT ck_chat_closed_hours_grid  CHECK (
+        MINUTE(start_time) IN (0, 15, 30, 45) AND SECOND(start_time) = 0
+        AND MINUTE(end_time) IN (0, 15, 30, 45) AND SECOND(end_time) = 0)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------
@@ -311,7 +362,8 @@ CREATE TABLE pins (
 -- -----------------------------------------------------------------------------
 -- conversations: one chat thread per student-professor pair. The foreign keys
 -- to the subtype tables guarantee chat is only ever student <-> professor.
--- Eligibility (non-declined appointment or open_messages) is checked by the API.
+-- Any student may write to any active professor outside the professor's
+-- chat_closed_hours; the API checks the closed hours on every student message.
 -- -----------------------------------------------------------------------------
 CREATE TABLE conversations (
     conversation_id  INT      NOT NULL AUTO_INCREMENT,

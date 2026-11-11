@@ -2,12 +2,13 @@
  * Booking (DESIGN.md 7.5): a bottom sheet with the day strip (Sunday-Thursday, this week and
  * next), the free stretches of that day, a start on any 5-minute step (hour chips, then minute
  * chips), a length in 5-minute steps (a stepper and one-tap lengths, starting from the
- * professor's usual length and never past the next booking or the end of office hours),
+ * professor's usual length and never past the next booking or the end of the booking time),
  * optional topic and note, a summary, then the one orchestrated moment: the door opens, a
  * check appears, "Booked with Dr. X, Sunday 10:30", and a success haptic.
  *
- * Steps from the profile: Book, (day, defaulted to the first bookable day), time (start and
- * length), confirm. Unavailable starts stay visible and say why when tapped. An error never
+ * Times come from the professor's booking times, which may lie outside office hours; days
+ * without one are dimmed. Steps from the profile: Book, (day, defaulted to the first day with
+ * a booking time), time (start and length), confirm. Unavailable starts stay visible and say why when tapped. An error never
  * clears the day, topic or note; only a time that was just taken by someone else is unselected.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -49,7 +50,10 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const name = professorName(professor, language, t);
   const days = useMemo(() => bookingDays(new Date()), []);
-  const [day, setDay] = useState(days[0]?.date ?? null);
+  const bookableWeekdays = new Set(professor.booking_periods.map((p) => p.day_of_week));
+  const [day, setDay] = useState(
+    (days.find((d) => bookableWeekdays.has(d.weekday)) ?? days[0])?.date ?? null,
+  );
   const [slot, setSlot] = useState<Slot | null>(null);
   const [hour, setHour] = useState<number | null>(null);
   // The length the student chose; until then the professor's usual length (both fitted).
@@ -159,6 +163,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
                     date: option.dayOfMonth,
                   })}
                   selected={day === option.date}
+                  dimmed={!bookableWeekdays.has(option.weekday)}
                   onPress={() => chooseDay(option.date)}
                 />
               ))}

@@ -1,8 +1,8 @@
 /**
  * Professor quick view (admin): tapping a professor shows who they are and how they stand
  * before any form: the live status with its door (active accounts only; students cannot see an
- * inactive professor), department and college, office, email, usual appointment length,
- * messages setting and upcoming appointments. Edit opens the form; a not-active account can be
+ * inactive professor), department and college, office, email, usual appointment length
+ * and upcoming appointments. Edit opens the form; a not-active account can be
  * activated here in one tap.
  */
 import { StyleSheet, View } from 'react-native';
@@ -50,10 +50,6 @@ export function ProfessorSummary({ professor, onEdit, onClose }: ProfessorSummar
     [t('admin.office'), professor.office ? officeFull(professor.office, t) : t('admin.no_office')],
     [t('admin.email'), professor.email],
     [t('admin.summary_length'), t('admin.summary_minutes', { minutes: professor.slot_minutes })],
-    [
-      t('admin.summary_messages'),
-      t(professor.open_messages ? 'admin.summary_messages_open' : 'admin.summary_messages_booked'),
-    ],
     [
       t('admin.summary_upcoming'),
       upcoming.data

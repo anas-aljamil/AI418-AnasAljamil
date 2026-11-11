@@ -1,7 +1,10 @@
 /**
  * Professor profile (DESIGN.md 7.4): a nameplate header (door, name, rank, department,
  * office), the live status with its note, return time and "updated" time, today's timeline,
- * and a sticky bar with Book (primary) and Pin within thumb reach. Message joins in P5.
+ * the weekly booking times, and a sticky bar with Book (primary), Message and Pin within thumb
+ * reach. Book is off when the professor has no booking times; Message always opens the
+ * conversation, and while the professor's closed hours are on the profile and the
+ * conversation say when messages open again.
  */
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -25,7 +28,7 @@ import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
-import { untilText } from '@/lib/format';
+import { clockText, laterText, untilText } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -47,13 +50,8 @@ export default function ProfessorProfile() {
   const [booking, setBooking] = useState(false);
 
   const openChat = useOpenConversation();
-  // The chat rule is checked by the API; when it says no, tapping explains why.
   const message = () => {
     if (!data) return;
-    if (!data.can_message) {
-      toast(t('chat.not_allowed', { name }));
-      return;
-    }
     openChat.mutate(
       { professor_id: data.professor_id },
       {
@@ -81,6 +79,11 @@ export default function ProfessorProfile() {
       )
     : null;
   const name = data ? professorName(data, language, t) : '';
+  const closedUntil =
+    data?.messages_closed_until && new Date(data.messages_closed_until) > now
+      ? new Date(data.messages_closed_until)
+      : null;
+  const bookable = !!data && data.booking_periods.length > 0;
 
   return (
     <View style={[styles.fill, { backgroundColor: colors.bg }]}>
@@ -133,6 +136,11 @@ export default function ProfessorProfile() {
                   : status.updated}
               </Text>
               {data.status.note ? <Text>{t('prof.note', { note: data.status.note })}</Text> : null}
+              {closedUntil ? (
+                <Text color="muted">
+                  {t('prof.messages_closed', { time: laterText(closedUntil, now, t) })}
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.section}>
@@ -140,6 +148,25 @@ export default function ProfessorProfile() {
                 {t('prof.today')}
               </Text>
               <TodayTimeline blocks={data.today.blocks} now={data.today.now_local_time} />
+            </View>
+
+            <View style={styles.section}>
+              <Text variant="title" role="heading">
+                {t('prof.booking_times')}
+              </Text>
+              {bookable ? (
+                data.booking_periods.map((period) => (
+                  <Text key={period.period_id}>
+                    {t('prof.period_line', {
+                      day: t(`weekday.${period.day_of_week}`),
+                      start: clockText(period.start_time, t),
+                      end: clockText(period.end_time, t),
+                    })}
+                  </Text>
+                ))
+              ) : (
+                <Text color="muted">{t('prof.no_booking_times', { name })}</Text>
+              )}
             </View>
           </>
         ) : professor.error ? (
@@ -170,7 +197,12 @@ export default function ProfessorProfile() {
           ]}
         >
           <View style={styles.grow}>
-            <Button label={t('prof.book')} onPress={() => setBooking(true)} block />
+            <Button
+              label={t('prof.book')}
+              onPress={() => setBooking(true)}
+              disabled={!bookable}
+              block
+            />
           </View>
           <Button
             variant="secondary"

@@ -2,7 +2,8 @@
 
 Messages are listed newest first (pages go back in time); reading a conversation marks the
 other side's messages read (read receipts) and clears its "new message" notification.
-Sending is rate-limited per user (CLAUDE.md Section 8).
+Sending is rate-limited per user (CLAUDE.md Section 8). Students cannot send during the
+professor's closed hours (403 CHAT_CLOSED); each conversation says until when.
 """
 
 from fastapi import APIRouter, Depends, Response
@@ -55,7 +56,7 @@ def message_out(message: Message, user: User) -> MessageOut:
     )
 
 
-def conversation_out(db: Session, conversation: Conversation, user: User) -> ConversationOut:
+def conversation_out(db: Session, conversation: Conversation, user: User, clock: Clock) -> ConversationOut:
     last = db.scalar(
         select(Message)
         .where(Message.conversation_id == conversation.conversation_id)
@@ -81,6 +82,7 @@ def conversation_out(db: Session, conversation: Conversation, user: User) -> Con
         else None,
         unread_count=unread,
         created_at=conversation.created_at,
+        closed_until=chat.professor_closed_until(db, conversation.professor_id, clock.now()),
     )
 
 
@@ -89,13 +91,14 @@ def list_conversations(
     page: PageParams = Depends(page_params),
     user: User = Depends(participant),
     db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
 ) -> Page[ConversationOut]:
     mine = db.scalars(
         select(Conversation).where(
             (Conversation.student_id == user.user_id) | (Conversation.professor_id == user.user_id)
         )
     ).all()
-    rows = [conversation_out(db, c, user) for c in mine]
+    rows = [conversation_out(db, c, user, clock) for c in mine]
     rows.sort(key=lambda r: r.last_message.created_at if r.last_message else r.created_at, reverse=True)
     return Page[ConversationOut](
         items=rows[page.offset : page.offset + page.limit],
@@ -114,14 +117,13 @@ def open_conversation(
 ) -> ConversationOut:
     if user.role == "student":
         student_id, professor_id = user.user_id, body.professor_id
-        if professor_id is None or db.get(Professor, professor_id) is None:
+        # Any active professor; their closed hours only stop sending, not opening.
+        if professor_id is None or not chat.can_chat(db, professor_id):
             raise not_found("Professor")
     else:
         student_id, professor_id = body.student_id, user.user_id
         if student_id is None or db.get(Student, student_id) is None:
             raise not_found("Student")
-    if not chat.can_chat(db, student_id, professor_id):
-        raise chat.CHAT_NOT_ALLOWED
     conversation = db.scalar(
         select(Conversation).where(
             Conversation.student_id == student_id, Conversation.professor_id == professor_id
@@ -131,7 +133,7 @@ def open_conversation(
         conversation = Conversation(student_id=student_id, professor_id=professor_id, created_at=clock.now())
         db.add(conversation)
         db.commit()
-    return conversation_out(db, conversation, user)
+    return conversation_out(db, conversation, user, clock)
 
 
 @router.get(
@@ -175,9 +177,13 @@ def send_message(
 ) -> MessageOut:
     conversation = chat.get_for_participant(db, conversation_id, user)
     message_limiter.check(str(user.user_id))
-    if not chat.can_chat(db, conversation.student_id, conversation.professor_id):
-        raise chat.CHAT_NOT_ALLOWED
     now = clock.now()
+    if user.role == "student":
+        if not chat.can_chat(db, conversation.professor_id):
+            raise not_found("Conversation")
+        until = chat.professor_closed_until(db, conversation.professor_id, now)
+        if until is not None:
+            raise chat.chat_closed(until)
     message = Message(conversation_id=conversation_id, sender_role=user.role, body=body.body, created_at=now)
     db.add(message)
     chat.notify_new_message(db, chat.other_party(conversation, user), conversation_id, now)

@@ -1,10 +1,14 @@
 """Chat and notifications (CLAUDE.md Sections 4 and 8; docs/plan.md P5)."""
 
+from datetime import datetime, time
+from types import SimpleNamespace
+
 from sqlalchemy import select
 
 from app.api.v1.conversations import message_limiter
-from app.models import Appointment, Notification
-from tests.conftest import ADMIN_EMAIL, FAISAL, HESSA, HUDA, LAMA, NORA, OMAR, SAAD, YOUSEF
+from app.models import Appointment, Message, Notification, User
+from app.services import chat
+from tests.conftest import ADMIN_EMAIL, FAISAL, HESSA, LAMA, NORA, SAAD, TARIQ, YOUSEF
 
 CONV = "/api/v1/conversations"
 NOTES = "/api/v1/notifications"
@@ -21,7 +25,7 @@ def send(client, headers, conversation_id, body):
 # --- who may chat --------------------------------------------------------------
 
 
-def test_a_student_with_a_booking_reopens_the_existing_conversation(client, auth):
+def test_a_student_reopens_the_existing_conversation(client, auth):
     response = client.post(CONV, json={"professor_id": NORA}, headers=auth(SAAD))
     assert response.status_code == 200, response.text
     body = response.json()
@@ -30,35 +34,71 @@ def test_a_student_with_a_booking_reopens_the_existing_conversation(client, auth
     assert body["last_message"]["mine"] is False
 
 
-def test_no_booking_and_closed_messages_means_no_chat(client, auth):
-    response = client.post(CONV, json={"professor_id": FAISAL}, headers=auth(YOUSEF))
-    assert response.status_code == 403
-    assert code(response) == "CHAT_NOT_ALLOWED"
+def test_any_student_can_write_to_a_professor_without_a_booking(client, auth, db):
+    assert not db.scalar(
+        select(Appointment).where(Appointment.student_id == YOUSEF, Appointment.professor_id == FAISAL)
+    )
     profile = client.get(f"/api/v1/professors/{FAISAL}", headers=auth(YOUSEF)).json()
-    assert profile["can_message"] is False
-
-
-def test_a_declined_booking_does_not_open_the_chat_but_a_pending_one_does(client, auth, db):
-    assert client.get(f"/api/v1/professors/{OMAR}", headers=auth(YOUSEF)).json()["can_message"]
-    for appointment in db.scalars(
-        select(Appointment).where(Appointment.student_id == YOUSEF, Appointment.professor_id == OMAR)
-    ):
-        appointment.status = "declined"
-    db.flush()
-    response = client.post(CONV, json={"professor_id": OMAR}, headers=auth(YOUSEF))
-    assert code(response) == "CHAT_NOT_ALLOWED"
-
-
-def test_open_messages_let_any_student_write(client, auth):
-    response = client.post(CONV, json={"professor_id": HUDA}, headers=auth(HESSA))
+    assert profile["messages_closed_until"] is None and "can_message" not in profile
+    response = client.post(CONV, json={"professor_id": FAISAL}, headers=auth(YOUSEF))
     assert response.status_code == 200, response.text
     created = response.json()
-    assert created["last_message"] is None and created["unread_count"] == 0
-    sent = send(client, auth(HESSA), created["conversation_id"], "أهلاً دكتورة")
+    assert created["last_message"] is None and created["closed_until"] is None
+    sent = send(client, auth(YOUSEF), created["conversation_id"], "السلام عليكم دكتور")
     assert sent.status_code == 201
 
 
-def test_a_professor_can_open_the_chat_with_an_eligible_student(client, auth):
+def test_students_cannot_write_during_the_professors_closed_hours(client, auth, db):
+    # Tariq closes messages on Monday 08:00-12:00 Riyadh; it is Monday 10:00.
+    profile = client.get(f"/api/v1/professors/{TARIQ}", headers=auth(HESSA)).json()
+    assert profile["messages_closed_until"] == "2026-10-05T09:00:00Z"  # 12:00 Riyadh
+    opened = client.post(CONV, json={"professor_id": TARIQ}, headers=auth(HESSA))
+    assert opened.status_code == 200  # the conversation opens; only sending waits
+    conversation = opened.json()
+    assert conversation["closed_until"] == "2026-10-05T09:00:00Z"
+    refused = send(client, auth(HESSA), conversation["conversation_id"], "Hello Dr. Haddad")
+    assert (refused.status_code, code(refused)) == (403, "CHAT_CLOSED")
+    assert not db.scalar(select(Message).where(Message.conversation_id == conversation["conversation_id"]))
+    # The professor can still write during his own closed hours.
+    answer = send(client, auth(TARIQ), conversation["conversation_id"], "I will reply after 12.")
+    assert answer.status_code == 201
+
+
+def test_chat_opens_again_when_the_closed_hours_end(client, auth, clock):
+    opened = client.post(CONV, json={"professor_id": TARIQ}, headers=auth(HESSA)).json()
+    clock.at = datetime(2026, 10, 5, 9, 0)  # 12:00 Riyadh: the closure has ended (half-open)
+    assert send(client, auth(HESSA), opened["conversation_id"], "Hello again").status_code == 201
+    listed = client.get(CONV, headers=auth(HESSA)).json()["items"]
+    assert all(c["closed_until"] is None for c in listed)
+
+
+def test_back_to_back_closures_count_as_one_stretch():
+    # Noura: Thursday 16:00 -> midnight, then all of Friday. On Thursday 17:00 Riyadh
+    # students can write again only at Saturday 00:00 Riyadh.
+    closures = [
+        SimpleNamespace(day_of_week=4, start_time=time(16), end_time=time(0)),
+        SimpleNamespace(day_of_week=5, start_time=time(0), end_time=time(0)),
+    ]
+    thursday_17 = datetime(2026, 10, 8, 14, 0)
+    assert chat.closed_until(closures, thursday_17) == datetime(2026, 10, 9, 21, 0)
+    assert chat.closed_until(closures, datetime(2026, 10, 8, 12, 59)) is None  # 15:59 Riyadh
+
+
+def test_a_saturday_night_closure_still_holds_on_sunday_morning():
+    closures = [SimpleNamespace(day_of_week=6, start_time=time(22), end_time=time(7))]
+    sunday_3am = datetime(2026, 10, 4, 0, 0)  # Sunday 03:00 Riyadh
+    assert chat.closed_until(closures, sunday_3am) == datetime(2026, 10, 4, 4, 0)  # 07:00 Riyadh
+    assert chat.closed_until(closures, datetime(2026, 10, 4, 4, 0)) is None
+
+
+def test_an_inactive_professor_cannot_be_messaged(client, auth, db):
+    db.get(User, FAISAL).is_active = False
+    db.flush()
+    response = client.post(CONV, json={"professor_id": FAISAL}, headers=auth(YOUSEF))
+    assert response.status_code == 404
+
+
+def test_a_professor_can_open_the_chat_with_a_student(client, auth):
     response = client.post(CONV, json={"student_id": LAMA}, headers=auth(NORA))
     assert response.status_code == 200
     assert response.json()["conversation_id"] == 2

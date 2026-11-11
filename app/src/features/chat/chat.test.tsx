@@ -30,6 +30,7 @@ const conversation: Conversation = {
   last_message: null,
   unread_count: 1,
   created_at: '2026-09-30T17:00:00Z',
+  closed_until: null,
 };
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 const message = (id: number, mine: boolean, body: string, read = false): ChatMessage => ({
@@ -41,10 +42,11 @@ const message = (id: number, mine: boolean, body: string, read = false): ChatMes
   read_at: read ? minutesAgo(1) : null,
 });
 
-function serve(onSend: (body: string) => unknown) {
+function serve(onSend: (body: string) => unknown, closedUntil: string | null = null) {
   mockApi.mockImplementation(async (path: string, method = 'GET', body?: unknown) => {
     if (path.startsWith('/conversations?')) {
-      return { items: [conversation], total: 1, limit: 100, offset: 0 };
+      const items = [{ ...conversation, closed_until: closedUntil }];
+      return { items, total: 1, limit: 100, offset: 0 };
     }
     if (path.startsWith('/conversations/1/messages') && method === 'GET') {
       const items = [
@@ -122,4 +124,30 @@ it('gives professors quick replies that send in one tap', async () => {
   await waitFor(() =>
     expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', { body: 'Come now' }),
   );
+});
+
+it("hides the composer from a student while the professor's messages are closed", async () => {
+  const inAnHour = new Date(Date.now() + 3_600_000).toISOString();
+  serve(() => undefined, inAnHour);
+  await renderWithProviders(<ConversationScreen />);
+  expect(await screen.findByText(/isn't taking messages until/)).toBeTruthy();
+  expect(screen.getByText('Yes, bring it printed.')).toBeTruthy(); // the thread stays readable
+  expect(screen.queryByLabelText(/^Message to/)).toBeNull();
+  expect(screen.queryByText('Send')).toBeNull();
+});
+
+it('lets the professor write during their own closed hours and says so', async () => {
+  mockUser = { user_id: 1, role: 'professor' } as Me;
+  serve(() => undefined, new Date(Date.now() + 3_600_000).toISOString());
+  await renderWithProviders(<ConversationScreen />);
+  expect(await screen.findByText(/Students can't write to you until/)).toBeTruthy();
+  expect(screen.getByText('Send')).toBeTruthy();
+});
+
+it('opens the composer again once the closed hours are over', async () => {
+  serve(() => undefined, new Date(Date.now() - 60_000).toISOString());
+  await renderWithProviders(<ConversationScreen />);
+  expect(await screen.findByText('Yes, bring it printed.')).toBeTruthy();
+  expect(screen.queryByText(/isn't taking messages/)).toBeNull();
+  expect(screen.getByText('Send')).toBeTruthy();
 });

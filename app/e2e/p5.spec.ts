@@ -98,10 +98,10 @@ test('a student writes, the professor gets the badge and replies in one tap', as
   ).toBe('professor');
 });
 
-test('no booking means no chat; settings change text size and hide message notifications', async ({
+test('any student can write; closed hours stop students; settings change text size and hide message notifications', async ({
   browser,
 }) => {
-  // Yousef has no booking with Mr. Faisal, who does not accept messages from everyone.
+  // Yousef has no booking with Mr. Faisal and can still write (owner decision 2026-11-07).
   const student = await open(browser, 'y.alghamdi@university.example');
   await student.getByLabel('Search professors').first().fill('Faisal'); // Home shows results inline
   await student
@@ -109,11 +109,38 @@ test('no booking means no chat; settings change text size and hide message notif
     .first()
     .click();
   await student.getByRole('button', { name: 'Message Mr. Faisal Al-Zahrani' }).click();
+  await expect(student).toHaveURL(/\/conversations\/\d+$/);
+  await student
+    .getByLabel('Message to Mr. Faisal Al-Zahrani')
+    .fill('Hello, a question about CE 101.');
+  await student.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(shown(student, /, Sent$/)).toBeVisible();
+  expect(
+    sql(
+      'SELECT COUNT(*) FROM messages m JOIN conversations c ON c.conversation_id = m.conversation_id ' +
+        'WHERE c.student_id = 11 AND c.professor_id = 6',
+    ),
+  ).toBe('1');
+
+  // Dr. Tariq closes messages on Monday 08:00-12:00; at 10:00 Hessa can read but not send.
+  const hessa = await open(browser, 'h.almansour@university.example');
+  await hessa.getByLabel('Search professors').first().fill('Tariq');
+  await hessa
+    .getByRole('button', { name: /^Dr\. Tariq Haddad/ })
+    .first()
+    .click();
+  await expect(shown(hessa, 'Not taking messages until 12:00 PM')).toBeVisible();
+  await hessa.getByRole('button', { name: 'Message Dr. Tariq Haddad' }).click();
   await expect(
-    shown(student, 'You can message Mr. Faisal Al-Zahrani after booking an appointment with them.'),
+    shown(
+      hessa,
+      "Dr. Tariq Haddad isn't taking messages until 12:00 PM. You can still read this conversation.",
+    ),
   ).toBeVisible();
-  expect(sql('SELECT COUNT(*) FROM conversations WHERE student_id = 11 AND professor_id = 6')).toBe(
-    '0',
+  await expect(hessa.getByLabel('Message to Dr. Tariq Haddad')).toHaveCount(0);
+  await shoot(hessa, 'en-6-chat-closed');
+  expect(sql('SELECT COUNT(*) FROM conversations WHERE student_id = 15 AND professor_id = 8')).toBe(
+    '1',
   );
 
   // Text size: from Medium (the default) the Profile heading grows by 20% with "Big" and
@@ -168,4 +195,43 @@ test('Arabic screens: conversations, thread with quick replies, notifications', 
 
   await student.clock.runFor(POLL_MS + 1000);
   await expect(shown(student, /، قُرئت$/)).toBeVisible();
+});
+
+test('a professor adds a booking time outside office hours and a student sees it', async ({
+  browser,
+}) => {
+  const professor = await open(browser, 'k.alotaibi@university.example');
+  await professor.getByRole('tab', { name: 'Schedule' }).click();
+  await professor.getByRole('tab', { name: 'Booking', exact: true }).click();
+  await professor.getByRole('button', { name: 'Add booking time' }).click();
+  await professor.getByRole('button', { name: 'Tuesday', exact: true }).click();
+  // 1:00 PM to 2:00 PM: Khalid has no office hours or classes then.
+  await professor.getByRole('button', { name: 'Start, PM' }).click();
+  await professor.getByRole('button', { name: 'Start, hour 1', exact: true }).click();
+  await professor.getByRole('button', { name: 'End, PM' }).click();
+  await professor.getByRole('button', { name: 'End, hour 2', exact: true }).click();
+  await expect(shown(professor, 'Tuesday, 1:00 PM–2:00 PM')).toBeVisible();
+  await shoot(professor, 'en-7-booking-time-sheet');
+  await professor.getByRole('button', { name: 'Save booking time' }).click();
+  await expect(shown(professor, 'Booking time saved')).toBeVisible();
+  expect(
+    sql(
+      "SELECT COUNT(*) FROM booking_periods WHERE professor_id = 2 AND day_of_week = 2 AND start_time = '13:00:00' AND end_time = '14:00:00'",
+    ),
+  ).toBe('1');
+  await shoot(professor, 'en-8-booking-times');
+
+  const student = await open(browser, 'l.alshehri@university.example');
+  await student.getByLabel('Search professors').first().fill('Khalid');
+  await student
+    .getByRole('button', { name: /^Prof\. Khalid Al-Otaibi/ })
+    .first()
+    .click();
+  await expect(shown(student, 'Tuesday, 1:00 PM–2:00 PM')).toBeVisible();
+  await shoot(student, 'en-9-profile-booking-times');
+
+  // Clean up so later specs see the seed (flows.spec reseeds only at its end).
+  sql(
+    "DELETE FROM booking_periods WHERE professor_id = 2 AND day_of_week = 2 AND start_time = '13:00:00'",
+  );
 });

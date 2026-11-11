@@ -43,7 +43,7 @@ Full step-by-step guide (Windows and macOS, including the phone): [docs/run-on-p
    - copy `.env.example` to `.env` and set `DB_PASSWORD`;
    - run `python3 scripts/reset_db.py`;
    - run `python3 scripts/check_db.py`.
-4. The graded SQL is in [`db/queries.sql`](db/queries.sql): 85 queries, three views and a double-booking trigger demo. It runs in the mawjood database with no errors and changes no data: `mysql -u root -p mawjood < db/queries.sql`, or open it in Workbench and run it all. `python3 scripts/check_sql.py` runs it on a throwaway copy and prints the coverage per table.
+4. The graded SQL is in [`db/queries.sql`](db/queries.sql): 102 queries, three views and a double-booking trigger demo. It runs in the mawjood database with no errors and changes no data: `mysql -u root -p mawjood < db/queries.sql`, or open it in Workbench and run it all. `python3 scripts/check_sql.py` runs it on a throwaway copy and prints the coverage per table.
 
 Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example `s.almutairi@university.example` (student), `n.alharbi@university.example` (professor) and `admin@university.example` (admin).
 
@@ -55,7 +55,7 @@ Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example 
    python3.12 -m venv .venv && source .venv/bin/activate   # Windows: py -3.12 -m venv .venv && .venv\Scripts\activate
    pip install -e ".[dev]"
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # API docs: http://localhost:8000/docs
-   pytest                                                     # 124 tests against a throwaway MySQL database
+   pytest                                                     # 147 tests against a throwaway MySQL database
    ```
 
 ### App (Expo: Android and iOS through Expo Go, plus the web build)
@@ -68,11 +68,11 @@ npx expo start        # scan the QR code with Expo Go (Android) or the Camera ap
 The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The first launch asks for the language, then you sign in with a demo account (below). What each role gets:
 - **Students:**
   - Home: pinned professors with their live door status, the next appointment and their department; refreshed every 20 seconds and still readable offline;
-  - Search, professor profiles and booking in 4 steps;
-  - Appointments, Messages and notifications.
+  - Search, professor profiles and booking in 4 steps, inside each professor's booking times;
+  - Appointments, Messages (any professor, except during their closed hours) and notifications.
 - **Professors:**
   - My status: one tap, with presets and a note;
-  - Requests, Schedule, Messages with quick replies, and notifications.
+  - Requests, Schedule (timetable, booking times and closed message hours), Messages with quick replies, and notifications.
 - **Admins:** departments, offices, professors and students (create, edit, delete).
 - **Settings for everyone:** language, theme and text size.
 - **New users:** "Create an account" on the sign-in screen with a university email (`@upm.edu.sa`; students use their university number, like `xxxxxxx@upm.edu.sa`).

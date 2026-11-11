@@ -1,4 +1,5 @@
-"""Professor self-service (one-tap status, schedule, settings) and student pins."""
+"""Professor self-service (one-tap status, schedule, booking periods, chat closed hours,
+settings) and student pins."""
 
 from datetime import datetime, timedelta
 
@@ -123,12 +124,10 @@ def test_professors_cannot_edit_each_others_schedule(client, auth):
     assert client.delete(f"{SCHEDULE}/1", headers=auth(KHALID)).status_code == 404  # block 1 is Noura's
 
 
-def test_professor_changes_slot_length_and_open_messages(client, auth):
+def test_professor_changes_the_usual_appointment_length(client, auth):
     headers = auth(NORA)
-    updated = client.patch(
-        "/api/v1/me/professor-settings", json={"slot_minutes": 30, "open_messages": True}, headers=headers
-    ).json()
-    assert (updated["slot_minutes"], updated["open_messages"]) == (30, True)
+    updated = client.patch("/api/v1/me/professor-settings", json={"slot_minutes": 30}, headers=headers).json()
+    assert updated["slot_minutes"] == 30 and "open_messages" not in updated
     bad = client.patch("/api/v1/me/professor-settings", json={"slot_minutes": 20}, headers=headers)
     assert bad.json()["error"]["code"] == "VALIDATION_ERROR"
 
@@ -142,3 +141,113 @@ def test_student_pins_and_unpins_professors(client, auth):
     assert client.delete(f"/api/v1/me/pins/{HUDA}", headers=headers).status_code == 204
     assert client.get("/api/v1/me/pins", headers=headers).json()["total"] == 3
     assert client.put("/api/v1/me/pins/999", headers=headers).status_code == 404
+
+
+# --- booking periods (owner decision 2026-11-07) ---------------------------------------
+
+PERIODS = "/api/v1/me/booking-periods"
+CLOSED = "/api/v1/me/chat-closed-hours"
+
+
+def test_professor_manages_booking_periods_independently_of_the_timetable(client, auth):
+    headers = auth(NORA)
+    assert client.get(PERIODS, headers=headers).json()["total"] == 3
+    # Monday 15:00-16:00 is outside every schedule block: still a valid booking period.
+    created = client.post(
+        PERIODS, json={"day_of_week": 1, "start_time": "15:00", "end_time": "16:00"}, headers=headers
+    )
+    assert created.status_code == 201, created.text
+    period = created.json()
+    assert (period["day_of_week"], period["start_time"], period["end_time"]) == (1, "15:00", "16:00")
+    # Over a class block is allowed too: periods only clash with other periods.
+    moved = client.put(
+        f"{PERIODS}/{period['period_id']}",
+        json={"day_of_week": 1, "start_time": "13:00", "end_time": "14:00"},
+        headers=headers,
+    )
+    assert moved.status_code == 200 and moved.json()["start_time"] == "13:00"
+    assert client.delete(f"{PERIODS}/{period['period_id']}", headers=headers).status_code == 204
+    assert client.get(PERIODS, headers=headers).json()["total"] == 3
+
+
+def test_booking_periods_cannot_overlap_and_are_validated(client, auth):
+    headers = auth(NORA)
+    overlap = client.post(  # Noura takes bookings on Sunday 10:00-12:00
+        PERIODS, json={"day_of_week": 0, "start_time": "11:30", "end_time": "12:30"}, headers=headers
+    )
+    assert (overlap.status_code, overlap.json()["error"]["code"]) == (409, "BOOKING_PERIOD_OVERLAP")
+    touching = client.post(
+        PERIODS, json={"day_of_week": 0, "start_time": "12:00", "end_time": "12:30"}, headers=headers
+    )
+    assert touching.status_code == 201
+    for bad in (
+        {"day_of_week": 5, "start_time": "10:00", "end_time": "11:00"},  # Friday
+        {"day_of_week": 1, "start_time": "10:10", "end_time": "11:00"},  # off the grid
+        {"day_of_week": 1, "start_time": "11:00", "end_time": "11:00"},  # empty
+    ):
+        assert client.post(PERIODS, json=bad, headers=headers).json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_booking_periods_and_closed_hours_belong_to_their_professor(client, auth):
+    assert client.delete(f"{PERIODS}/1", headers=auth(KHALID)).status_code == 404  # Noura's
+    assert (
+        client.put(
+            f"{CLOSED}/1",
+            json={"day_of_week": 1, "start_time": "08:00", "end_time": "09:00"},
+            headers=auth(KHALID),
+        ).status_code
+        == 404
+    )
+    assert client.get(PERIODS, headers=auth(SAAD)).status_code == 403  # students have none
+
+
+# --- chat closed hours -------------------------------------------------------------
+
+
+def test_professor_closes_chat_overnight_and_for_whole_days(client, auth):
+    headers = auth(KHALID)
+    night = client.post(
+        CLOSED, json={"day_of_week": 3, "start_time": "20:00", "end_time": "08:00"}, headers=headers
+    )
+    assert night.status_code == 201, night.text
+    friday = client.post(
+        CLOSED, json={"day_of_week": 5, "start_time": "00:00", "end_time": "00:00"}, headers=headers
+    )
+    assert friday.status_code == 201
+    listed = client.get(CLOSED, headers=headers).json()["items"]
+    assert [(c["day_of_week"], c["start_time"], c["end_time"]) for c in listed] == [
+        (3, "20:00", "08:00"),
+        (5, "00:00", "00:00"),
+    ]
+    # Wednesday's night closure runs into Thursday morning: Thursday 07:00 overlaps it.
+    clash = client.post(
+        CLOSED, json={"day_of_week": 4, "start_time": "07:00", "end_time": "09:00"}, headers=headers
+    )
+    assert (clash.status_code, clash.json()["error"]["code"]) == (409, "CHAT_CLOSURE_OVERLAP")
+    after = client.post(
+        CLOSED, json={"day_of_week": 4, "start_time": "08:00", "end_time": "09:00"}, headers=headers
+    )
+    assert after.status_code == 201
+    assert client.delete(f"{CLOSED}/{night.json()['closure_id']}", headers=headers).status_code == 204
+
+
+def test_a_saturday_night_closure_wraps_into_sunday(client, auth):
+    headers = auth(KHALID)
+    saturday = client.post(
+        CLOSED, json={"day_of_week": 6, "start_time": "22:00", "end_time": "06:00"}, headers=headers
+    )
+    assert saturday.status_code == 201
+    sunday = client.post(
+        CLOSED, json={"day_of_week": 0, "start_time": "05:00", "end_time": "07:00"}, headers=headers
+    )
+    assert sunday.json()["error"]["code"] == "CHAT_CLOSURE_OVERLAP"
+
+
+def test_closed_hours_input_is_validated(client, auth):
+    headers = auth(KHALID)
+    for bad in (
+        {"day_of_week": 7, "start_time": "10:00", "end_time": "11:00"},
+        {"day_of_week": 1, "start_time": "10:10", "end_time": "11:00"},
+        {"day_of_week": 1, "start_time": "24:00", "end_time": "11:00"},
+    ):
+        assert client.post(CLOSED, json=bad, headers=headers).json()["error"]["code"] == "VALIDATION_ERROR"

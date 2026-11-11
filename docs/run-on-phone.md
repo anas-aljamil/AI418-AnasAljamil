@@ -56,7 +56,7 @@ The three files must run in this order, in one session:
 2. *File → Open SQL Script…* → `db/create_database.sql` → click the lightning bolt (Execute). The `USE mawjood;` at its end makes `mawjood` the default schema.
 3. Open `db/schema.sql` in the same connection and execute it.
 4. Open `db/seed.sql` and execute it.
-5. Refresh the *Schemas* panel: `mawjood` shows 12 tables. Check with `SELECT COUNT(*) FROM mawjood.users;`, which returns 16.
+5. Refresh the *Schemas* panel: `mawjood` shows 15 tables. Check with `SELECT COUNT(*) FROM mawjood.users;`, which returns 16.
 
 Workbench understands the `DELIMITER $$` lines around the triggers; don't remove them.
 

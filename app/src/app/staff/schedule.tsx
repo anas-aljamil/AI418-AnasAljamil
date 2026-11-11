@@ -1,10 +1,14 @@
 /**
- * Weekly schedule editor: the professor's office hours and classes for Sunday to Thursday,
- * added, edited and deleted in a sheet, plus the appointment length (15 or 30 minutes).
- * Times are Riyadh times on a 15-minute grid, picked on the 12-hour clock (hour, minutes,
- * AM/PM); overlaps are refused by the API.
+ * Weekly schedule editor, in three views behind one switch:
+ * - Timetable: office hours and classes for Sunday to Thursday (they drive the live status),
+ *   plus the usual appointment length (15 or 30 minutes);
+ * - Booking: the times students can book in, inside or outside office hours;
+ * - Messages: the weekly hours when students cannot write.
+ * Each item is added, edited and deleted in a sheet. Times are Riyadh times on a 15-minute
+ * grid, picked on the 12-hour clock (hour, minutes, AM/PM); overlaps are refused by the API.
  */
 import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,12 +27,14 @@ import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { SkeletonRow } from '@/components/Placeholders';
+import { Segmented } from '@/components/Segmented';
 import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
+import { WeeklyRanges } from '@/features/schedule/WeeklyRanges';
 import { errorKey } from '@/lib/errors';
 import { clockText, minutesOfDay } from '@/lib/format';
 import { isQuarterHour } from '@/lib/validation';
@@ -36,6 +42,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
 const DAYS = [0, 1, 2, 3, 4];
+type ScheduleView = 'timetable' | 'booking' | 'chat';
+const VIEWS: ScheduleView[] = ['timetable', 'booking', 'chat'];
 const EMPTY: BlockInput = {
   kind: 'office_hours',
   day_of_week: 0,
@@ -51,6 +59,11 @@ export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const user = useUser();
+  // ?view=booking or ?view=chat opens that view (links from elsewhere in the app).
+  const params = useLocalSearchParams<{ view?: string }>();
+  const [view, setView] = useState<ScheduleView>(
+    VIEWS.find((option) => option === params.view) ?? 'timetable',
+  );
   const schedule = useMySchedule();
   const slotLength = useSlotLength();
   const [minutes, setMinutes] = useState(user.professor?.slot_minutes ?? 15);
@@ -84,56 +97,74 @@ export default function ScheduleScreen() {
         <Text variant="heading" role="heading">
           {t('schedule.title')}
         </Text>
-
-        <View style={styles.section}>
-          <Text variant="label" role="heading">
-            {t('schedule.slot_length')}
-          </Text>
-          <View style={styles.chips}>
-            {([15, 30] as const).map((value) => (
-              <Chip
-                key={value}
-                label={t(`schedule.minutes_${value}`)}
-                selected={minutes === value}
-                onPress={() => changeLength(value)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.start}>
-          <Button
-            label={t('schedule.add')}
-            onPress={() => setEditing({ id: null, block: { ...EMPTY } })}
+        <View accessibilityLabel={t('schedule.view_label')}>
+          <Segmented
+            options={VIEWS.map((value) => ({ value, label: t(`schedule.view_${value}`) }))}
+            value={view}
+            onChange={setView}
           />
         </View>
 
-        {schedule.data === undefined && !schedule.error ? (
-          <SkeletonRow />
-        ) : schedule.error ? (
-          <SectionError message={t(errorKey(schedule.error))} onRetry={() => schedule.refetch()} />
+        {view === 'booking' ? (
+          <WeeklyRanges kind="booking-periods" />
+        ) : view === 'chat' ? (
+          <WeeklyRanges kind="chat-closed-hours" />
         ) : (
-          DAYS.map((day) => {
-            const blocks = (schedule.data ?? []).filter((b) => b.day_of_week === day);
-            return (
-              <View key={day} style={styles.section}>
-                <Text variant="title" role="heading">
-                  {t(`weekday.${day}`)}
-                </Text>
-                {blocks.length === 0 ? (
-                  <Text color="muted">{t('schedule.empty_day')}</Text>
-                ) : (
-                  blocks.map((block: Block) => (
-                    <ListRow
-                      key={block.block_id}
-                      title={line(block)}
-                      onPress={() => setEditing({ id: block.block_id, block })}
-                    />
-                  ))
-                )}
+          <>
+            <View style={styles.section}>
+              <Text variant="label" role="heading">
+                {t('schedule.slot_length')}
+              </Text>
+              <View style={styles.chips}>
+                {([15, 30] as const).map((value) => (
+                  <Chip
+                    key={value}
+                    label={t(`schedule.minutes_${value}`)}
+                    selected={minutes === value}
+                    onPress={() => changeLength(value)}
+                  />
+                ))}
               </View>
-            );
-          })
+            </View>
+
+            <View style={styles.start}>
+              <Button
+                label={t('schedule.add')}
+                onPress={() => setEditing({ id: null, block: { ...EMPTY } })}
+              />
+            </View>
+
+            {schedule.data === undefined && !schedule.error ? (
+              <SkeletonRow />
+            ) : schedule.error ? (
+              <SectionError
+                message={t(errorKey(schedule.error))}
+                onRetry={() => schedule.refetch()}
+              />
+            ) : (
+              DAYS.map((day) => {
+                const blocks = (schedule.data ?? []).filter((b) => b.day_of_week === day);
+                return (
+                  <View key={day} style={styles.section}>
+                    <Text variant="title" role="heading">
+                      {t(`weekday.${day}`)}
+                    </Text>
+                    {blocks.length === 0 ? (
+                      <Text color="muted">{t('schedule.empty_day')}</Text>
+                    ) : (
+                      blocks.map((block: Block) => (
+                        <ListRow
+                          key={block.block_id}
+                          title={line(block)}
+                          onPress={() => setEditing({ id: block.block_id, block })}
+                        />
+                      ))
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </>
         )}
       </ScrollView>
       {editing ? (
