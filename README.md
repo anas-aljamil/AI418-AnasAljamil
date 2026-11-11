@@ -45,7 +45,7 @@ Full step-by-step guide (Windows and macOS, including the phone): [docs/run-on-p
    - run `python3 scripts/check_db.py`.
 4. The graded SQL is in [`db/queries.sql`](db/queries.sql): 102 queries, three views and a double-booking trigger demo. It runs in the mawjood database with no errors and changes no data: `mysql -u root -p mawjood < db/queries.sql`, or open it in Workbench and run it all. `python3 scripts/check_sql.py` runs it on a throwaway copy and prints the coverage per table.
 
-Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example `s.almutairi@university.example` (student), `n.alharbi@university.example` (professor) and `admin@university.example` (admin).
+Demo accounts (fictional) all use the password `Mawjood-Demo-2026`, for example `s.almutairi@university.example` (student), `n.alharbi@university.example` (professor) and `admin@university.example` (admin). Through the public link the admin needs a private password first: `python3 scripts/set_password.py admin@university.example`.
 
 ### Backend API (FastAPI)
 1. Add a `JWT_SECRET` (a long random string) to `.env`.

@@ -122,13 +122,23 @@ def test_roles_are_enforced_server_side(client, auth):
     assert client.get("/api/v1/admin/departments", headers=student).status_code == 403
 
 
-def test_seed_password_is_refused_through_the_public_link(client):
+def test_through_the_public_link_demo_users_sign_in_but_not_the_admin(client):
     # Every seed account, the admin included, shares a published password.
     tunnel = {"CF-Connecting-IP": "203.0.113.7"}
-    response = client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}, headers=tunnel)
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "DEMO_ACCOUNT_LOCAL_ONLY"
+    student = client.post(LOGIN, json={"email": EMAILS[SAAD], "password": DEMO_PASSWORD}, headers=tunnel)
+    assert student.status_code == 200
+    admin = client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}, headers=tunnel)
+    assert admin.status_code == 403
+    assert admin.json()["error"]["code"] == "ADMIN_DEMO_PASSWORD"
+    # On this computer (no tunnel) the admin still signs in with it.
     assert client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}).status_code == 200
+
+
+def test_the_admin_block_reveals_nothing_without_the_password(client):
+    tunnel = {"CF-Connecting-IP": "203.0.113.7"}
+    response = client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": "a-wrong-one"}, headers=tunnel)
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
 
 
 def test_refresh_cookie_is_secure_when_the_browser_used_https(client):

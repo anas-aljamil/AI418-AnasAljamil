@@ -174,7 +174,7 @@ The same steps by hand:
    `--protocol http2` uses ordinary HTTPS. Without it cloudflared first tries QUIC (UDP), which many networks block ("failed to dial to edge with quic"). If the terminal says `cloudflared` is not recognised, open a new terminal after installing, or run `& "C:\Program Files (x86)\cloudflared\cloudflared.exe"` instead.
 5. Copy the `https://….trycloudflare.com` address it prints and share it. On a phone it can be saved to the home screen (Section 3a, step 6).
 
-Demo accounts (Section 1) share a published password, the admin included, so they sign in only on this computer or its Wi-Fi, never through the public link (`DEMO_ACCOUNT_LOCAL_ONLY`). People on the link create their own account (sign-up, @upm.edu.sa). An admin activates professors from this computer at `http://localhost:8000`. Over the link the refresh cookie is `Secure` automatically, and rate limits count each visitor's own address (docs/security.md).
+Demo accounts (Section 1) share a published password. Through the public link the demo students and professors sign in with it (fictional data). The admin does not while it still has that password (`ADMIN_DEMO_PASSWORD`): give it a private one with `python scripts/set_password.py admin@university.example` (typed hidden; again after every `reset_db.py`), then it signs in through the link too. Until then, sign in as admin on this computer at `http://localhost:8000`. People can also create their own account (sign-up, @upm.edu.sa). Over the link the refresh cookie is `Secure` automatically, and rate limits count each visitor's own address (docs/security.md).
 
 ## 3. The app on your phone (Expo Go)
 
