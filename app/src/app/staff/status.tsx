@@ -59,13 +59,11 @@ export default function StatusScreen() {
   const setStatus = useSetStatus();
 
   const current = status.data;
-  // The note field starts from the saved note once the status has loaded.
-  const [note, setNote] = useState('');
-  const [noteLoaded, setNoteLoaded] = useState(false);
-  if (current && !noteLoaded) {
-    setNoteLoaded(true);
-    setNote(current.source === 'override' ? (current.note ?? '') : '');
-  }
+  // The note students see (owner request 2026-11-11: the professor sees it too, as a card with
+  // when it goes, Edit and Delete). It belongs to a status the professor set; while the field
+  // is open, the draft is what a status tap saves with.
+  const savedNote = current?.source === 'override' ? current.note : null;
+  const [draft, setDraft] = useState<string | null>(null);
 
   const apply = (input: StatusInput | null, onDone?: () => void) => {
     if (input && Platform.OS !== 'web') {
@@ -76,7 +74,10 @@ export default function StatusScreen() {
       onError: () => toast(t('status_screen.failed')),
     });
   };
-  const withNote = (input: StatusInput): StatusInput => ({ ...input, note: note.trim() || null });
+  const withNote = (input: StatusInput): StatusInput => ({
+    ...input,
+    note: (draft ?? savedNote ?? '').trim() || null,
+  });
   // Whole minutes, so the status ends at exactly the time it shows ("until 10:15 AM", not 10:15:40).
   const inMinutes = (minutes: number) => {
     const end = new Date(now.getTime() + minutes * 60_000);
@@ -89,6 +90,34 @@ export default function StatusScreen() {
   const officeEnd = today?.blocks.find(
     (b) => b.kind === 'office_hours' && minutesOfDay(b.end_time) > minutesOfDay(now),
   )?.end_time;
+
+  // A note saved while following the schedule keeps the current status only until the schedule
+  // changes (the end of this block, or the start of the next one today), not all day: saving
+  // used to pin "In office" until midnight.
+  const nextStart = today?.blocks
+    .map((b) => b.start_time)
+    .filter((start) => minutesOfDay(start) > minutesOfDay(now))
+    .sort()[0];
+  const noteExpiry = (): string | null => {
+    if (!current) return null;
+    if (current.until) return current.until;
+    if (current.source === 'override' || !today || !nextStart) return null;
+    return new Date(`${today.date}T${nextStart}:00+03:00`).toISOString();
+  };
+  const saveNote = (text: string | null) => {
+    if (!current) return;
+    apply(
+      {
+        status: MANUAL.has(current.status) ? (current.status as ManualStatus) : 'away',
+        expires_at: noteExpiry(),
+        note: text?.trim() || null,
+      },
+      () => {
+        setDraft(null);
+        toast(t(text?.trim() ? 'status_screen.note_saved' : 'status_screen.note_removed'));
+      },
+    );
+  };
 
   const described = current
     ? describeStatus(
@@ -184,7 +213,7 @@ export default function StatusScreen() {
                     <Button
                       variant="quiet"
                       label={t('status_screen.back_to_schedule')}
-                      onPress={() => apply(null, () => setNote(''))}
+                      onPress={() => apply(null, () => setDraft(null))}
                     />
                   </View>
                 ) : null}
@@ -226,30 +255,71 @@ export default function StatusScreen() {
               </View>
 
               <View style={styles.section}>
-                <TextField
-                  label={t('status_screen.note_label')}
-                  helper={t('status_screen.note_helper')}
-                  value={note}
-                  onChangeText={setNote}
-                  maxLength={60}
-                />
-                <View style={styles.start}>
-                  <Button
-                    variant="secondary"
-                    label={t('status_screen.save_note')}
-                    onPress={() =>
-                      apply(
-                        withNote({
-                          status: MANUAL.has(current.status)
-                            ? (current.status as ManualStatus)
-                            : 'away',
-                          expires_at: current.source === 'override' ? current.until : null,
-                        }),
-                        () => toast(t('status_screen.note_saved')),
-                      )
-                    }
-                  />
-                </View>
+                {draft !== null ? (
+                  <>
+                    <TextField
+                      label={t('status_screen.note_label')}
+                      helper={t('status_screen.note_helper')}
+                      placeholder={t('status_screen.note_placeholder')}
+                      value={draft}
+                      onChangeText={setDraft}
+                      maxLength={60}
+                    />
+                    <View style={styles.noteActions}>
+                      <Button
+                        label={t('status_screen.save_note')}
+                        onPress={() => saveNote(draft)}
+                        disabled={!draft.trim() || setStatus.isPending}
+                      />
+                      <Button
+                        variant="quiet"
+                        label={t('common.cancel')}
+                        onPress={() => setDraft(null)}
+                      />
+                    </View>
+                  </>
+                ) : savedNote ? (
+                  <View
+                    style={[
+                      styles.noteCard,
+                      { backgroundColor: colors.surface, borderColor: colors.line },
+                    ]}
+                  >
+                    <Text variant="label" role="heading">
+                      {t('status_screen.note_heading')}
+                    </Text>
+                    {/* The same line students see on the profile. */}
+                    <Text weight="medium">{t('prof.note', { note: savedNote })}</Text>
+                    <Text variant="caption" color="muted">
+                      {t('status_screen.note_shown', {
+                        when: current.until
+                          ? untilText(new Date(current.until), t)
+                          : t('prof.until_end_of_day'),
+                      })}
+                    </Text>
+                    <View style={styles.noteActions}>
+                      <Button
+                        variant="secondary"
+                        label={t('status_screen.note_edit')}
+                        onPress={() => setDraft(savedNote)}
+                      />
+                      <Button
+                        variant="quiet"
+                        label={t('status_screen.note_delete')}
+                        onPress={() => saveNote(null)}
+                        disabled={setStatus.isPending}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.start}>
+                    <Button
+                      variant="secondary"
+                      label={t('status_screen.note_add')}
+                      onPress={() => setDraft('')}
+                    />
+                  </View>
+                )}
               </View>
             </>
           ) : (
@@ -320,5 +390,12 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  noteCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.card,
+    padding: space.md,
+    gap: space.xs,
+  },
+  noteActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   start: { alignItems: 'flex-start' },
 });

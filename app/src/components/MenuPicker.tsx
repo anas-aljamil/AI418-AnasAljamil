@@ -1,10 +1,15 @@
 /**
- * One choice from a longer list (an office, a booking start): a field that shows the choice.
- * On phones it opens a sheet with the options as a radio list; on the web build it is the
- * browser's own menu (a native <select> laid over the field), which phones show as their
- * system picker list (owner request 2026-11-11). Options may be grouped under headings and
- * may be unavailable: those stay in the list, dimmed, and cannot be chosen; their label says
- * why. Shorter lists use chips; departments use DepartmentPicker, which groups them by college.
+ * One choice from a longer list (an office, a booking start, a length): a field that shows
+ * the choice and opens the options.
+ * - Phones and tablets in the browser (a touch screen) get the browser's own menu: a native
+ *   <select> laid over the field, which the phone shows as its system picker (owner request
+ *   2026-11-11).
+ * - A computer (mouse) and the Expo Go app get our own menu, styled like the rest of the app:
+ *   a sheet (a centred dialog on desktop) with the options as a radio list, or as compact pills
+ *   for short labels such as times. Chrome's own menu on a computer could not be styled and
+ *   broke the Arabic times over two lines (owner report 2026-11-11).
+ * Options may be grouped under headings and may be unavailable: those stay in the list,
+ * dimmed, and cannot be chosen; their label says why. Departments use DepartmentPicker.
  */
 import { createElement, Fragment, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -35,6 +40,8 @@ interface MenuPickerProps {
   /** Shown when nothing is chosen yet. */
   placeholder: string;
   error?: string;
+  /** Short labels (times, lengths): our menu shows them as pills in rows instead of a list. */
+  compact?: boolean;
 }
 
 /** Consecutive options with the same group, in order. */
@@ -48,6 +55,16 @@ function grouped(options: MenuOption[]): { group?: string; options: MenuOption[]
   return runs;
 }
 
+/** A browser on a touch screen (phone or tablet), where the system picker fits best. */
+function touchBrowser(): boolean {
+  return (
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches
+  );
+}
+
 export function MenuPicker({
   label,
   options,
@@ -55,15 +72,16 @@ export function MenuPicker({
   onChange,
   placeholder,
   error,
+  compact = false,
 }: MenuPickerProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [native] = useState(touchBrowser);
   const selected = options.find((o) => o.value === value);
   const shown = selected?.label ?? placeholder;
   const runs = grouped(options);
-  const web = Platform.OS === 'web';
 
   const box = [
     styles.box,
@@ -85,7 +103,7 @@ export function MenuPicker({
   return (
     <View style={styles.field}>
       <Text variant="label">{label}</Text>
-      {web ? (
+      {native ? (
         <View>
           {/* The visible field; the transparent <select> on top takes the taps, the keyboard
               and the screen reader, so the field itself is hidden from assistive technology. */}
@@ -127,7 +145,10 @@ export function MenuPicker({
           accessibilityLabel={spokenList([label, shown], t)}
           accessibilityHint={error}
           aria-invalid={!!error}
+          aria-haspopup="dialog"
           onPress={() => setOpen(true)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           style={({ pressed }) => [box, { opacity: pressed ? 0.85 : 1 }]}
         >
           {content}
@@ -139,46 +160,70 @@ export function MenuPicker({
         </Text>
       ) : null}
 
-      {web ? null : (
+      {native ? null : (
         <BottomSheet visible={open} title={label} onClose={() => setOpen(false)}>
-          <View role="radiogroup" accessibilityLabel={label} style={styles.list}>
+          <View role="radiogroup" accessibilityLabel={label} style={styles.groups}>
             {runs.map((run, index) => (
-              <View key={index} style={styles.list}>
+              <View key={index} style={styles.group}>
                 {run.group === undefined ? null : (
-                  <Text variant="label" weight="semibold" role="heading" style={styles.group}>
+                  <Text variant="label" weight="semibold" role="heading" color="muted">
                     {run.group}
                   </Text>
                 )}
-                {run.options.map((option) => {
-                  const chosen = option.value === value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      role="radio"
-                      aria-checked={chosen}
-                      aria-disabled={!!option.disabled}
-                      disabled={option.disabled}
-                      accessibilityLabel={option.label}
-                      onPress={() => {
-                        onChange(option.value);
-                        setOpen(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.option,
-                        {
-                          borderColor: chosen ? colors.primary : colors.line,
-                          backgroundColor: chosen ? colors.surface : 'transparent',
-                          opacity: option.disabled ? 0.45 : pressed ? 0.85 : 1,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.grow} weight={chosen ? 'semibold' : 'regular'}>
-                        {option.label}
-                      </Text>
-                      {chosen ? <Check color={colors.primary} size={20} strokeWidth={2} /> : null}
-                    </Pressable>
-                  );
-                })}
+                <View style={compact ? styles.pills : styles.list}>
+                  {run.options.map((option) => {
+                    const chosen = option.value === value;
+                    return (
+                      <Pressable
+                        key={option.value}
+                        role="radio"
+                        aria-checked={chosen}
+                        aria-disabled={!!option.disabled}
+                        disabled={option.disabled}
+                        accessibilityLabel={option.label}
+                        onPress={() => {
+                          onChange(option.value);
+                          setOpen(false);
+                        }}
+                        style={(state) => {
+                          const keyboard =
+                            'focused' in state && (state as { focused?: boolean }).focused;
+                          return [
+                            compact ? styles.pill : styles.option,
+                            {
+                              borderColor: chosen ? colors.primary : colors.line,
+                              borderWidth: chosen ? 2 : 1,
+                              backgroundColor: chosen
+                                ? colors.primary
+                                : state.pressed
+                                  ? colors.line
+                                  : colors.surface,
+                              opacity: option.disabled ? 0.45 : 1,
+                            },
+                            keyboard && {
+                              outlineColor: colors.primary,
+                              outlineWidth: 2,
+                              outlineStyle: 'solid',
+                              outlineOffset: 2,
+                            },
+                          ];
+                        }}
+                      >
+                        <Text
+                          style={compact ? undefined : styles.grow}
+                          numberOfLines={compact ? 1 : 2}
+                          weight={chosen ? 'semibold' : 'regular'}
+                          color={chosen ? 'onPrimary' : 'text'}
+                        >
+                          {option.label}
+                        </Text>
+                        {chosen && !compact ? (
+                          <Check color={colors.onPrimary} size={20} strokeWidth={2} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             ))}
           </View>
@@ -219,15 +264,24 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   grow: { flex: 1 },
+  groups: { gap: space.md },
+  group: { gap: space.xs },
   list: { gap: space.xxs },
-  group: { paddingTop: space.xs },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   option: {
     minHeight: touchTarget,
     borderRadius: radii.input,
-    borderWidth: 1,
     paddingHorizontal: space.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
+  },
+  pill: {
+    minHeight: touchTarget,
+    minWidth: touchTarget * 2,
+    borderRadius: radii.pill,
+    paddingHorizontal: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

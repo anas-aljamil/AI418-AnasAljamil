@@ -140,14 +140,18 @@ test('professor pushed screens fit 320 px: notifications and a conversation', as
 test('the schedule time picker fits 320 px and reads on the 12-hour clock', async ({ page }) => {
   await signIn(page, ROLES.professor.email, 'en', 'light');
   await navTab(page, 'Schedule').click();
-  await expect(page.getByText(/^10:00 AM–12:00 PM Office hours/).first()).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /^10:00 AM–12:00 PM, Office hours/ }).first(),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Add a block' }).click();
   const sheet = page.getByRole('dialog', { name: 'New block' });
   await expect(sheet).toBeVisible();
   // Several days, a start and a length (2026-11-11): the longest labels on one screen.
   await sheet.getByRole('button', { name: 'Sunday to Thursday', exact: true }).click();
-  await sheet.getByRole('button', { name: 'Start, 1 PM', exact: true }).click();
-  await sheet.getByRole('button', { name: 'Length, 1 hour 30 minutes', exact: true }).click();
+  await sheet.getByRole('button', { name: /^Start, / }).click();
+  await page.getByRole('radio', { name: '1:00 PM', exact: true }).click();
+  await sheet.getByRole('button', { name: /^Length, / }).click();
+  await page.getByRole('radio', { name: '1 hour 30 minutes, until 2:30 PM', exact: true }).click();
   await expect(sheet.getByText('1 hour 30 minutes, until 2:30 PM', { exact: true })).toBeVisible();
   await page.waitForTimeout(800); // the sheet slides up; measure it in place
   const problems = (await overflowing(page)).map((p) => `schedule sheet: ${p}`);
@@ -167,7 +171,7 @@ test('closed message hours past midnight fit 320 px in Arabic, dark', async ({ p
   await expect(
     sheet.getByText('12 ساعة، حتى 8:00 ص في اليوم التالي', { exact: true }),
   ).toBeVisible();
-  await expect(sheet.getByRole('button', { name: 'البداية، 3 ص', exact: true })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'البداية، 8:00 م', exact: true })).toBeVisible();
   await page.waitForTimeout(800); // the sheet slides up; measure it in place
   const problems = (await overflowing(page)).map((p) => `closed hours sheet: ${p}`);
   await painted(page);

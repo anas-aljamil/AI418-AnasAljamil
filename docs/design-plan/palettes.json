@@ -54,5 +54,107 @@
     "busy": "#F0564F",
     "away": "#93A6A9",
     "lamp": "#FFD27A"
+  },
+  "A light vision red_green": {
+    "bg": "#F2F5F8",
+    "surface": "#FFFFFF",
+    "text": "#15212E",
+    "muted": "#4B5A69",
+    "primary": "#1F4F8C",
+    "on_primary": "#FFFFFF",
+    "line": "#D6DEE6",
+    "in_office": "#16418F",
+    "in_class": "#C27A0A",
+    "busy": "#861317",
+    "away": "#66727F",
+    "lamp": "#FFE9A8",
+    "vision": [
+      "protanopia",
+      "deuteranopia"
+    ]
+  },
+  "A dark vision red_green": {
+    "bg": "#0D151E",
+    "surface": "#152030",
+    "text": "#E7EEF5",
+    "muted": "#A3B2C2",
+    "primary": "#8AB6EE",
+    "on_primary": "#0D151E",
+    "line": "#263445",
+    "in_office": "#3D7DF5",
+    "in_class": "#F2B50D",
+    "busy": "#CC3333",
+    "away": "#94A2B1",
+    "lamp": "#F6D985",
+    "vision": [
+      "protanopia",
+      "deuteranopia"
+    ]
+  },
+  "A light vision blue_yellow": {
+    "bg": "#F2F5F8",
+    "surface": "#FFFFFF",
+    "text": "#15212E",
+    "muted": "#4B5A69",
+    "primary": "#1F4F8C",
+    "on_primary": "#FFFFFF",
+    "line": "#D6DEE6",
+    "in_office": "#1B7F4C",
+    "in_class": "#A35400",
+    "busy": "#B0124A",
+    "away": "#66727F",
+    "lamp": "#FFE9A8",
+    "vision": [
+      "tritanopia"
+    ]
+  },
+  "A dark vision blue_yellow": {
+    "bg": "#0D151E",
+    "surface": "#152030",
+    "text": "#E7EEF5",
+    "muted": "#A3B2C2",
+    "primary": "#8AB6EE",
+    "on_primary": "#0D151E",
+    "line": "#263445",
+    "in_office": "#5BD6A8",
+    "in_class": "#F2A65A",
+    "busy": "#FF6B8B",
+    "away": "#94A2B1",
+    "lamp": "#F6D985",
+    "vision": [
+      "tritanopia"
+    ]
+  },
+  "A light vision none": {
+    "bg": "#F2F5F8",
+    "surface": "#FFFFFF",
+    "text": "#15212E",
+    "muted": "#4B5A69",
+    "primary": "#1F4F8C",
+    "on_primary": "#FFFFFF",
+    "line": "#D6DEE6",
+    "in_office": "#262626",
+    "in_class": "#454545",
+    "busy": "#8C8C8C",
+    "away": "#66727F",
+    "lamp": "#FFE9A8",
+    "vision": [],
+    "min_delta_e": 13
+  },
+  "A dark vision none": {
+    "bg": "#0D151E",
+    "surface": "#152030",
+    "text": "#E7EEF5",
+    "muted": "#A3B2C2",
+    "primary": "#8AB6EE",
+    "on_primary": "#0D151E",
+    "line": "#263445",
+    "in_office": "#E3E3E3",
+    "in_class": "#BABABA",
+    "busy": "#6E6E6E",
+    "away": "#94A2B1",
+    "lamp": "#F6D985",
+    "vision": [],
+    "min_delta_e": 13
   }
 }

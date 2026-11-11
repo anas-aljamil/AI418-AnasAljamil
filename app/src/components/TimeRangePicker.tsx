@@ -1,33 +1,31 @@
 /**
- * A weekly time range on the 15-minute grid, picked as a start and a length (owner request
- * 2026-11-11: the old start and end pickers were 36 chips and let the end fall before the
- * start). The start is one hour chip that carries its period ("10 AM", "10 ص") plus a minute
- * chip; the length is a stepper (15 minutes shorter or longer) and one-tap lengths. The end
- * follows from the two, so a range can never end before it starts.
+ * A weekly time range on the 15-minute grid, picked as a start and a length, each from a
+ * menu (owner request 2026-11-11, replacing the hour, minute and length chips: they took two
+ * rows of 15-24 chips, nothing said the minutes were a second step, and ":00" read "00:" in
+ * Arabic). The start menu lists every quarter hour under its hour; the length menu lists every
+ * length that fits, each with its end ("1 hour 30 minutes, until 9:30 AM"). The end follows
+ * from the two, so a range can never end before it starts.
  *
  * Values stay "HH:MM" on the 24-hour clock, as the API stores them.
- * - Same-day ranges (timetable, booking times) offer 7 AM to 9 PM and end by 11:45 PM.
- * - Overnight ranges (closed message hours) offer every hour and may run past midnight, up to
+ * - Same-day ranges (timetable, booking times) offer starts from 7 AM to 9:45 PM and end by
+ *   11:45 PM.
+ * - Overnight ranges (closed message hours) offer every start and may run past midnight, up to
  *   a whole day, which is stored as an end equal to the start.
  */
 import { StyleSheet, View } from 'react-native';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import { clockText, durationText, hourText, minutesOfDay, timeOfDay } from '@/lib/format';
 import { space } from '@/theme/tokens';
-import { Chip } from './Chip';
-import { StepButton } from './StepButton';
-import { Text } from './Text';
+import { MenuPicker } from './MenuPicker';
 
 const STEP = 15;
 const DAY = 24 * 60;
 /** The latest end of a same-day range (the API needs the end after the start, same day). */
 const LAST_END = DAY - STEP;
-const WORK_HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7 AM to 9 PM
-const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = [0, 15, 30, 45];
-const SAME_DAY_LENGTHS = [30, 60, 90, 120, 180];
-const OVERNIGHT_LENGTHS = [60, 120, 240, 480, 720, DAY];
+const FIRST_WORK_START = 7 * 60;
+const LAST_WORK_START = 21 * 60 + 45;
 
 export interface TimeRange {
   start_time: string;
@@ -48,11 +46,19 @@ export function rangeLength({ start_time, end_time }: TimeRange, overnight: bool
   return Math.max(STEP, length);
 }
 
+/** "2 hours, until 12:00 PM", "12 hours, until 8:00 AM the next day" or "All day". */
+export function lengthText(start: number, length: number, t: TFunction): string {
+  if (length === DAY) return t('schedule.whole_day');
+  return t(start + length > DAY ? 'time_picker.until_next_day' : 'time_picker.until', {
+    length: durationText(length, t),
+    end: clockText(timeOfDay(start + length), t),
+  });
+}
+
 export function TimeRangePicker({ value, onChange, overnight = false }: TimeRangePickerProps) {
   const { t } = useTranslation();
   const start = minutesOfDay(value.start_time);
   const length = rangeLength(value, overnight);
-  const startHour = Math.floor(start / 60);
   const maxLength = (from: number) => (overnight ? DAY : LAST_END - from);
 
   const set = (nextStart: number, nextLength: number) => {
@@ -60,114 +66,43 @@ export function TimeRangePicker({ value, onChange, overnight = false }: TimeRang
     onChange({ start_time: timeOfDay(nextStart), end_time: timeOfDay(nextStart + fitted) });
   };
 
-  // An hour saved before outside 7 AM-9 PM still shows, so the current value is always visible.
-  const hours = overnight
-    ? ALL_HOURS
-    : WORK_HOURS.includes(startHour)
-      ? WORK_HOURS
-      : [...WORK_HOURS, startHour].sort((a, b) => a - b);
-  const lengths = (overnight ? OVERNIGHT_LENGTHS : SAME_DAY_LENGTHS).filter(
-    (option) => option <= maxLength(start),
-  );
-  const startLabel = t('schedule.start');
-  const lengthLabel = t('time_picker.length');
-  const end = clockText(timeOfDay(start + length), t);
-  const lengthLine =
-    length === DAY
-      ? t('schedule.whole_day')
-      : t(start + length > DAY ? 'time_picker.until_next_day' : 'time_picker.until', {
-          length: durationText(length, t),
-          end,
-        });
+  // A start saved before outside 7 AM-9:45 PM still shows, so the current value is listed.
+  const starts: number[] = [];
+  for (let at = 0; at < DAY; at += STEP) {
+    const inHours = overnight || (at >= FIRST_WORK_START && at <= LAST_WORK_START);
+    if (inHours || at === start) starts.push(at);
+  }
+  const lengths: number[] = [];
+  for (let option = STEP; option <= maxLength(start); option += STEP) lengths.push(option);
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.heading}>
-        <Text variant="label" role="heading">
-          {startLabel}
-        </Text>
-        <Text weight="semibold">{clockText(value.start_time, t)}</Text>
-      </View>
-      <View style={styles.row}>
-        {hours.map((hour) => (
-          <Chip
-            key={hour}
-            label={hourText(hour, t)}
-            accessibilityLabel={t('time_picker.hour_label', {
-              field: startLabel,
-              hour: hourText(hour, t),
-            })}
-            selected={startHour === hour}
-            onPress={() => set(hour * 60 + (start % 60), length)}
-          />
-        ))}
-      </View>
-      <View style={styles.row}>
-        {MINUTES.map((minute) => (
-          <Chip
-            key={minute}
-            label={`:${String(minute).padStart(2, '0')}`}
-            accessibilityLabel={t('time_picker.minute_label', {
-              field: startLabel,
-              minute: String(minute).padStart(2, '0'),
-            })}
-            selected={start % 60 === minute}
-            onPress={() => set(startHour * 60 + minute, length)}
-          />
-        ))}
-      </View>
-
-      <Text variant="label" role="heading" style={styles.gap}>
-        {lengthLabel}
-      </Text>
-      <View style={styles.stepper}>
-        <StepButton
-          label={t('time_picker.shorter')}
-          icon="minus"
-          disabled={length <= STEP}
-          onPress={() => set(start, length - STEP)}
-        />
-        <Text
-          weight="semibold"
-          style={[styles.grow, styles.center]}
-          accessibilityLiveRegion="polite"
-        >
-          {lengthLine}
-        </Text>
-        <StepButton
-          label={t('time_picker.longer')}
-          icon="plus"
-          disabled={length >= maxLength(start)}
-          onPress={() => set(start, length + STEP)}
-        />
-      </View>
-      <View style={styles.row}>
-        {lengths.map((option) => {
-          const text = option === DAY ? t('schedule.whole_day') : durationText(option, t);
-          return (
-            <Chip
-              key={option}
-              label={text}
-              accessibilityLabel={t('time_picker.length_label', {
-                field: lengthLabel,
-                length: text,
-              })}
-              selected={length === option}
-              onPress={() => set(start, option)}
-            />
-          );
-        })}
-      </View>
+      <MenuPicker
+        label={t('schedule.start')}
+        compact
+        value={String(start)}
+        onChange={(chosen) => set(Number(chosen), length)}
+        placeholder={clockText(value.start_time, t)}
+        options={starts.map((at) => ({
+          value: String(at),
+          label: clockText(timeOfDay(at), t),
+          group: hourText(Math.floor(at / 60), t),
+        }))}
+      />
+      <MenuPicker
+        label={t('time_picker.length')}
+        value={String(length)}
+        onChange={(chosen) => set(start, Number(chosen))}
+        placeholder={lengthText(start, length, t)}
+        options={lengths.map((option) => ({
+          value: String(option),
+          label: lengthText(start, option, t),
+        }))}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.xs },
-  heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
-  gap: { marginTop: space.sm },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  grow: { flex: 1 },
-  center: { textAlign: 'center' },
+  wrap: { gap: space.sm },
 });

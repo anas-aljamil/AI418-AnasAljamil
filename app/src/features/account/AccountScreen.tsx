@@ -12,19 +12,21 @@ import { useColumn } from '@/lib/layout';
 import { useAuth, useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { Door } from '@/components/Door';
+import { MenuPicker } from '@/components/MenuPicker';
 import { Text } from '@/components/Text';
 import { switchLanguage } from '@/i18n';
 import { departmentName, fullName } from '@/lib/names';
 import { TEXT_SIZES, useSettings, type TextSize } from '@/settings/SettingsProvider';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
-import { space, type Language } from '@/theme/tokens';
+import { COLOR_VISIONS, space, type ColorVision, type Language } from '@/theme/tokens';
 
 const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 const LANGUAGES: Language[] = ['ar', 'en'];
 
 export function AccountScreen() {
   const { t, i18n } = useTranslation();
-  const { colors, preference, setPreference } = useTheme();
+  const { colors, preference, setPreference, colorVision, setColorVision } = useTheme();
   const insets = useSafeAreaInsets();
   const column = useColumn();
   const { signOut } = useAuth();
@@ -99,6 +101,32 @@ export function AccountScreen() {
         </View>
       </View>
 
+      {/* Colour vision (owner request 2026-11-11): a menu, normal by default; the doors below
+          show the status colours it gives, each with its name. */}
+      <View style={styles.section}>
+        <MenuPicker
+          label={t('settings.color_vision')}
+          options={COLOR_VISIONS.map((vision) => ({
+            value: vision,
+            label: t(`settings.vision_${vision}`),
+          }))}
+          value={colorVision}
+          onChange={(vision) => setColorVision(vision as ColorVision)}
+          placeholder={t('settings.vision_normal')}
+        />
+        <View style={styles.preview}>
+          {(['in_office', 'in_class', 'busy', 'away'] as const).map((status) => (
+            <View key={status} style={styles.previewItem}>
+              <Door status={status} size={32} />
+              <Text variant="caption">{t(`status.${status}`)}</Text>
+            </View>
+          ))}
+        </View>
+        <Text variant="caption" color="muted">
+          {t('settings.color_vision_helper')}
+        </Text>
+      </View>
+
       <View style={styles.section}>
         <Text variant="label" role="heading">
           {t('settings.text_size')}
@@ -156,4 +184,6 @@ const styles = StyleSheet.create({
   identity: { gap: space.xxs },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  preview: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  previewItem: { alignItems: 'center', gap: space.xxs },
 });

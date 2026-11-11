@@ -4,13 +4,15 @@
  *   plus the usual appointment length (15 or 30 minutes);
  * - Booking: the times students can book in, inside or outside office hours;
  * - Messages: the weekly hours when students cannot write.
- * Each item is added, edited and deleted in a sheet. Times are Riyadh times on a 15-minute
- * grid, picked as a start and a length (TimeRangePicker); a new item may go on several days
- * at once. Overlaps are refused by the API.
+ * Each view is a week (WeekAgenda: a list per day on phones, a week grid on desktop), and each
+ * item is added, edited and deleted in a sheet. Times are Riyadh times on a 15-minute grid,
+ * picked as a start and a length from two menus (TimeRangePicker); a new item may go on
+ * several days at once. Overlaps are refused by the API.
  */
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import Plus from 'lucide-react-native/icons/plus';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,17 +30,18 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { Door } from '@/components/Door';
 import { SkeletonRow } from '@/components/Placeholders';
 import { Segmented } from '@/components/Segmented';
-import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { TimeRangePicker } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { DayChips, saveEachDay } from '@/features/schedule/days';
+import { WeekAgenda } from '@/features/schedule/WeekAgenda';
 import { WeeklyRanges } from '@/features/schedule/WeeklyRanges';
-import { BLOCK_KINDS, blockKindKey } from '@/lib/blocks';
+import { BLOCK_KINDS, BLOCK_PATTERN, BLOCK_STATUS, blockKindKey } from '@/lib/blocks';
 import { errorKey } from '@/lib/errors';
 import { clockText, daysText } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -134,6 +137,7 @@ export default function ScheduleScreen() {
             <View style={styles.start}>
               <Button
                 label={t('schedule.add')}
+                icon={<Plus color={colors.onPrimary} size={20} strokeWidth={2} />}
                 onPress={() => setEditing({ id: null, block: { ...EMPTY } })}
               />
             </View>
@@ -146,27 +150,20 @@ export default function ScheduleScreen() {
                 onRetry={() => schedule.refetch()}
               />
             ) : (
-              DAYS.map((day) => {
-                const blocks = (schedule.data ?? []).filter((b) => b.day_of_week === day);
-                return (
-                  <View key={day} style={styles.section}>
-                    <Text variant="title" role="heading">
-                      {t(`weekday.${day}`)}
-                    </Text>
-                    {blocks.length === 0 ? (
-                      <Text color="muted">{t('schedule.empty_day')}</Text>
-                    ) : (
-                      blocks.map((block: Block) => (
-                        <ListRow
-                          key={block.block_id}
-                          title={line(block)}
-                          onPress={() => setEditing({ id: block.block_id, block })}
-                        />
-                      ))
-                    )}
-                  </View>
-                );
-              })
+              <WeekAgenda
+                days={DAYS}
+                overview
+                items={(schedule.data ?? []).map((block: Block) => ({
+                  key: String(block.block_id),
+                  range: block,
+                  title: t(blockKindKey(block.kind)),
+                  label: block.label,
+                  color: colors.status[BLOCK_STATUS[block.kind]],
+                  pattern: BLOCK_PATTERN[block.kind],
+                  icon: <Door status={BLOCK_STATUS[block.kind]} size={24} />,
+                  onPress: () => setEditing({ id: block.block_id, block }),
+                }))}
+              />
             )}
           </>
         )}
