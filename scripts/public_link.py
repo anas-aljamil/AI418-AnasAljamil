@@ -124,7 +124,9 @@ def run_tunnel() -> subprocess.Popen:
                 "\n"
                 "  Mawjood is public. Share this link (it changes every time this starts):\n"
                 f"    {link}\n"
-                "  On this computer: http://localhost:8000 (demo accounts work only here).\n"
+                "  On this computer: http://localhost:8000\n"
+                "  Demo students and professors sign in through the link; the admin needs\n"
+                "  a private password there: py scripts/set_password.py <admin email>\n"
                 "  Keep this window open; Ctrl+C ends the link.\n",
                 flush=True,
             )
