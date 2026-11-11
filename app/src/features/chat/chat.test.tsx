@@ -38,6 +38,11 @@ const message = (id: number, mine: boolean, body: string, read = false): ChatMes
   sender_role: mine ? 'student' : 'professor',
   mine,
   body,
+  edited_at: null,
+  deleted_at: null,
+  reply_to: null,
+  // A message of mine sent a minute ago can still be changed.
+  editable_until: mine ? new Date(Date.now() + 14 * 60_000).toISOString() : null,
   created_at: minutesAgo(30 - id),
   read_at: read ? minutesAgo(1) : null,
 });
@@ -113,7 +118,10 @@ it('shows a message at once and lets a failed one be sent again', async () => {
   fail = false;
   await fireEvent.press(screen.getByRole('button', { name: 'On my way' }));
   await waitFor(() => expect(screen.queryByText(/Not sent/)).toBeNull());
-  expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', { body: 'On my way' });
+  expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', {
+    body: 'On my way',
+    reply_to_id: null,
+  });
 });
 
 it('gives professors quick replies that send in one tap', async () => {
@@ -122,7 +130,10 @@ it('gives professors quick replies that send in one tap', async () => {
   await renderWithProviders(<ConversationScreen />);
   await fireEvent.press(await screen.findByRole('button', { name: 'Come now' }));
   await waitFor(() =>
-    expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', { body: 'Come now' }),
+    expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', {
+      body: 'Come now',
+      reply_to_id: null,
+    }),
   );
 });
 
@@ -150,4 +161,89 @@ it('opens the composer again once the closed hours are over', async () => {
   expect(await screen.findByText('Yes, bring it printed.')).toBeTruthy();
   expect(screen.queryByText(/isn't taking messages/)).toBeNull();
   expect(screen.getByText('Send')).toBeTruthy();
+});
+
+/** Serves the thread with extra messages and records every other call. */
+function serveThread(items: ChatMessage[]) {
+  mockApi.mockImplementation(async (path: string, method = 'GET', body?: unknown) => {
+    if (path.startsWith('/conversations?'))
+      return { items: [conversation], total: 1, limit: 100, offset: 0 };
+    if (path.startsWith('/conversations/1/messages') && method === 'GET')
+      return { items, total: items.length, limit: 100, offset: 0 };
+    if (path === '/conversations/1/read') return undefined;
+    if (path === '/conversations/1/messages')
+      return { ...message(9, true, (body as { body: string }).body), reply_to: null };
+    if (path.startsWith('/conversations/1/messages/')) {
+      const id = Number(path.split('/').pop());
+      const found = items.find((m) => m.message_id === id)!;
+      return method === 'DELETE'
+        ? { ...found, body: null, deleted_at: new Date().toISOString() }
+        : { ...found, body: (body as { body: string }).body, edited_at: new Date().toISOString() };
+    }
+    throw new Error(`unexpected ${method} ${path}`);
+  });
+}
+
+it('replies to a message: the composer says so and the reply carries the quote', async () => {
+  serveThread([
+    message(2, false, 'Yes, bring it printed.'),
+    message(1, true, 'Shall I bring the draft?', true),
+  ]);
+  await renderWithProviders(<ConversationScreen />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'Yes, bring it printed.' }));
+  // Not my message: Reply and no Edit or Delete.
+  expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Reply' }));
+  expect(screen.getByText('Replying to Dr. Noura Al-Harbi')).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText('Message to Dr. Noura Al-Harbi'), 'Will do');
+  await fireEvent.press(screen.getByRole('button', { name: 'Send' }));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages', 'POST', {
+      body: 'Will do',
+      reply_to_id: 2,
+    }),
+  );
+  expect(screen.queryByText('Replying to Dr. Noura Al-Harbi')).toBeNull();
+});
+
+it('edits my message within 15 minutes and deletes one after a confirmation', async () => {
+  const old = { ...message(3, true, 'Sent long ago'), editable_until: null };
+  serveThread([message(1, true, 'See you at 10'), old]);
+  await renderWithProviders(<ConversationScreen />);
+  await fireEvent.press(await screen.findByRole('button', { name: 'See you at 10' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+  expect(screen.getByText('Editing your message')).toBeTruthy();
+  await fireEvent.changeText(
+    screen.getByLabelText('Message to Dr. Noura Al-Harbi'),
+    'See you at 10:30',
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages/1', 'PATCH', {
+      body: 'See you at 10:30',
+    }),
+  );
+  // Too old to change, still mine to delete.
+  await fireEvent.press(screen.getByRole('button', { name: 'Sent long ago' }));
+  expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Delete' }));
+  expect(screen.getByText('Delete this message?')).toBeTruthy();
+  await fireEvent.press(screen.getAllByRole('button', { name: 'Delete' }).at(-1)!);
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/conversations/1/messages/3', 'DELETE'),
+  );
+});
+
+it('keeps a deleted message in place and shows edits and quotes', async () => {
+  serveThread([
+    { ...message(4, false, 'Fine'), reply_to: { message_id: 1, mine: true, body: 'Shall I?' } },
+    { ...message(3, false, null as unknown as string), body: null, deleted_at: minutesAgo(1) },
+    { ...message(2, false, 'Bring it printed.'), edited_at: minutesAgo(2) },
+    message(1, true, 'Shall I?'),
+  ]);
+  await renderWithProviders(<ConversationScreen />);
+  expect(await screen.findByText('This message was deleted')).toBeTruthy();
+  expect(screen.getByText(/edited/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Replying to You: Shall I?' })).toBeTruthy();
 });

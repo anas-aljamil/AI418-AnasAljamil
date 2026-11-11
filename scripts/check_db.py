@@ -102,6 +102,14 @@ MUST_FAIL = [
      "INSERT INTO skipped_dates (skip_date) VALUES ('2026-10-25')", SIGNAL),
     ("skipped_dates: one row skips a date once",
      "INSERT INTO skipped_dates (block_id, skip_date) VALUES (2, '2026-10-18')", DUPLICATE),
+    # Edited, deleted and reply messages (2026-11-11).
+    ("messages: a deleted message keeps no text",
+     "UPDATE messages SET deleted_at = '2026-10-02 08:00:00' WHERE message_id = 1", CHECK_FAILED),
+    ("messages: a message cannot be edited before it was sent",
+     "UPDATE messages SET edited_at = '2026-09-01 08:00:00' WHERE message_id = 1", CHECK_FAILED),
+    ("messages: a reply quotes a message of its own conversation (trigger)",
+     "INSERT INTO messages (conversation_id, sender_role, body, reply_to_id) VALUES (2, 'student', 'Hi', 1)",
+     SIGNAL),
     ("booking_periods: Friday is not a working day",
      "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 5, '10:00', '11:00')",
      CHECK_FAILED),
@@ -279,8 +287,9 @@ def run_schema_checks(load_warnings: list[str]) -> list[tuple[bool, str, str]]:
     triggers = q(f"SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '{CHECK_DB}' "
                  "ORDER BY TRIGGER_NAME")
     expected = [["trg_appointments_no_overlap_insert"], ["trg_appointments_no_overlap_update"],
+                ["trg_messages_reply_same_conversation_insert"], ["trg_messages_reply_same_conversation_update"],
                 ["trg_skipped_dates_one_parent_insert"], ["trg_skipped_dates_one_parent_update"]]
-    results.append((triggers == expected, "double-booking and skipped-date triggers exist",
+    results.append((triggers == expected, "double-booking, reply and skipped-date triggers exist",
                     ", ".join(t[0] for t in triggers)))
     checks = scalar(f"SELECT COUNT(*) FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '{CHECK_DB}'", CONFIG)
     results.append((int(checks) >= 40, "CHECK constraints are installed and enforced", f"{checks} CHECK constraints"))

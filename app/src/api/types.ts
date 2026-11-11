@@ -220,19 +220,32 @@ export interface Participant extends Person {
   honorific: Honorific | null;
 }
 
+/** The message a reply quotes; body is null when that message was deleted. */
+export interface QuotedMessage {
+  message_id: number;
+  mine: boolean;
+  body: string | null;
+}
+
 export interface ChatMessage {
   message_id: number;
   sender_role: 'student' | 'professor';
   mine: boolean;
-  body: string;
+  /** null once the sender deleted it (its place stays). */
+  body: string | null;
   created_at: string;
+  edited_at: string | null;
+  deleted_at: string | null;
   read_at: string | null;
+  reply_to: QuotedMessage | null;
+  /** Until then the sender may change the text (15 minutes); null otherwise. */
+  editable_until: string | null;
 }
 
 export interface Conversation {
   conversation_id: number;
   other: Participant;
-  last_message: { body: string; mine: boolean; created_at: string } | null;
+  last_message: { body: string | null; mine: boolean; created_at: string } | null;
   unread_count: number;
   created_at: string;
   /** Set while the professor's closed hours are on: students can write again at this time. */

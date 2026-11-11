@@ -515,17 +515,30 @@ class ParticipantOut(PersonOut):
     honorific: str | None = None  # professors only
 
 
+class QuotedOut(BaseModel):
+    """The message a reply quotes."""
+
+    message_id: int
+    mine: bool
+    body: str | None  # None when that message was deleted
+
+
 class MessageOut(BaseModel):
     message_id: int
     sender_role: Literal["student", "professor"]
     mine: bool
-    body: str
+    body: str | None  # None once deleted
     created_at: UtcDatetime
+    edited_at: UtcDatetime | None
+    deleted_at: UtcDatetime | None
     read_at: UtcDatetime | None
+    reply_to: QuotedOut | None
+    # Until this time the sender may still change the text (None: no longer, or not theirs).
+    editable_until: UtcDatetime | None
 
 
 class LastMessageOut(BaseModel):
-    body: str
+    body: str | None  # None when the last message was deleted
     mine: bool
     created_at: UtcDatetime
 
@@ -547,8 +560,17 @@ class ConversationIn(BaseModel):
     student_id: int | None = None
 
 
+MessageText = Annotated[str, AfterValidator(str.strip), Field(min_length=1, max_length=1000)]
+
+
 class MessageIn(BaseModel):
-    body: Annotated[str, AfterValidator(str.strip), Field(min_length=1, max_length=1000)]
+    body: MessageText
+    # A reply quotes an earlier message of the same conversation.
+    reply_to_id: int | None = None
+
+
+class MessageEditIn(BaseModel):
+    body: MessageText
 
 
 class NotificationOut(BaseModel):

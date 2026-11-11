@@ -438,19 +438,34 @@ CREATE TABLE conversations (
 -- recipient, so neither user id is stored (and a sender can never be an
 -- outsider to the conversation).
 -- -----------------------------------------------------------------------------
+-- Edited, deleted and reply messages (owner decision 2026-11-11): the sender
+-- may change the text within 15 minutes (edited_at) and delete a message at
+-- any time; a deleted message keeps its place in the thread but loses its
+-- text (body NULL exactly when deleted_at is set). reply_to_id points at an
+-- earlier message of the same conversation (trigger below), SET NULL if it
+-- goes with its conversation.
 CREATE TABLE messages (
     message_id       INT           NOT NULL AUTO_INCREMENT,
     conversation_id  INT           NOT NULL,
     sender_role      VARCHAR(10)   COLLATE utf8mb4_0900_bin NOT NULL,
-    body             VARCHAR(1000) NOT NULL,
+    body             VARCHAR(1000) NULL,
+    reply_to_id      INT           NULL,
     created_at       DATETIME      NOT NULL DEFAULT (UTC_TIMESTAMP()),
+    edited_at        DATETIME      NULL,
+    deleted_at       DATETIME      NULL,
     read_at          DATETIME      NULL,
     PRIMARY KEY (message_id),
     KEY ix_messages_conversation_time (conversation_id, created_at),
+    KEY ix_messages_reply (reply_to_id),
     CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id)
         REFERENCES conversations (conversation_id) ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT fk_messages_reply FOREIGN KEY (reply_to_id)
+        REFERENCES messages (message_id) ON DELETE SET NULL ON UPDATE RESTRICT,
     CONSTRAINT ck_messages_sender_role CHECK (sender_role IN ('student', 'professor')),
     CONSTRAINT ck_messages_body        CHECK (CHAR_LENGTH(TRIM(body)) >= 1),
+    CONSTRAINT ck_messages_deleted     CHECK ((deleted_at IS NULL) = (body IS NOT NULL)),
+    CONSTRAINT ck_messages_edited_after_sent  CHECK (edited_at >= created_at),
+    CONSTRAINT ck_messages_deleted_after_sent CHECK (deleted_at >= created_at),
     CONSTRAINT ck_messages_read_after_sent CHECK (read_at >= created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -532,6 +547,34 @@ BEGIN
     ) THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'SLOT_TAKEN: overlapping appointment for this professor';
+    END IF;
+END$$
+
+-- A reply quotes a message of its own conversation (a foreign key alone would
+-- allow any message).
+CREATE TRIGGER trg_messages_reply_same_conversation_insert
+BEFORE INSERT ON messages
+FOR EACH ROW
+BEGIN
+    IF NEW.reply_to_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM messages AS m
+        WHERE m.message_id = NEW.reply_to_id AND m.conversation_id = NEW.conversation_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REPLY_ELSEWHERE: a reply quotes a message of its own conversation';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_messages_reply_same_conversation_update
+BEFORE UPDATE ON messages
+FOR EACH ROW
+BEGIN
+    IF NEW.reply_to_id IS NOT NULL AND NOT (NEW.reply_to_id <=> OLD.reply_to_id) AND NOT EXISTS (
+        SELECT 1 FROM messages AS m
+        WHERE m.message_id = NEW.reply_to_id AND m.conversation_id = NEW.conversation_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REPLY_ELSEWHERE: a reply quotes a message of its own conversation';
     END IF;
 END$$
 

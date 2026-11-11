@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.api.v1.conversations import message_limiter
 from app.models import Appointment, Message, Notification, User
 from app.services import chat
-from tests.conftest import ADMIN_EMAIL, FAISAL, HESSA, LAMA, NORA, SAAD, TARIQ, YOUSEF
+from tests.conftest import ADMIN_EMAIL, FAISAL, HELEN, HESSA, LAMA, NORA, SAAD, TARIQ, YOUSEF
 
 
 def weekly(**fields):
@@ -216,3 +216,69 @@ def test_dated_and_skipped_closed_hours():
     evenings.skipped_dates = [date(2026, 10, 15)]
     assert chat.closed_until([evenings], thursday_10am) is None  # skipped this Thursday
     assert chat.closed_until([evenings], thursday_10am + timedelta(days=7)) == datetime(2026, 10, 22, 9, 0)
+
+
+# --- edit, delete, reply (owner decisions 2026-11-11) ---------------------------
+
+
+def test_the_sender_edits_a_message_within_15_minutes(client, auth, clock):
+    sent = send(client, auth(SAAD), 1, "See you at 10").json()
+    assert sent["editable_until"] == "2026-10-05T07:15:00Z" and sent["edited_at"] is None
+    url = f"{CONV}/1/messages/{sent['message_id']}"
+    edited = client.patch(url, json={"body": "  See you at 10:30  "}, headers=auth(SAAD))
+    assert edited.status_code == 200, edited.text
+    assert (edited.json()["body"], edited.json()["edited_at"]) == ("See you at 10:30", "2026-10-05T07:00:00Z")
+    # Only the sender: the professor gets 403, someone outside the chat 404.
+    assert code(client.patch(url, json={"body": "x"}, headers=auth(NORA))) == "NOT_YOUR_MESSAGE"
+    assert client.patch(url, json={"body": "x"}, headers=auth(LAMA)).status_code == 404
+    seen = client.get(f"{CONV}/1/messages", headers=auth(NORA)).json()["items"][0]
+    assert (seen["body"], seen["editable_until"]) == ("See you at 10:30", None)  # not hers to edit
+    clock.at += timedelta(minutes=15)
+    late = client.patch(url, json={"body": "See you at 11"}, headers=auth(SAAD))
+    assert code(late) == "EDIT_WINDOW_CLOSED"
+
+
+def test_the_sender_deletes_a_message_for_both_sides(client, auth):
+    sent = send(client, auth(SAAD), 1, "Wrong chat, sorry").json()
+    url = f"{CONV}/1/messages/{sent['message_id']}"
+    assert code(client.delete(url, headers=auth(NORA))) == "NOT_YOUR_MESSAGE"
+    deleted = client.delete(url, headers=auth(SAAD))
+    assert deleted.status_code == 200
+    assert (deleted.json()["body"], deleted.json()["deleted_at"]) == (None, "2026-10-05T07:00:00Z")
+    assert client.delete(url, headers=auth(SAAD)).status_code == 200  # again: no change
+    assert code(client.patch(url, json={"body": "x"}, headers=auth(SAAD))) == "MESSAGE_DELETED"
+    seen = client.get(f"{CONV}/1/messages", headers=auth(NORA)).json()["items"][0]
+    assert (seen["message_id"], seen["body"], seen["deleted_at"]) == (
+        sent["message_id"],
+        None,
+        "2026-10-05T07:00:00Z",
+    )
+    last = next(c for c in client.get(CONV, headers=auth(NORA)).json()["items"] if c["conversation_id"] == 1)
+    assert last["last_message"]["body"] is None
+
+
+def test_a_reply_quotes_a_message_of_the_same_conversation(client, auth):
+    first = send(client, auth(NORA), 1, "Bring the printed draft").json()
+    reply = client.post(
+        f"{CONV}/1/messages",
+        json={"body": "Will do", "reply_to_id": first["message_id"]},
+        headers=auth(SAAD),
+    )
+    assert reply.status_code == 201, reply.text
+    assert reply.json()["reply_to"] == {
+        "message_id": first["message_id"],
+        "mine": False,
+        "body": "Bring the printed draft",
+    }
+    seen = client.get(f"{CONV}/1/messages", headers=auth(NORA)).json()["items"][0]
+    assert seen["reply_to"]["mine"] is True  # Noura's own message, from her side
+    # Message 3 is in Lama's conversation with Noura.
+    elsewhere = client.post(f"{CONV}/1/messages", json={"body": "Hi", "reply_to_id": 3}, headers=auth(SAAD))
+    assert code(elsewhere) == "REPLY_NOT_FOUND"
+
+
+def test_the_seed_has_an_edited_a_deleted_and_a_reply_message(client, auth):
+    helen = client.get(f"{CONV}/4/messages", headers=auth(HELEN)).json()["items"]
+    by_id = {m["message_id"]: m for m in helen}
+    assert (by_id[8]["body"], by_id[8]["deleted_at"]) == (None, "2026-09-29T17:30:00Z")
+    assert by_id[9]["edited_at"] == "2026-09-29T17:02:00Z"

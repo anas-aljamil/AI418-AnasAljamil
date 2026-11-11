@@ -115,7 +115,7 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### messages
 - Candidate key: **message_id**.
-- FDs: `message_id -> conversation_id, sender_role, body, created_at, read_at`.
+- FDs: `message_id -> conversation_id, sender_role, body, reply_to_id, created_at, edited_at, deleted_at, read_at` (edits, deletion and replies added 2026-11-11). A deleted message keeps its row, with no text (`ck_messages_deleted`), so replies to it and the thread order stay; `reply_to_id` is a recursive foreign key and its conversation is the reply's own (trigger), which no column repeats.
 - The sender's and recipient's user ids are derivable via `conversation_id` and `sender_role`, so they are not stored.
 - **BCNF**.
 

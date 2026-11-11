@@ -258,9 +258,14 @@ class Message(Base):
     message_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.conversation_id"))
     sender_role: Mapped[str] = mapped_column(String(10))
-    body: Mapped[str] = mapped_column(String(1000))
+    body: Mapped[str | None] = mapped_column(String(1000))  # None once deleted
+    reply_to_id: Mapped[int | None] = mapped_column(ForeignKey("messages.message_id"))
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
     read_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    reply_to: Mapped["Message | None"] = relationship(remote_side=[message_id], lazy="joined", viewonly=True)
 
 
 class Notification(Base):

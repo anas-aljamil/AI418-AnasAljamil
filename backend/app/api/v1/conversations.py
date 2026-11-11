@@ -6,13 +6,15 @@ Sending is rate-limited per user (CLAUDE.md Section 8). Students cannot send dur
 professor's closed hours (403 CHAT_CLOSED); each conversation says until when.
 """
 
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.core.clock import Clock, get_clock
-from app.core.errors import not_found
+from app.core.errors import AppError, not_found
 from app.core.pagination import Page, PageParams, page_params
 from app.core.rate_limit import RateLimiter
 from app.db import get_db
@@ -22,9 +24,11 @@ from app.schemas import (
     ConversationIn,
     ConversationOut,
     LastMessageOut,
+    MessageEditIn,
     MessageIn,
     MessageOut,
     ParticipantOut,
+    QuotedOut,
 )
 from app.services import chat
 
@@ -45,15 +49,43 @@ def participant_out(db: Session, user_id: int) -> ParticipantOut:
     )
 
 
-def message_out(message: Message, user: User) -> MessageOut:
+# The sender may change a message's text for this long after sending it (owner decision
+# 2026-11-11); deleting is possible at any time.
+EDIT_WINDOW = timedelta(minutes=15)
+
+
+def message_out(message: Message, user: User, now: datetime) -> MessageOut:
+    mine = message.sender_role == user.role
+    quoted = message.reply_to
+    editable_until = message.created_at + EDIT_WINDOW
     return MessageOut(
         message_id=message.message_id,
         sender_role=message.sender_role,
-        mine=message.sender_role == user.role,
+        mine=mine,
         body=message.body,
         created_at=message.created_at,
+        edited_at=message.edited_at,
+        deleted_at=message.deleted_at,
         read_at=message.read_at,
+        reply_to=QuotedOut(
+            message_id=quoted.message_id, mine=quoted.sender_role == user.role, body=quoted.body
+        )
+        if quoted is not None
+        else None,
+        editable_until=editable_until
+        if mine and message.deleted_at is None and now < editable_until
+        else None,
     )
+
+
+def own_message(db: Session, conversation_id: int, message_id: int, user: User) -> Message:
+    """A message of this conversation that the user sent; someone else's is 403, none 404."""
+    message = db.get(Message, message_id)
+    if message is None or message.conversation_id != conversation_id:
+        raise not_found("Message")
+    if message.sender_role != user.role:
+        raise AppError(403, "NOT_YOUR_MESSAGE", "Only the sender can change or delete a message.")
+    return message
 
 
 def conversation_out(db: Session, conversation: Conversation, user: User, clock: Clock) -> ConversationOut:
@@ -146,6 +178,7 @@ def list_messages(
     page: PageParams = Depends(page_params),
     user: User = Depends(participant),
     db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
 ) -> Page[MessageOut]:
     chat.get_for_participant(db, conversation_id, user)
     where = Message.conversation_id == conversation_id
@@ -157,8 +190,9 @@ def list_messages(
         .offset(page.offset)
         .limit(page.limit)
     ).all()
+    now = clock.now()
     return Page[MessageOut](
-        items=[message_out(m, user) for m in rows], total=total, limit=page.limit, offset=page.offset
+        items=[message_out(m, user, now) for m in rows], total=total, limit=page.limit, offset=page.offset
     )
 
 
@@ -184,11 +218,75 @@ def send_message(
         until = chat.professor_closed_until(db, conversation.professor_id, now)
         if until is not None:
             raise chat.chat_closed(until)
-    message = Message(conversation_id=conversation_id, sender_role=user.role, body=body.body, created_at=now)
+    if body.reply_to_id is not None:
+        quoted = db.get(Message, body.reply_to_id)
+        if quoted is None or quoted.conversation_id != conversation_id:
+            raise AppError(422, "REPLY_NOT_FOUND", "The message you reply to is not in this conversation.")
+    message = Message(
+        conversation_id=conversation_id,
+        sender_role=user.role,
+        body=body.body,
+        reply_to_id=body.reply_to_id,
+        created_at=now,
+    )
     db.add(message)
     chat.notify_new_message(db, chat.other_party(conversation, user), conversation_id, now)
     db.commit()
-    return message_out(message, user)
+    db.refresh(message)
+    return message_out(message, user, now)
+
+
+@router.patch(
+    "/{conversation_id}/messages/{message_id}",
+    response_model=MessageOut,
+    summary="Change the text of my message (within 15 minutes of sending it)",
+)
+def edit_message(
+    conversation_id: int,
+    message_id: int,
+    body: MessageEditIn,
+    user: User = Depends(participant),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MessageOut:
+    conversation = chat.get_for_participant(db, conversation_id, user)
+    message = own_message(db, conversation_id, message_id, user)
+    message_limiter.check(str(user.user_id))
+    now = clock.now()
+    if message.deleted_at is not None:
+        raise AppError(409, "MESSAGE_DELETED", "This message was deleted.")
+    if now >= message.created_at + EDIT_WINDOW:
+        raise AppError(409, "EDIT_WINDOW_CLOSED", "A message can be changed for 15 minutes after it is sent.")
+    # Editing is writing: a student cannot change a message while messages are closed.
+    if user.role == "student":
+        until = chat.professor_closed_until(db, conversation.professor_id, now)
+        if until is not None:
+            raise chat.chat_closed(until)
+    if body.body != message.body:
+        message.body, message.edited_at = body.body, now
+        db.commit()
+    return message_out(message, user, now)
+
+
+@router.delete(
+    "/{conversation_id}/messages/{message_id}",
+    response_model=MessageOut,
+    summary="Delete my message for both sides (its place stays, marked deleted)",
+)
+def delete_message(
+    conversation_id: int,
+    message_id: int,
+    user: User = Depends(participant),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MessageOut:
+    chat.get_for_participant(db, conversation_id, user)
+    message = own_message(db, conversation_id, message_id, user)
+    now = clock.now()
+    if message.deleted_at is None:
+        message.body, message.deleted_at = None, now
+        db.commit()
+    return message_out(message, user, now)
 
 
 @router.post(
