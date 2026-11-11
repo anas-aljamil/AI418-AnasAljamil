@@ -3,9 +3,11 @@
  * timetable: a list per day and a sheet to add, change or delete one.
  * - Booking times (Sunday-Thursday): students can book only inside them, whether they fall in
  *   office hours or not. No booking times means nobody can book.
- * - Closed message hours (any day): students cannot write then. An end at or before the start
- *   runs into the next day ("8:00 PM to 8:00 AM the next day"); the same time closes the
- *   whole day. Overlaps are refused by the API.
+ * - Closed message hours (any day): students cannot write then. A length past midnight runs
+ *   into the next day ("8:00 PM to 8:00 AM the next day"), and a whole day is stored as an
+ *   end equal to the start. Overlaps are refused by the API.
+ * Both are picked as days, a start and a length (TimeRangePicker); a new one may go on
+ * several days at once.
  */
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,18 +24,17 @@ import {
 } from '@/api/queries';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
-import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { SkeletonRow } from '@/components/Placeholders';
 import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
-import { TimePicker } from '@/components/TimePicker';
+import { TimeRangePicker, type TimeRange } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
-import { clockText, minutesOfDay } from '@/lib/format';
-import { isQuarterHour } from '@/lib/validation';
+import { clockText, daysText, minutesOfDay } from '@/lib/format';
 import { space } from '@/theme/tokens';
+import { DayChips, saveEachDay } from './days';
 
 const WORKING_DAYS = [0, 1, 2, 3, 4];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -171,41 +172,44 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
   const config = KINDS[kind];
   const save = useSaveRange(kind);
   const remove = useDeleteRange(kind);
-  const [range, setRange] = useState<RangeInput>({
-    day_of_week: initial.day_of_week,
+  const [days, setDays] = useState([initial.day_of_week]);
+  const [times, setTimes] = useState<TimeRange>({
     start_time: initial.start_time,
     end_time: initial.end_time,
   });
   const [showErrors, setShowErrors] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const update = (patch: Partial<RangeInput>) => setRange((current) => ({ ...current, ...patch }));
 
-  const startError = !isQuarterHour(range.start_time) ? t('schedule.time_invalid') : null;
-  const endError = !isQuarterHour(range.end_time)
-    ? t('schedule.time_invalid')
-    : !config.overnight &&
-        !startError &&
-        minutesOfDay(range.end_time) <= minutesOfDay(range.start_time)
-      ? t('schedule.end_before_start')
-      : null;
-  const line = (r: RangeInput) =>
-    t('schedule.day_line', { day: t(`weekday.${r.day_of_week}`), range: rangeLine(r, t) });
+  const daysError = days.length === 0 ? t('schedule.days_missing') : undefined;
+  const line = (on: number[], range: TimeRange) =>
+    t('schedule.day_line', {
+      day: daysText(on, t),
+      range: rangeLine({ day_of_week: on[0] ?? 0, ...range }, t),
+    });
 
-  const submit = () => {
+  const submit = async () => {
     setShowErrors(true);
-    if (startError || endError) return;
+    if (daysError) return;
     setServerError(null);
-    save.mutate(
-      { id, range },
-      {
-        onSuccess: () => {
-          toast(t(config.keys.saved));
-          onClose();
-        },
-        onError: (error) => setServerError(t(errorKey(error))),
-      },
+    setSaving(true);
+    const result = await saveEachDay(
+      days,
+      (day) => save.mutateAsync({ id, range: { day_of_week: day, ...times } }),
+      t,
     );
+    setSaving(false);
+    if (result.failed.length === 0) {
+      toast(t(config.keys.saved));
+      onClose();
+      return;
+    }
+    // Keep only the days that still need saving, so trying again does not add duplicates.
+    if (result.saved.length > 0)
+      toast(t('schedule.saved_for', { days: daysText(result.saved, t) }));
+    setDays(result.failed);
+    setServerError(result.message);
   };
 
   const confirmDelete = () => {
@@ -229,43 +233,23 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
         title={t(id === null ? config.keys.newTitle : config.keys.editTitle)}
         onClose={onClose}
       >
-        <Text variant="label" role="heading">
-          {t('schedule.day')}
-        </Text>
-        <View style={styles.chips}>
-          {config.days.map((day) => (
-            <Chip
-              key={day}
-              label={t(`weekday.${day}`)}
-              selected={range.day_of_week === day}
-              onPress={() => update({ day_of_week: day })}
-            />
-          ))}
-        </View>
-        <TimePicker
-          label={t('schedule.start')}
-          value={range.start_time}
-          onChange={(value) => update({ start_time: value })}
-          error={showErrors ? (startError ?? undefined) : undefined}
+        <DayChips
+          days={config.days}
+          value={days}
+          onChange={setDays}
+          multiple={id === null}
+          error={showErrors ? daysError : undefined}
         />
-        <TimePicker
-          label={t('schedule.end')}
-          value={range.end_time}
-          onChange={(value) => update({ end_time: value })}
-          error={showErrors ? (endError ?? undefined) : undefined}
-        />
-        {config.overnight ? (
-          <Text variant="caption" color="muted">
-            {t('schedule.closure_end_helper')}
+        <TimeRangePicker value={times} onChange={setTimes} overnight={config.overnight} />
+        {days.length > 0 ? (
+          <Text weight="medium" accessibilityLiveRegion="polite">
+            {line(days, times)}
           </Text>
         ) : null}
-        <Text weight="medium" accessibilityLiveRegion="polite">
-          {line(range)}
-        </Text>
         <View accessibilityLiveRegion="polite" role={serverError ? 'alert' : undefined}>
           {serverError ? <Text color="danger">{serverError}</Text> : null}
         </View>
-        <Button label={t(config.keys.save)} onPress={submit} disabled={save.isPending} block />
+        <Button label={t(config.keys.save)} onPress={submit} disabled={saving} block />
         {id !== null ? (
           <Button
             variant="danger"
@@ -278,7 +262,7 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
       <ConfirmSheet
         visible={confirming}
         title={t(config.keys.confirmTitle)}
-        body={t(config.keys.confirmBody, { line: line(initial) })}
+        body={t(config.keys.confirmBody, { line: line([initial.day_of_week], initial) })}
         confirmLabel={t(config.keys.delete)}
         cancelLabel={t('common.cancel')}
         onConfirm={confirmDelete}
@@ -291,6 +275,5 @@ function RangeSheet({ kind, id, initial, onClose }: RangeSheetProps) {
 
 const styles = StyleSheet.create({
   section: { gap: space.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   start: { alignItems: 'flex-start' },
 });

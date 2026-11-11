@@ -453,12 +453,13 @@
     "empty_day": "لا شيء في هذا اليوم",
     "kind": "النوع",
     "day": "اليوم",
+    "days": "الأيام",
+    "days_missing": "اختر يومًا واحدًا على الأقل.",
+    "day_failed": "لم يُحفظ يوم {{day}}: {{reason}}",
+    "saved_for": "حُفظ: {{days}}",
     "start": "البداية",
-    "end": "النهاية",
     "label": "التسمية (اختيارية)",
     "label_helper": "مثل رمز المقرر",
-    "time_invalid": "اختر وقتًا.",
-    "end_before_start": "يجب أن تكون النهاية بعد البداية.",
     "save": "احفظ الفترة",
     "delete": "احذف الفترة",
     "confirm_delete_title": "حذف هذه الفترة؟",
@@ -498,7 +499,6 @@
     "whole_day": "طوال اليوم",
     "no_periods": "لا أوقات حجز بعد. لن يتمكن الطلاب من الحجز معك حتى تضيف وقتًا.",
     "no_closures": "الرسائل مفتوحة طوال الأسبوع.",
-    "closure_end_helper": "إذا كانت النهاية قبل البداية تبقى الرسائل مغلقة حتى ذلك الوقت من اليوم التالي، وإذا تساوتا تُغلق طوال اليوم.",
     "range_to_midnight": "من {{start}} حتى منتصف الليل",
     "day_line": "{{day}}، {{range}}"
   },
@@ -642,9 +642,33 @@
     "slot_freed": "أُلغي الموعد الذي قبل موعدك مع {{name}}. هل تريد تقديم موعدك؟ موعدك {{when}}"
   },
   "time_picker": {
-    "hour_label": "{{field}}، الساعة {{hour}}",
+    "hour_label": "{{field}}، {{hour}}",
     "minute_label": "{{field}}، الدقيقة {{minute}}",
-    "period_label": "{{field}}، {{period}}"
+    "length": "المدة",
+    "length_label": "{{field}}، {{length}}",
+    "shorter": "أقصر بربع ساعة",
+    "longer": "أطول بربع ساعة",
+    "until": "{{length}}، حتى {{end}}",
+    "until_next_day": "{{length}}، حتى {{end}} في اليوم التالي"
+  },
+  "duration": {
+    "minutes_one": "دقيقة واحدة",
+    "minutes_two": "دقيقتان",
+    "minutes_few": "{{count}} دقائق",
+    "minutes_many": "{{count}} دقيقة",
+    "minutes_other": "{{count}} دقيقة",
+    "hours_one": "ساعة",
+    "hours_two": "ساعتان",
+    "hours_few": "{{count}} ساعات",
+    "hours_many": "{{count}} ساعة",
+    "hours_other": "{{count}} ساعة",
+    "both": "{{hours}} و{{minutes}}"
+  },
+  "days": {
+    "every_day": "كل يوم",
+    "working_days": "من الأحد إلى الخميس",
+    "separator": " و",
+    "last": " و"
   },
   "department_picker": {
     "choose": "اختر القسم",

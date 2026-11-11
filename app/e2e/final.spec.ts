@@ -144,13 +144,33 @@ test('the schedule time picker fits 320 px and reads on the 12-hour clock', asyn
   await page.getByRole('button', { name: 'Add a block' }).click();
   const sheet = page.getByRole('dialog', { name: 'New block' });
   await expect(sheet).toBeVisible();
-  await sheet.getByRole('button', { name: 'End, PM', exact: true }).click();
-  await sheet.getByRole('button', { name: 'End, hour 1', exact: true }).click();
-  await sheet.getByRole('button', { name: 'End, 30 minutes', exact: true }).click();
-  await expect(sheet.getByText('1:30 PM', { exact: true })).toBeVisible();
+  // Several days, a start and a length (2026-11-11): the longest labels on one screen.
+  await sheet.getByRole('button', { name: 'Sunday to Thursday', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Start, 1 PM', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Length, 1 hour 30 minutes', exact: true }).click();
+  await expect(sheet.getByText('1 hour 30 minutes, until 2:30 PM', { exact: true })).toBeVisible();
   await page.waitForTimeout(800); // the sheet slides up; measure it in place
   const problems = (await overflowing(page)).map((p) => `schedule sheet: ${p}`);
   await painted(page);
   await page.screenshot({ path: `${SHOTS}/en-light-professor-time-picker-320.png` });
+  expect(problems).toEqual([]);
+});
+
+test('closed message hours past midnight fit 320 px in Arabic, dark', async ({ page }) => {
+  await signIn(page, ROLES.professor.email, 'ar', 'dark');
+  // The Messages view of Schedule; the main Messages tab has the same name, so go by its link.
+  await page.goto('/staff/schedule?view=chat');
+  await page.getByRole('button', { name: 'أضف ساعات إغلاق' }).click();
+  const sheet = page.getByRole('dialog', { name: 'ساعات إغلاق جديدة' });
+  await expect(sheet).toBeVisible();
+  // The default runs from 8 PM to 8 AM the next day; every hour is offered for the start.
+  await expect(
+    sheet.getByText('12 ساعة، حتى 8:00 ص في اليوم التالي', { exact: true }),
+  ).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'البداية، 3 ص', exact: true })).toBeVisible();
+  await page.waitForTimeout(800); // the sheet slides up; measure it in place
+  const problems = (await overflowing(page)).map((p) => `closed hours sheet: ${p}`);
+  await painted(page);
+  await page.screenshot({ path: `${SHOTS}/ar-dark-professor-closed-hours-320.png` });
   expect(problems).toEqual([]);
 });

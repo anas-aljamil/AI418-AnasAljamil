@@ -4,7 +4,7 @@ const expoConfig = require('eslint-config-expo/flat');
 
 module.exports = defineConfig([
   expoConfig,
-  { ignores: ['dist/*', '.expo/*', 'e2e/screenshots/*'] },
+  { ignores: ['dist/*', 'dist-qa/*', '.expo/*', 'e2e/screenshots/*'] },
   {
     // Design tokens live in src/theme (DESIGN.md Section 4): no raw colours in components.
     files: ['src/**/*.{ts,tsx}'],

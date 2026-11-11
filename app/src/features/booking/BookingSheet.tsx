@@ -12,12 +12,10 @@
  * clears the day, topic or note; only a time that was just taken by someone else is unselected.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import Check from 'lucide-react-native/icons/check';
-import Minus from 'lucide-react-native/icons/minus';
-import Plus from 'lucide-react-native/icons/plus';
 
 import { ApiError } from '@/api/client';
 import { useBook, useSlots } from '@/api/queries';
@@ -27,6 +25,7 @@ import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
 import { SkeletonRow } from '@/components/Placeholders';
+import { StepButton } from '@/components/StepButton';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { insetEnd } from '@/lib/direction';
@@ -34,7 +33,7 @@ import { errorKey } from '@/lib/errors';
 import { addMinutes, bookingDays, clockText, hourText, whenText } from '@/lib/format';
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { space, touchTarget, type Language } from '@/theme/tokens';
+import { space, type Language } from '@/theme/tokens';
 import { fitLength, freeWindows, hoursOf, QUICK_LENGTHS, STEP } from './times';
 
 const TOPICS: Topic[] = ['assignment', 'exam_review', 'advising', 'other'];
@@ -331,41 +330,6 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   );
 }
 
-/** A round 48 px button that makes the length 5 minutes shorter or longer. */
-function StepButton({
-  label,
-  icon,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  icon: 'minus' | 'plus';
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  const Icon = icon === 'minus' ? Minus : Plus;
-  return (
-    <Pressable
-      role="button"
-      accessibilityLabel={label}
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.step,
-        {
-          borderColor: colors.line,
-          backgroundColor: colors.surface,
-          opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
-        },
-      ]}
-    >
-      <Icon color={colors.text} size={22} strokeWidth={2} />
-    </Pressable>
-  );
-}
-
 /** The signature moment: the door swings open, then a check and the summary. */
 function BookedMoment({ text, onDone }: { text: string; onDone: () => void }) {
   const { t, i18n } = useTranslation();
@@ -420,12 +384,4 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   grow: { flex: 1 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  step: {
-    width: touchTarget,
-    height: touchTarget,
-    borderRadius: touchTarget / 2,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

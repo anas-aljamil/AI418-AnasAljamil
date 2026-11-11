@@ -1,3 +1,5 @@
+import { createInstance } from 'i18next';
+
 import en from '@/i18n/en.json';
 import ar from '@/i18n/ar.json';
 import { isUniversityEmail, universityNumberOf } from '@/lib/validation';
@@ -5,6 +7,9 @@ import {
   appointmentDay,
   bookingDays,
   countdownKey,
+  daysText,
+  durationText,
+  timeOfDay,
   greetingKey,
   pluralCategory,
   relativeUpdateKey,
@@ -14,6 +19,8 @@ import {
   laterText,
   untilText,
 } from './format';
+
+const resources = { ar: { translation: ar }, en: { translation: en } };
 
 describe('Arabic plural categories (CLDR)', () => {
   it.each([
@@ -168,6 +175,41 @@ describe('12-hour clock (owner decision)', () => {
   ])('%s reads %s / %s', (hhmm, english, arabic) => {
     expect(clockText(hhmm, tFor(en))).toBe(english);
     expect(clockText(hhmm, tFor(ar))).toBe(arabic);
+  });
+});
+
+describe('lengths and days for the schedule', () => {
+  // Real i18next, because the lengths use Arabic plural forms (ساعتان, 3 ساعات, 12 ساعة).
+  const tIn = async (language: 'ar' | 'en') => {
+    const instance = createInstance();
+    await instance.init({ resources, lng: language, interpolation: { escapeValue: false } });
+    return instance.t.bind(instance) as Parameters<typeof durationText>[1];
+  };
+
+  it.each([
+    [45, '45 minutes', '45 دقيقة'],
+    [60, '1 hour', 'ساعة'],
+    [90, '1 hour 30 minutes', 'ساعة و30 دقيقة'],
+    [120, '2 hours', 'ساعتان'],
+    [180, '3 hours', '3 ساعات'],
+    [720, '12 hours', '12 ساعة'],
+  ])('%i minutes read %s / %s', async (minutes, english, arabic) => {
+    expect(durationText(minutes, await tIn('en'))).toBe(english);
+    expect(durationText(minutes, await tIn('ar'))).toBe(arabic);
+  });
+
+  it.each([
+    [[4, 0, 2], 'Sunday, Tuesday and Thursday', 'الأحد والثلاثاء والخميس'],
+    [[1], 'Monday', 'الاثنين'],
+    [[0, 1, 2, 3, 4], 'Sunday to Thursday', 'من الأحد إلى الخميس'],
+    [[0, 1, 2, 3, 4, 5, 6], 'Every day', 'كل يوم'],
+  ])('days %j read %s / %s', async (days, english, arabic) => {
+    expect(daysText(days, await tIn('en'))).toBe(english);
+    expect(daysText(days, await tIn('ar'))).toBe(arabic);
+  });
+
+  it('wraps a time past midnight', () => {
+    expect([0, 75, 1440 + 60, -15].map(timeOfDay)).toEqual(['00:00', '01:15', '01:00', '23:45']);
   });
 });
 

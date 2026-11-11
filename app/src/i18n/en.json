@@ -453,12 +453,13 @@
     "empty_day": "Nothing on this day",
     "kind": "Type",
     "day": "Day",
+    "days": "Days",
+    "days_missing": "Choose at least one day.",
+    "day_failed": "Not saved for {{day}}: {{reason}}",
+    "saved_for": "Saved for {{days}}",
     "start": "Start",
-    "end": "End",
     "label": "Label (optional)",
     "label_helper": "For example a course code",
-    "time_invalid": "Choose a time.",
-    "end_before_start": "The end must be after the start.",
     "save": "Save block",
     "delete": "Delete block",
     "confirm_delete_title": "Delete this block?",
@@ -498,7 +499,6 @@
     "whole_day": "All day",
     "no_periods": "No booking times yet. Students cannot book you until you add one.",
     "no_closures": "Messages are open all week.",
-    "closure_end_helper": "An end before the start closes until that time the next day; the same time as the start closes the whole day.",
     "range_to_midnight": "{{start}} until midnight",
     "day_line": "{{day}}, {{range}}"
   },
@@ -642,9 +642,33 @@
     "slot_freed": "The appointment before yours with {{name}} was cancelled. Move yours earlier? It is {{when}}"
   },
   "time_picker": {
-    "hour_label": "{{field}}, hour {{hour}}",
+    "hour_label": "{{field}}, {{hour}}",
     "minute_label": "{{field}}, {{minute}} minutes",
-    "period_label": "{{field}}, {{period}}"
+    "length": "Length",
+    "length_label": "{{field}}, {{length}}",
+    "shorter": "15 minutes shorter",
+    "longer": "15 minutes longer",
+    "until": "{{length}}, until {{end}}",
+    "until_next_day": "{{length}}, until {{end}} the next day"
+  },
+  "duration": {
+    "minutes_one": "1 minute",
+    "minutes_two": "2 minutes",
+    "minutes_few": "{{count}} minutes",
+    "minutes_many": "{{count}} minutes",
+    "minutes_other": "{{count}} minutes",
+    "hours_one": "1 hour",
+    "hours_two": "2 hours",
+    "hours_few": "{{count}} hours",
+    "hours_many": "{{count}} hours",
+    "hours_other": "{{count}} hours",
+    "both": "{{hours}} {{minutes}}"
+  },
+  "days": {
+    "every_day": "Every day",
+    "working_days": "Sunday to Thursday",
+    "separator": ", ",
+    "last": " and "
   },
   "department_picker": {
     "choose": "Choose a department",

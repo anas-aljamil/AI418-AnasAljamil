@@ -123,10 +123,15 @@ export function riyadhDateKey(utc: Date): string {
   return riyadhLocal(utc).toISOString().slice(0, 10);
 }
 
-/** Minutes since Riyadh midnight for an instant, or for an "HH:MM" schedule time. */
 /** "HH:MM" plus some minutes, as "HH:MM" (same day). */
 export function addMinutes(hhmm: string, minutes: number): string {
   const total = minutesOfDay(hhmm) + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** Minutes since midnight as "HH:MM", wrapping past midnight (1500 is "01:00"). */
+export function timeOfDay(minutes: number): string {
+  const total = ((minutes % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
@@ -138,6 +143,33 @@ export function hourText(hour: number, t: TFunction): string {
   });
 }
 
+/** A length of time: "45 minutes", "2 hours", "1 hour 30 minutes" / "ساعة و30 دقيقة". */
+export function durationText(minutes: number, t: TFunction): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return t('duration.minutes', { count: rest });
+  if (rest === 0) return t('duration.hours', { count: hours });
+  return t('duration.both', {
+    hours: t('duration.hours', { count: hours }),
+    minutes: t('duration.minutes', { count: rest }),
+  });
+}
+
+/**
+ * Weekdays (0 = Sunday) as one phrase: "Sunday to Thursday" for the working week, "Every day"
+ * for all seven, else "Sunday, Tuesday and Thursday" / "الأحد والثلاثاء والخميس".
+ */
+export function daysText(days: number[], t: TFunction): string {
+  const sorted = [...new Set(days)].sort((a, b) => a - b);
+  if (sorted.length === 7) return t('days.every_day');
+  if (sorted.join() === '0,1,2,3,4') return t('days.working_days');
+  const names = sorted.map((day) => t(`weekday.${day}`));
+  const last = names.pop();
+  if (last === undefined) return '';
+  return names.length === 0 ? last : names.join(t('days.separator')) + t('days.last') + last;
+}
+
+/** Minutes since Riyadh midnight for an instant, or for an "HH:MM" schedule time. */
 export function minutesOfDay(at: Date | string): number {
   if (typeof at === 'string') {
     const [h = '0', m = '0'] = at.split(':');
