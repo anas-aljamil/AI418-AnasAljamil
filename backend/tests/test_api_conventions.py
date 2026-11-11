@@ -50,13 +50,24 @@ def test_openapi_docs_are_served(client):
     assert "/api/v1/professors" in paths and "/api/v1/appointments/{appointment_id}/{action}" in paths
 
 
-def test_cors_allows_the_expo_web_dev_server_only(client):
+def test_cors_allows_the_expo_web_dev_server_and_the_browser_version_on_the_wifi(client):
     preflight = {"Access-Control-Request-Method": "GET", "Access-Control-Request-Headers": "Authorization"}
     allowed = client.options("/api/v1/professors", headers={"Origin": "http://localhost:8081", **preflight})
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:8081"
     assert allowed.headers["access-control-allow-credentials"] == "true"
-    other = client.options("/api/v1/professors", headers={"Origin": "https://evil.example", **preflight})
-    assert "access-control-allow-origin" not in other.headers
+    # A phone's browser on the same Wi-Fi: the web build at a private address, port 8081.
+    for origin in ("http://10.1.214.168:8081", "http://192.168.1.26:8081", "http://172.20.0.5:8081"):
+        lan = client.options("/api/v1/professors", headers={"Origin": origin, **preflight})
+        assert lan.headers.get("access-control-allow-origin") == origin, origin
+    for origin in (
+        "https://evil.example",
+        "http://8.8.8.8:8081",  # a public address
+        "http://192.168.1.26:3000",  # another port on the network
+        "http://172.32.0.5:8081",  # outside the 172.16-31 private block
+        "http://10.1.214.168:8081.evil.example",
+    ):
+        other = client.options("/api/v1/professors", headers={"Origin": origin, **preflight})
+        assert "access-control-allow-origin" not in other.headers, origin
 
 
 def test_models_match_the_mysql_schema(db):
@@ -110,6 +121,38 @@ def test_health_says_when_the_database_is_older_than_the_code(client):
     error = response.json()["error"]
     assert error["code"] == "SCHEMA_OUTDATED"
     assert "table colleges is missing" in error["message"] and "reset_db.py" in error["message"]
+
+
+def test_an_unreachable_database_is_not_called_outdated(monkeypatch):
+    from sqlalchemy import create_engine
+
+    # Nothing listens on port 1: the check cannot know the schema, so it says so (None).
+    assert schema_check.schema_problems(create_engine("mysql+pymysql://x@127.0.0.1:1/x")) is None
+
+
+def test_health_checks_again_once_the_database_answers(client, monkeypatch):
+    """MySQL started after the API: health looks again instead of reporting the startup state."""
+    client.app.state.schema_problems = None  # unreachable at startup
+    answers = iter([None, []])
+    monkeypatch.setattr(schema_check, "schema_problems", lambda _engine: next(answers))
+    first = client.get("/api/v1/health")
+    assert first.status_code == 503
+    assert first.json()["error"]["code"] == "DATABASE_UNREACHABLE"
+    assert "MySQL" in first.json()["error"]["message"] and "reset_db" not in first.json()["error"]["message"]
+    assert client.get("/api/v1/health").json() == {"status": "ok"}
+
+
+def test_a_lost_connection_is_503_not_500(client):
+    import pymysql
+    from sqlalchemy.exc import OperationalError
+
+    def down():
+        raise OperationalError("SELECT 1", {}, pymysql.err.OperationalError(2003, "Can't connect"))
+
+    client.app.add_api_route("/database-down", down)
+    response = client.get("/database-down")
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "DATABASE_UNREACHABLE"
 
 
 def test_a_missing_table_or_column_says_the_database_is_outdated(client):

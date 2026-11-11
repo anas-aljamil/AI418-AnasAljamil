@@ -15,6 +15,7 @@ import Plus from 'lucide-react-native/icons/plus';
 import UserCheck from 'lucide-react-native/icons/user-check';
 import Users from 'lucide-react-native/icons/users';
 
+import { useColumn } from '@/lib/layout';
 import { useAdminList, useAppointments, useColleges } from '@/api/queries';
 import type { AdminProfessor, AdminStudent } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
@@ -36,6 +37,7 @@ export function AdminOverview() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const user = useUser();
   const professors = useAdminList('professors');
   const students = useAdminList('students');
@@ -108,7 +110,7 @@ export function AdminOverview() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
     >
       <View>
         <Text variant="heading" role="heading">

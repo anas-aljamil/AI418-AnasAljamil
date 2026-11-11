@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.core.clock import Clock, get_clock
 from app.core.errors import AppError
+from app.core.network import came_through_tunnel, client_address, is_https
 from app.core.rate_limit import RateLimiter
 from app.core.security import create_token, decode_token, verify_password
 from app.db import get_db
@@ -47,6 +48,9 @@ CSRF_HEADER, CSRF_VALUE = "X-Requested-With", "mawjood"
 login_limiter = RateLimiter(get_settings().login_attempts_per_minute, 60)
 signup_limiter = RateLimiter(get_settings().signups_per_minute, 60)
 STUDENT_NUMBER = re.compile(r"[0-9]{4,12}")  # the local part of a student's university email
+# Every seed account shares this published password (db/seed.sql), the admin included, so it
+# signs in only from this computer or its Wi-Fi, never through the public link.
+SEED_PASSWORD = "Mawjood-Demo-2026"  # noqa: S105
 
 
 def me_out(db: Session, user: User) -> MeOut:
@@ -65,7 +69,9 @@ def me_out(db: Session, user: User) -> MeOut:
     return out
 
 
-def issue_tokens(db: Session, user: User, client: str, response: Response, clock: Clock) -> TokenOut:
+def issue_tokens(
+    db: Session, user: User, client: str, request: Request, response: Response, clock: Clock
+) -> TokenOut:
     now = clock.now()
     access, access_expires = create_token(user.user_id, user.role, "access", now)
     refresh, _ = create_token(user.user_id, user.role, "refresh", now)
@@ -78,7 +84,7 @@ def issue_tokens(db: Session, user: User, client: str, response: Response, clock
             path=COOKIE_PATH,
             httponly=True,
             samesite="strict",
-            secure=settings.cookie_secure,
+            secure=settings.cookie_secure or is_https(request),
         )
     return TokenOut(
         access_token=access,
@@ -101,8 +107,13 @@ def login(
     db: Session = Depends(get_db),
     clock: Clock = Depends(get_clock),
 ) -> TokenOut:
-    client_ip = request.client.host if request.client else "unknown"
-    login_limiter.check(f"{client_ip}|{body.email}")
+    login_limiter.check(f"{client_address(request)}|{body.email}")
+    if body.password == SEED_PASSWORD and came_through_tunnel(request):
+        raise AppError(
+            403,
+            "DEMO_ACCOUNT_LOCAL_ONLY",
+            "Demo accounts sign in only on the computer that runs Mawjood. Create your own account.",
+        )
     user = db.scalar(select(User).where(User.email == body.email))
     if not verify_password(body.password, user.password_hash if user else None):
         raise AppError(401, "INVALID_CREDENTIALS", "The email or password is incorrect.")
@@ -112,7 +123,7 @@ def login(
             "ACCOUNT_DISABLED",
             "This account is not active: it waits for an administrator or has been deactivated.",
         )
-    return issue_tokens(db, user, body.client, response, clock)
+    return issue_tokens(db, user, body.client, request, response, clock)
 
 
 @router.post(
@@ -128,7 +139,7 @@ def signup(
     db: Session = Depends(get_db),
     clock: Clock = Depends(get_clock),
 ) -> TokenOut | PendingOut:
-    signup_limiter.check(request.client.host if request.client else "unknown")
+    signup_limiter.check(client_address(request))
     domain = get_settings().signup_email_domain
     if not body.email.endswith(f"@{domain}"):
         raise AppError(422, "EMAIL_DOMAIN", f"Use your university email address (@{domain}).")
@@ -154,7 +165,7 @@ def signup(
             )
         )
         db.commit()
-        return issue_tokens(db, user, body.client, response, clock)
+        return issue_tokens(db, user, body.client, request, response, clock)
     user = accounts.create_user(db, body, "professor", now, active=False)
     db.add(
         Professor(
@@ -187,7 +198,7 @@ def refresh(
     user = db.get(User, int(claims["sub"])) if claims else None
     if user is None or not user.is_active:
         raise UNAUTHORIZED
-    return issue_tokens(db, user, client, response, clock)
+    return issue_tokens(db, user, client, request, response, clock)
 
 
 @router.post("/logout", status_code=204, summary="Sign out (clears the web refresh cookie)")
@@ -200,7 +211,7 @@ def logout(request: Request) -> Response:
         path=COOKIE_PATH,
         httponly=True,
         samesite="strict",
-        secure=get_settings().cookie_secure,
+        secure=get_settings().cookie_secure or is_https(request),
     )
     return response
 

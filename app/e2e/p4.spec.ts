@@ -7,6 +7,10 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { painted } from './paint';
+
+import { PYTHON } from './python';
+
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/p4');
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
 const PASSWORD = 'Mawjood-Demo-2026';
@@ -15,7 +19,7 @@ const POLL_MS = 20_000;
 /** One value from MySQL, through the project's own client wrapper (scripts/mysql_cli.py). */
 function sql(query: string): string {
   return execFileSync(
-    'python3',
+    PYTHON,
     [
       '-c',
       'import sys, mysql_cli as m; c = m.load_config(); print(m.scalar(sys.argv[1], c, c.database))',
@@ -60,6 +64,7 @@ async function shoot(page: Page, name: string) {
     ),
   );
   await page.setViewportSize({ width: 360, height: Math.min(height, 3000) });
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
   await page.setViewportSize({ width: 360, height: 800 });
 }
@@ -87,6 +92,17 @@ async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   }
   throw new Error('no free time in the booking window');
 }
+
+// Close the browser contexts this test opened: the browser is shared by every spec (one
+// worker), so pages left open would keep polling the API and slow the later tests down.
+test.afterEach(async ({ browser, context }) => {
+  await Promise.all(
+    browser
+      .contexts()
+      .filter((c) => c !== context)
+      .map((c) => c.close()),
+  );
+});
 
 test('a student books, the professor approves, the student sees Approved', async ({ browser }) => {
   const student = await open(browser, 'l.alshehri@university.example');

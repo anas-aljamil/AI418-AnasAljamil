@@ -397,10 +397,15 @@ def run_rebase_check() -> list[tuple[bool, str, str]]:
     weekend = scalar("SELECT COUNT(*) FROM appointments "
                      "WHERE DAYOFWEEK(starts_at + INTERVAL 3 HOUR) - 1 > 4", CONFIG, CHECK_DB)
     expected = "2026-11-29 07:30:00"  # 2026-10-11 + 7 weeks, still a Sunday
-    ok = not warnings and first == expected and weekend == "0"
+    # created_at columns move too ("updated X ago" reads them); they have an expression default.
+    created = scalar("SELECT created_at FROM status_overrides WHERE override_id = 1", CONFIG, CHECK_DB)
+    created_expected = "2026-11-15 06:50:00"  # 2026-09-27 + 7 weeks
+    ok = (not warnings and first == expected and weekend == "0"
+          and created == created_expected)
     build_check_db()
     return [(ok, f"rebase by {weeks} weeks keeps data valid and weekdays intact",
-             f"appointment 6 -> {first}; appointments on Fri/Sat: {weekend}")]
+             f"appointment 6 -> {first}; override 1 created -> {created}; "
+             f"appointments on Fri/Sat: {weekend}")]
 
 
 def check_er_diagram_sync() -> list[tuple[bool, str, str]]:

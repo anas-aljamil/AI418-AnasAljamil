@@ -65,7 +65,9 @@ cd app
 npm install
 npx expo start        # scan the QR code with Expo Go (Android) or the Camera app (iPhone); press w for the web build
 ```
-The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The first launch asks for the language, then you sign in with a demo account (below). What each role gets:
+**No Expo Go (any iPhone or Android):** start the API, run `npm run phones` in `app`, and open `http://<computer Wi-Fi address>:8081` in the phone's browser; *Add to Home Screen* makes it open full screen like an app ([docs/run-on-phone.md](docs/run-on-phone.md), Section 3a).
+
+The app finds the backend on the same computer by itself (details and fixes for university Wi-Fi: [docs/run-on-phone.md](docs/run-on-phone.md), Sections 3-4). The app opens on sign-in in your device's language (the button in the top corner switches it); sign in with a demo account (below). What each role gets:
 - **Students:**
   - Home: pinned professors with their live door status, the next appointment and their department; refreshed every 20 seconds and still readable offline;
   - Search, professor profiles and booking in 4 steps, inside each professor's booking times;

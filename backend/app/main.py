@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.core import schema_check
 from app.core.errors import AppError, install_error_handlers
 from app.db import get_engine
+from app.web import mount_web_build
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,
+        allow_origin_regex=get_settings().cors_origin_regex,
         allow_credentials=True,  # the web build's refresh cookie
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
@@ -42,6 +44,12 @@ def create_app() -> FastAPI:
 
     @api.get("/health", tags=["health"], summary="Liveness check (used to test the phone's connection)")
     def health() -> dict[str, str]:
+        if app.state.schema_problems is None:
+            # MySQL was not reachable when the API started: look again now, so starting MySQL
+            # later is enough (no API restart).
+            app.state.schema_problems = schema_check.schema_problems(get_engine())
+        if app.state.schema_problems is None:
+            raise AppError(503, "DATABASE_UNREACHABLE", schema_check.UNREACHABLE)
         if app.state.schema_problems:
             raise AppError(
                 503,
@@ -54,6 +62,7 @@ def create_app() -> FastAPI:
     for module in (auth, professors, me, appointments, conversations, notifications, admin):
         api.include_router(module.router)
     app.include_router(api)
+    mount_web_build(app, get_settings().web_dir)  # pages for paths no route matched
     return app
 
 

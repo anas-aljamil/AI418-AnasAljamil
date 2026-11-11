@@ -1,5 +1,5 @@
 /** Card (self-contained objects only) and ListRow (everything listed). DESIGN.md Section 3. */
-import { Pressable, StyleSheet, View, type ViewProps } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type ViewProps } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, touchTarget } from '@/theme/tokens';
@@ -24,6 +24,8 @@ interface ListRowProps {
   after?: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
+  /** The item open in the pane beside the list (desktop): a bar at the start edge and a plate. */
+  selected?: boolean;
 }
 
 /**
@@ -39,16 +41,30 @@ export function ListRow({
   after,
   onPress,
   accessibilityLabel,
+  selected = false,
 }: ListRowProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.row, { borderBottomColor: colors.line }]}>
+    <View
+      style={[
+        styles.row,
+        { borderBottomColor: colors.line },
+        selected && [
+          styles.selected,
+          { backgroundColor: colors.surface, borderStartColor: colors.primary },
+        ],
+      ]}
+    >
       <Pressable
         disabled={!onPress}
         onPress={onPress}
         accessible
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={selected ? { selected: true } : undefined}
+        // On the web "selected" is not valid on a button; aria-current names the open item.
+        // React Native Web supports it, React Native's types do not list it.
+        {...(selected && Platform.OS === 'web' ? ({ 'aria-current': 'true' } as object) : null)}
         style={({ pressed }) => [
           styles.content,
           { backgroundColor: pressed ? colors.line : 'transparent' },
@@ -124,6 +140,7 @@ const styles = StyleSheet.create({
     gap: space.xxs,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  selected: { borderStartWidth: space.xxs },
   content: {
     flex: 1,
     minHeight: 64,

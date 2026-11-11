@@ -120,3 +120,21 @@ def test_roles_are_enforced_server_side(client, auth):
     student = auth(SAAD)
     assert client.post("/api/v1/me/status", json={"status": "busy"}, headers=student).status_code == 403
     assert client.get("/api/v1/admin/departments", headers=student).status_code == 403
+
+
+def test_seed_password_is_refused_through_the_public_link(client):
+    # Every seed account, the admin included, shares a published password.
+    tunnel = {"CF-Connecting-IP": "203.0.113.7"}
+    response = client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}, headers=tunnel)
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "DEMO_ACCOUNT_LOCAL_ONLY"
+    assert client.post(LOGIN, json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}).status_code == 200
+
+
+def test_refresh_cookie_is_secure_when_the_browser_used_https(client):
+    response = client.post(
+        LOGIN,
+        json={"email": EMAILS[SAAD], "password": DEMO_PASSWORD, "client": "web"},
+        headers={"X-Forwarded-Proto": "https"},
+    )
+    assert "secure" in response.headers["set-cookie"].lower()

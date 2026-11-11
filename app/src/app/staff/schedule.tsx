@@ -20,6 +20,7 @@ import {
   useSlotLength,
   type BlockInput,
 } from '@/api/queries';
+import { useColumn } from '@/lib/layout';
 import type { Block } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -57,6 +58,7 @@ export default function ScheduleScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const toast = useToast();
   const user = useUser();
   // ?view=booking or ?view=chat opens that view (links from elsewhere in the app).
@@ -92,7 +94,7 @@ export default function ScheduleScreen() {
     <>
       <ScrollView
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+        contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
       >
         <Text variant="heading" role="heading">
           {t('schedule.title')}

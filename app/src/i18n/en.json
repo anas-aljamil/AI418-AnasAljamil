@@ -168,12 +168,8 @@
     "afternoon": "Good afternoon, {{name}}",
     "evening": "Good evening, {{name}}"
   },
-  "language": {
-    "title": "Choose your language",
-    "hint": "You can change it later in your profile.",
-    "continue": "Continue"
-  },
   "signin": {
+    "language": "Change the language to {{language}}",
     "title": "Sign in",
     "subtitle": "Use your university email. Your account decides whether you see the student or professor screens.",
     "email": "University email",
@@ -212,6 +208,7 @@
   "errors": {
     "INVALID_CREDENTIALS": "The email or password is incorrect.",
     "ACCOUNT_DISABLED": "This account is not active yet, or it has been deactivated. Contact the administrator.",
+    "DEMO_ACCOUNT_LOCAL_ONLY": "Demo accounts work only on the computer that runs Mawjood. Create your own account instead.",
     "RATE_LIMITED": "Too many attempts. Wait a minute, then try again.",
     "NETWORK": "Can't reach the Mawjood server. Check your connection, then try again.",
     "generic": "Something went wrong on the server. Try again in a moment.",
@@ -315,6 +312,7 @@
     "professor": "Professor"
   },
   "search": {
+    "choose": "Choose a professor to see their status, today and booking times.",
     "title": "Search",
     "status_filter": "Status",
     "department_filter": "Department",
@@ -505,6 +503,7 @@
     "day_line": "{{day}}, {{range}}"
   },
   "admin": {
+    "choose": "Choose a row to see or edit it, or add a new one.",
     "add": "Add",
     "search": "Search by name or email",
     "empty": "Nothing here yet.",
@@ -596,6 +595,7 @@
     "search_offices": "Search by building or room"
   },
   "chat": {
+    "choose": "Choose a conversation to read it.",
     "title": "Messages",
     "empty_title": "No conversations yet",
     "empty_student": "Find a professor and send them a message. Professors may close messages at some times of the week.",

@@ -20,13 +20,6 @@ import en from './en.json';
 export const resources = { ar: { translation: ar }, en: { translation: en } } as const;
 
 const i18n = createInstance();
-/** False until the user has picked a language once (first launch shows the language screen). */
-let languageChosen = false;
-
-export function isLanguageChosen(): boolean {
-  return languageChosen;
-}
-
 export function deviceLanguage(): Language {
   return getLocales()[0]?.languageCode === 'ar' ? 'ar' : 'en';
 }
@@ -41,7 +34,6 @@ function applyWebDirection(language: Language) {
 /** Load the saved language (or the device's), and line native direction up with it. */
 export async function initI18n(): Promise<Language> {
   const stored = await readPreference(preferenceKeys.language);
-  languageChosen = stored === 'ar' || stored === 'en';
   const language: Language = stored === 'ar' || stored === 'en' ? stored : deviceLanguage();
   await i18n.use(initReactI18next).init({
     resources,
@@ -76,7 +68,6 @@ export async function initI18n(): Promise<Language> {
  */
 export async function switchLanguage(language: Language): Promise<void> {
   await writePreference(preferenceKeys.language, language);
-  languageChosen = true;
   await i18n.changeLanguage(language);
   applyWebDirection(language);
   if (Platform.OS !== 'web' && I18nManager.isRTL !== (language === 'ar')) {

@@ -11,6 +11,7 @@ import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn } from '@/lib/layout';
 import { ApiError } from '@/api/client';
 import { useDepartments } from '@/api/queries';
 import type { Honorific, Rank, SignUpBody } from '@/api/types';
@@ -51,6 +52,7 @@ export default function SignUpScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn('narrow');
   const { state, signUp } = useAuth();
   const departments = useDepartments();
 
@@ -131,6 +133,7 @@ export default function SignUpScreen() {
 
   const page = [
     styles.page,
+    column,
     { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.lg },
   ];
 

@@ -4,7 +4,7 @@ This guide takes you from a fresh computer to the app running on your phone. It 
 
 1. **MySQL 8.0** on your computer, holding the Mawjood database.
 2. **The backend API** (Python), which reads MySQL.
-3. **The app** (Expo), served from your computer to **Expo Go** on your phone over the same Wi-Fi.
+3. **The app** (Expo), served from your computer over the same Wi-Fi: in the phone's **browser** (any iPhone or Android, no install; Section 3a) or in **Expo Go**.
 4. **How the app finds the backend.**
 
 All four parts work today.
@@ -129,7 +129,54 @@ pytest
 - **Windows:** the first run shows a Windows Defender Firewall prompt. Allow **Private networks**. If you missed it, allow Python in *Windows Security → Firewall → Allow an app through firewall*.
 - **macOS:** allow incoming connections for Python when asked (*System Settings → Network → Firewall → Options* if you need to change it later).
 
-## 3. The app on your phone
+## 3a. The app in the phone's browser (any iPhone or Android, no Expo Go)
+
+The same app runs in Safari or Chrome, and can be saved to the home screen, where it opens full screen with the Mawjood icon. Nothing to install and no Expo account (owner decision 2026-11-10).
+
+1. Connect the phone and the computer to the **same Wi-Fi network**.
+2. Start the API (Section 2).
+3. Build and serve the browser version (rebuild after every code change):
+   ```bash
+   cd app
+   npm run phones
+   ```
+4. Find the computer's Wi-Fi address: on Windows run `ipconfig` and read *IPv4 Address* under the Wi-Fi adapter (not a VMware one); on macOS run `ipconfig getifaddr en0`.
+5. On the phone, open `http://<that address>:8081`, for example `http://10.1.214.168:8081`.
+6. Optional, to use it like an app: on iPhone tap **Share, Add to Home Screen**; on Android tap **⋮, Add to Home screen** (or **Install app**).
+
+The API accepts the browser version from any private network address on port 8081 (10.x, 172.16-31.x, 192.168.x; `CORS_ORIGIN_REGEX`), so it keeps working when the computer's address changes. Not available in the browser: vibration (haptics). The refresh token is kept in an httpOnly cookie instead of the phone's secure storage (docs/security.md).
+
+## 3b. A public link anyone can open (free, any network)
+
+Anyone with the link can use Mawjood from any phone or computer, on any network, for free and without an account anywhere (owner decision 2026-11-10: "something that can work with anyone", free). The API serves the browser version itself, and a free Cloudflare quick tunnel gives this computer a public `https://` address. MySQL stays on this computer.
+
+It works only while this computer is on and steps 2-4 keep running. The link changes every time the tunnel starts, so share the new one each time.
+
+**One command** (after the one-time install in step 1, with MySQL running):
+```bash
+python scripts/public_link.py
+```
+It rebuilds the browser version only when the app changed (`--build` forces it), uses the API already running on port 8000 or starts it, opens the tunnel over HTTP/2 and prints the link. Ctrl+C stops what it started. `--local` skips the public link. On Windows use `py` instead of `python` if `python` is not found.
+
+The same steps by hand:
+
+1. Once: install the tunnel tool with `winget install --id Cloudflare.cloudflared` (Windows) or `brew install cloudflared` (macOS), then open a new terminal.
+2. Build the browser version (again after every code change):
+   ```bash
+   cd app
+   npm run export:web
+   ```
+3. Start the API (Section 2). It now also serves the app: `http://localhost:8000` opens Mawjood on this computer.
+4. In another terminal, start the tunnel:
+   ```bash
+   cloudflared tunnel --protocol http2 --url http://localhost:8000
+   ```
+   `--protocol http2` uses ordinary HTTPS. Without it cloudflared first tries QUIC (UDP), which many networks block ("failed to dial to edge with quic"). If the terminal says `cloudflared` is not recognised, open a new terminal after installing, or run `& "C:\Program Files (x86)\cloudflared\cloudflared.exe"` instead.
+5. Copy the `https://….trycloudflare.com` address it prints and share it. On a phone it can be saved to the home screen (Section 3a, step 6).
+
+Demo accounts (Section 1) share a published password, the admin included, so they sign in only on this computer or its Wi-Fi, never through the public link (`DEMO_ACCOUNT_LOCAL_ONLY`). People on the link create their own account (sign-up, @upm.edu.sa). An admin activates professors from this computer at `http://localhost:8000`. Over the link the refresh cookie is `Secure` automatically, and rate limits count each visitor's own address (docs/security.md).
+
+## 3. The app on your phone (Expo Go)
 
 1. Install **Expo Go** from the Play Store or the App Store.
 2. Connect the phone and the computer to the **same Wi-Fi network**.
@@ -141,8 +188,8 @@ pytest
    ```
 4. Scan the QR code:
    - **Android:** with the Expo Go app;
-   - **iPhone:** with the Camera app.
-5. The app opens in Expo Go: first the language screen, then sign-in. Use a demo account (Section 1, *Demo accounts*); students land on Home. If sign-in says it can't reach the server, see Section 4.
+   - **iPhone:** with the Camera app. If Expo Go says you are signed in to Expo Go but not to Expo CLI, sign out in Expo Go (account icon, Log out) or run `npx expo login` with the same account on the computer. Also allow **Local Network** for Expo Go in the iPhone's Settings.
+5. The app opens in Expo Go on sign-in, in the phone's language (the button in the top corner switches it). Use a demo account (Section 1, *Demo accounts*); students land on Home. If sign-in says it can't reach the server, see Section 4.
 6. Press `w` in the terminal to open the web build in a browser too.
 
 What to try on the phone, step by step: [phone-checklist.md](phone-checklist.md).

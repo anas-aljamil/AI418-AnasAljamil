@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 
+import { useColumn } from '@/lib/layout';
 import { useMarkNotificationsRead } from '@/api/queries';
 import type { AppNotification } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
@@ -32,6 +33,7 @@ export default function NotificationsScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
   const now = useNow();
   const user = useUser();
   const { query, visible, hidden, unread } = useVisibleNotifications();
@@ -93,7 +95,7 @@ export default function NotificationsScreen() {
         ) : null}
       </View>
       <SectionList
-        contentContainerStyle={[styles.page, { paddingBottom: insets.bottom + space.xl }]}
+        contentContainerStyle={[styles.page, column, { paddingBottom: insets.bottom + space.xl }]}
         sections={sections}
         keyExtractor={(n) => String(n.notification_id)}
         stickySectionHeadersEnabled={false}

@@ -6,12 +6,16 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { painted } from './paint';
+
+import { PYTHON } from './python';
+
 const SHOTS = path.resolve(__dirname, '../../docs/screenshots/signup');
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
 
 function sql(query: string): string {
   return execFileSync(
-    'python3',
+    PYTHON,
     [
       '-c',
       'import sys, mysql_cli as m; c = m.load_config(); print(m.scalar(sys.argv[1], c, c.database))',
@@ -30,9 +34,12 @@ async function fresh(browser: Browser, language: 'ar' | 'en' = 'en'): Promise<Pa
   return page;
 }
 
-/** The sign-in screen stays mounted under sign-up on the web build: use the top (last) one. */
+/**
+ * The sign-in screen stays mounted, hidden, under sign-up on the web build, so a label can
+ * match twice: use the visible field. (Its place in the page is not reliably last.)
+ */
 const field = (page: Page, label: string | RegExp) =>
-  page.getByLabel(label, { exact: true }).last();
+  page.getByLabel(label, { exact: true }).filter({ visible: true });
 
 async function signIn(page: Page, email: string, password: string) {
   await field(page, 'University email').fill(email);
@@ -48,6 +55,7 @@ async function openDepartmentMenu(page: Page) {
 
 async function shoot(page: Page, name: string) {
   await page.waitForTimeout(600); // let the sheet finish sliding up
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 
@@ -57,6 +65,17 @@ async function fillAccount(page: Page, who: { ar: string; en: string; email: str
   await field(page, 'University email').fill(who.email);
   await page.getByLabel('Password (at least 8 characters)').fill('a-long-password');
 }
+
+// Close the browser contexts this test opened: the browser is shared by every spec (one
+// worker), so pages left open would keep polling the API and slow the later tests down.
+test.afterEach(async ({ browser, context }) => {
+  await Promise.all(
+    browser
+      .contexts()
+      .filter((c) => c !== context)
+      .map((c) => c.close()),
+  );
+});
 
 test('a student creates an account and lands on Home', async ({ browser }) => {
   const page = await fresh(browser);
@@ -127,6 +146,7 @@ test('Arabic sign-up form, and the domain rule', async ({ browser }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await field(page, 'البريد الجامعي').fill('4519002@gmail.com');
   await page.setViewportSize({ width: 360, height: 1500 }); // the whole form in one picture
+  await painted(page);
   await page.screenshot({ path: `${SHOTS}/ar-sign-up.png` });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.getByLabel('الاسم بالعربية').fill('رنا');

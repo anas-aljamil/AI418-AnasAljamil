@@ -60,7 +60,10 @@ def timestamp_columns(config: Config, name: str) -> dict[str, list[str]]:
     rows = run(
         "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS "
         f"WHERE TABLE_SCHEMA = '{check_identifier(name)}' AND DATA_TYPE = 'datetime' "
-        "AND EXTRA NOT LIKE '%GENERATED%' ORDER BY TABLE_NAME, ORDINAL_POSITION", config)
+        # Generated columns have an expression. EXTRA is no test: MySQL 8 also marks a column
+        # with an expression default, DEFAULT (UTC_TIMESTAMP()), as DEFAULT_GENERATED, and
+        # filtering on it left every created_at unmoved.
+        "AND GENERATION_EXPRESSION = '' ORDER BY TABLE_NAME, ORDINAL_POSITION", config)
     columns: dict[str, list[str]] = {}
     for table, column in rows:
         columns.setdefault(table, []).append(column)

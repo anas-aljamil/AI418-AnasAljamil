@@ -7,6 +7,7 @@ This file covers the implementation of CLAUDE.md Section 8. The code is in `back
 - **No account enumeration:** a wrong password and an unknown email return the same 401 `INVALID_CREDENTIALS`. Both take the same time, because an unknown email is still checked against a dummy hash.
 - **Minimum length:** 8 characters for accounts created by the admin.
 - **Seed accounts:** they all share the password `Mawjood-Demo-2026`. These are fictional demo accounts; never reuse that password anywhere.
+- **Seed password on the public link:** that password is published, and it opens the admin account too. Through the public link (docs/run-on-phone.md, Section 3b) the API refuses it with 403 `DEMO_ACCOUNT_LOCAL_ONLY`, before checking the account, so the demo accounts sign in only on the computer that runs Mawjood or its Wi-Fi.
 
 ## Tokens
 
@@ -36,16 +37,24 @@ How the tokens behave:
 - **The cookie is only sent with requests from our own site** (`SameSite=Strict`), and only to `/api/v1/auth/*` (its path).
 - **Requests that rely on the cookie** (`/auth/refresh` and `/auth/logout`) must also send `X-Requested-With: mawjood`. Without it the API returns 403 `CSRF_CHECK_FAILED`.
   - A cross-site HTML form cannot set custom headers.
-  - A cross-site script would need a CORS preflight, which the API refuses for origins outside `CORS_ORIGINS`.
+  - A cross-site script would need a CORS preflight, which the API refuses for origins outside `CORS_ORIGINS` and `CORS_ORIGIN_REGEX`.
 - **The native app sends no cookies,** so CSRF does not apply there.
 
 ## CORS
-- **Allowed origins:** only those in `CORS_ORIGINS`. The default is the Expo web dev server, `http://localhost:8081`.
+- **Allowed origins:** those in `CORS_ORIGINS` (default: the Expo web dev server, `http://localhost:8081`), plus `CORS_ORIGIN_REGEX`: the browser version opened from a phone on the same Wi-Fi, i.e. `http://<private address>:8081` (10.x, 172.16-31.x, 192.168.x; added 2026-11-10). Public addresses, other ports and look-alike hosts are refused (`test_api_conventions.py`).
+- **Why a private-network pattern is acceptable:** it only lets a page served on port 8081 by a device on the local network call the API; every request still needs a valid sign-in. The refresh cookie stays `SameSite=Strict`, so a page on another host never receives or sends it.
 - **Credentials** are allowed only for those origins (for the refresh cookie).
 - **The native app** is not a browser and is unaffected by CORS.
+- **The public link needs no CORS:** the API serves the browser version itself (`backend/app/web.py`), so the page and the API share one origin and the refresh cookie stays same-site.
+
+## Public link (Cloudflare quick tunnel, added 2026-11-10)
+- **How a request is recognised:** the tunnel reaches the API from `127.0.0.1`. Cloudflare's edge sets `CF-Connecting-IP` to the visitor's address and replaces any copy the visitor sends. A request with that header came through the link (`backend/app/core/network.py`).
+- **Rate limits** use that address, so visitors on the link do not share one limit. A device on the local Wi-Fi could send the header itself; that only changes its own limit key, and the Wi-Fi is trusted like this computer.
+- **Secure cookie:** the browser reaches the link over HTTPS, and the tunnel forwards plain HTTP with `X-Forwarded-Proto: https`. The refresh cookie is then marked `Secure` without setting `COOKIE_SECURE`.
+- **Exposure:** only port 8000 (the API and the page) is published. MySQL stays on this computer. The link exists only while `cloudflared` runs.
 
 ## Rate limiting
-- **Login:** 5 attempts per minute for each combination of client address and email, then 429 `RATE_LIMITED` with a `Retry-After` header.
+- **Login:** 5 attempts per minute for each combination of client address (the visitor's own address on the public link) and email, then 429 `RATE_LIMITED` with a `Retry-After` header.
 - **Sign-up:** 5 accounts per minute for each client address (`SIGNUPS_PER_MINUTE`), then 429 `RATE_LIMITED`.
 - **Sending messages:** 20 per minute for each user (`MESSAGES_PER_MINUTE`), then 429 `RATE_LIMITED`.
 - **Limitation:** the limiter is in memory, so it resets on restart and covers one server process. That is enough for a single-server MVP.

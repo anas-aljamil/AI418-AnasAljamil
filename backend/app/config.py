@@ -29,6 +29,16 @@ class Settings(BaseSettings):
 
     # Browser origins allowed to call the API (the Expo web dev server by default).
     cors_origins: list[str] = ["http://localhost:8081", "http://127.0.0.1:8081"]
+    # Also allowed: the browser version opened from a phone on the same Wi-Fi, i.e. the web
+    # build served on port 8081 at a private network address (10.x, 172.16-31.x, 192.168.x),
+    # so it keeps working when the computer's Wi-Fi address changes (docs/run-on-phone.md).
+    cors_origin_regex: str | None = (
+        r"^http://(10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}):8081$"
+    )
+
+    # The exported browser version (cd app && npm run export:web), served by the API at /
+    # when present, so the page and the API share one address (the public link needs this).
+    web_dir: Path = REPO_ROOT / "app" / "dist"
 
     login_attempts_per_minute: int = 5
     signups_per_minute: int = 5

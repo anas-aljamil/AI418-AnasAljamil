@@ -1,18 +1,22 @@
 /**
  * Messages tab (DESIGN.md 7.7), for students and professors: conversations with the latest
- * activity first, each with the other person, the last message and an unread count.
+ * activity first, each with the other person, the last message and an unread count. On
+ * desktop the open thread sits in a pane beside the list (?id=; docs/desktop-plan.md).
  */
 import { FlatList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColumn, useLayout } from '@/lib/layout';
 import { useConversations } from '@/api/queries';
 import type { Conversation } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ListRow, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
+import { EmptyPane, TwoPane, useSelectedId } from '@/components/TwoPane';
+import { ConversationThread } from '@/features/chat/ConversationThread';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { shortWhen } from '@/lib/format';
@@ -26,6 +30,9 @@ export function ConversationsScreen() {
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const desktop = useLayout() === 'desktop';
+  const [selectedId, select] = useSelectedId();
   const now = useNow();
   const user = useUser();
   const conversations = useConversations();
@@ -55,15 +62,24 @@ export function ConversationsScreen() {
           </View>
         }
         accessibilityLabel={spokenList([name, unread, preview, when], t)}
-        onPress={() => router.push(`/conversations/${conversation.conversation_id}`)}
+        selected={desktop && conversation.conversation_id === selectedId}
+        onPress={() =>
+          desktop
+            ? select(conversation.conversation_id)
+            : router.push(`/conversations/${conversation.conversation_id}`)
+        }
       />
     );
   };
 
-  return (
+  const list = (
     <FlatList
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.page, { paddingTop: insets.top + space.lg }]}
+      contentContainerStyle={[
+        styles.page,
+        desktop ? null : column,
+        { paddingTop: insets.top + space.lg },
+      ]}
       data={conversations.data ?? []}
       keyExtractor={(c) => String(c.conversation_id)}
       renderItem={({ item }) => row(item)}
@@ -92,6 +108,19 @@ export function ConversationsScreen() {
           />
         ) : (
           <EmptyState title={t('chat.empty_title')} body={t('chat.empty_professor')} />
+        )
+      }
+    />
+  );
+  if (!desktop) return list;
+  return (
+    <TwoPane
+      list={list}
+      detail={
+        selectedId ? (
+          <ConversationThread key={selectedId} conversationId={selectedId} pane />
+        ) : (
+          <EmptyPane message={t('chat.choose')} />
         )
       }
     />

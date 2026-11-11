@@ -1,0 +1,286 @@
+/**
+ * Professor profile (DESIGN.md 7.4): a nameplate header (door, name, rank, department,
+ * office), the live status with its note, return time and "updated" time, today's timeline,
+ * the weekly booking times, and Book (primary), Message and Pin. Book is off when the
+ * professor has no booking times; Message always opens the conversation, and while the
+ * professor's closed hours are on the profile and the conversation say when messages open again.
+ *
+ * Phones and tablets: a full screen with a back button and the actions in a sticky bar within
+ * thumb reach. Desktop: the actions sit in a row under the nameplate, and in a pane (Search,
+ * docs/desktop-plan.md) there is no back button, because the list stays beside it.
+ */
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import Pin from 'lucide-react-native/icons/pin';
+
+import { useColumn, useLayout } from '@/lib/layout';
+import { useOpenConversation, useProfessor } from '@/api/queries';
+import { useAuth } from '@/auth/AuthProvider';
+import { Button } from '@/components/Button';
+import { Door } from '@/components/Door';
+import { SkeletonRow } from '@/components/Placeholders';
+import { describeStatus } from '@/components/StatusLabel';
+import { IconButton } from '@/components/Surfaces';
+import { Text } from '@/components/Text';
+import { TodayTimeline } from '@/components/TodayTimeline';
+import { useToast } from '@/components/Toast';
+import { BookingSheet } from '@/features/booking/BookingSheet';
+import { SectionError } from '@/features/home/HomeParts';
+import { usePinWithToast } from '@/features/professors/usePinWithToast';
+import { errorKey } from '@/lib/errors';
+import { clockText, laterText, untilText } from '@/lib/format';
+import { useNow } from '@/lib/hooks';
+import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
+import { useTheme } from '@/theme/ThemeProvider';
+import { radii, space, touchTarget, type Language } from '@/theme/tokens';
+
+interface ProfessorDetailProps {
+  professorId: number;
+  /** Shown in a pane beside a list (desktop Search): no back button, no column of its own. */
+  pane?: boolean;
+}
+
+export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailProps) {
+  const { t, i18n } = useTranslation();
+  const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const column = useColumn();
+  const inline = useLayout() === 'desktop';
+  const now = useNow();
+  const { state } = useAuth();
+  const isStudent = state.status === 'signedIn' && state.user.role === 'student';
+  const professor = useProfessor(professorId);
+  const togglePin = usePinWithToast();
+  const toast = useToast();
+  const [booking, setBooking] = useState(false);
+
+  const openChat = useOpenConversation();
+  const message = () => {
+    if (!data) return;
+    openChat.mutate(
+      { professor_id: data.professor_id },
+      {
+        onSuccess: (conversation) => router.push(`/conversations/${conversation.conversation_id}`),
+        onError: (error) => toast(t(errorKey(error))),
+      },
+    );
+  };
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  // Directional icons mirror in right-to-left layouts (DESIGN.md Section 9). On native the
+  // Icons are drawings: layout direction moves them but never mirrors them, so the back
+  // arrow is flipped for Arabic on every platform.
+  const flip = language === 'ar';
+
+  const data = professor.data;
+  const status = data
+    ? describeStatus(
+        data.status.status,
+        data.status.confirmed,
+        data.status.updated_at ? new Date(data.status.updated_at) : null,
+        now,
+        language,
+        t,
+      )
+    : null;
+  const name = data ? professorName(data, language, t) : '';
+  const closedUntil =
+    data?.messages_closed_until && new Date(data.messages_closed_until) > now
+      ? new Date(data.messages_closed_until)
+      : null;
+  const bookable = !!data && data.booking_periods.length > 0;
+
+  const actions =
+    data && isStudent ? (
+      <>
+        <View style={inline ? undefined : styles.grow}>
+          <Button
+            label={t('prof.book')}
+            onPress={() => setBooking(true)}
+            disabled={!bookable}
+            block={!inline}
+          />
+        </View>
+        <Button
+          variant="secondary"
+          label={t('chat.message')}
+          accessibilityLabel={t('chat.message_label', { name })}
+          disabled={openChat.isPending}
+          onPress={message}
+        />
+        <IconButton
+          label={t(data.is_pinned ? 'home.unpin' : 'home.pin', { name })}
+          selected={!!data.is_pinned}
+          onPress={() => togglePin(data, !data.is_pinned)}
+          icon={
+            <Pin
+              color={data.is_pinned ? colors.primary : colors.muted}
+              fill={data.is_pinned ? colors.primary : 'none'}
+              size={22}
+              strokeWidth={1.75}
+            />
+          }
+        />
+        <BookingSheet professor={data} visible={booking} onClose={() => setBooking(false)} />
+      </>
+    ) : null;
+
+  return (
+    <View style={[styles.fill, { backgroundColor: colors.bg }]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.page,
+          pane ? styles.panePage : [column, { paddingTop: insets.top + space.xs }],
+        ]}
+      >
+        {pane ? null : (
+          <View style={styles.topBar}>
+            <IconButton
+              label={t('prof.back')}
+              onPress={back}
+              icon={
+                <View style={flip ? styles.flipped : undefined}>
+                  <ChevronLeft color={colors.text} size={26} strokeWidth={1.75} />
+                </View>
+              }
+            />
+          </View>
+        )}
+
+        {data && status ? (
+          <>
+            {/* The nameplate beside the office door. */}
+            <View
+              style={[
+                styles.nameplate,
+                { backgroundColor: colors.surface, borderColor: colors.line },
+              ]}
+            >
+              <Door
+                status={status.door}
+                size={72}
+                accessibilityLabel={t('status.door', { status: status.label })}
+              />
+              <View style={styles.plateText}>
+                <Text variant="heading" role="heading">
+                  {name}
+                </Text>
+                <Text color="muted">
+                  {spokenList(
+                    [t(`rank.${data.academic_rank}`), departmentName(data.department, language)],
+                    t,
+                  )}
+                </Text>
+                <Text color="muted">{officeFull(data.office, t)}</Text>
+              </View>
+            </View>
+            {inline && actions ? <View style={styles.actionRow}>{actions}</View> : null}
+
+            <View style={styles.section} accessibilityLiveRegion="polite">
+              <Text variant="title">{status.label}</Text>
+              <Text color="muted">
+                {data.status.until
+                  ? spokenList([status.updated, untilText(new Date(data.status.until), t)], t)
+                  : status.updated}
+              </Text>
+              {data.status.note ? <Text>{t('prof.note', { note: data.status.note })}</Text> : null}
+              {closedUntil ? (
+                <Text color="muted">
+                  {t('prof.messages_closed', { time: laterText(closedUntil, now, t) })}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={styles.section}>
+              <Text variant="title" role="heading">
+                {t('prof.today')}
+              </Text>
+              <TodayTimeline blocks={data.today.blocks} now={data.today.now_local_time} />
+            </View>
+
+            <View style={styles.section}>
+              <Text variant="title" role="heading">
+                {t('prof.booking_times')}
+              </Text>
+              {bookable ? (
+                data.booking_periods.map((period) => (
+                  <Text key={period.period_id}>
+                    {t('prof.period_line', {
+                      day: t(`weekday.${period.day_of_week}`),
+                      start: clockText(period.start_time, t),
+                      end: clockText(period.end_time, t),
+                    })}
+                  </Text>
+                ))
+              ) : (
+                <Text color="muted">{t('prof.no_booking_times', { name })}</Text>
+              )}
+            </View>
+          </>
+        ) : professor.error ? (
+          <View style={styles.section}>
+            <Text variant="title">{t('prof.load_failed')}</Text>
+            <SectionError
+              message={t(errorKey(professor.error))}
+              onRetry={() => professor.refetch()}
+            />
+          </View>
+        ) : (
+          <View>
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        )}
+      </ScrollView>
+
+      {!inline && actions ? (
+        <View
+          style={[
+            styles.bar,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.line,
+              paddingBottom: insets.bottom + space.sm,
+            },
+          ]}
+        >
+          {actions}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  page: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: space.lg },
+  panePage: { paddingTop: space.lg, paddingHorizontal: space.lg },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
+  topBar: { flexDirection: 'row', marginStart: -space.sm },
+  flipped: { transform: [{ scaleX: -1 }] },
+  nameplate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radii.sheet,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  plateText: { flex: 1, gap: space.xxs },
+  section: { gap: space.xs },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingTop: space.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    minHeight: touchTarget + space.lg,
+  },
+  grow: { flex: 1 },
+});

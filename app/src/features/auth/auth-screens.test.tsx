@@ -1,8 +1,7 @@
-/** First-launch language choice and sign-in (DESIGN.md 7.1). */
+/** Sign-in, the screen the app opens on, with its language switch (DESIGN.md 7.1). */
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import { ApiError } from '@/api/client';
-import LanguageScreen from '@/app/language';
 import SignInScreen from '@/app/sign-in';
 import { switchLanguage } from '@/i18n';
 import { renderWithProviders } from '@/test-utils';
@@ -29,21 +28,26 @@ beforeEach(() => {
   (switchLanguage as jest.Mock).mockClear();
 });
 
-describe('language screen', () => {
-  it('preselects the device language without applying it', async () => {
-    await renderWithProviders(<LanguageScreen />, 'en');
-    expect(screen.getByRole('radio', { name: 'العربية' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'English' })).not.toBeChecked();
-    // The rest of the screen speaks the preselected language; nothing has been saved yet.
-    expect(screen.getByRole('button', { name: 'متابعة' })).toBeTruthy();
-    expect(switchLanguage).not.toHaveBeenCalled();
+describe('language switch on sign-in', () => {
+  it('sits at the top, before the title, and names the other language', async () => {
+    await renderWithProviders(<SignInScreen />, 'en');
+    const button = screen.getByRole('button', { name: 'Change the language to العربية' });
+    expect(button).toHaveTextContent('العربية');
+    const order = screen
+      .getAllByRole(/button|header/)
+      .map((el) => el.props.accessibilityLabel ?? '');
+    expect(order.indexOf('Change the language to العربية')).toBe(0);
   });
 
-  it('applies the chosen language on Continue, then moves on', async () => {
-    await renderWithProviders(<LanguageScreen />, 'en');
-    await fireEvent.press(screen.getByRole('radio', { name: 'English' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+  it('switches to Arabic in one tap', async () => {
+    await renderWithProviders(<SignInScreen />, 'en');
+    await fireEvent.press(screen.getByRole('button', { name: 'Change the language to العربية' }));
+    expect(switchLanguage).toHaveBeenCalledWith('ar');
+  });
+
+  it('in Arabic, offers English', async () => {
+    await renderWithProviders(<SignInScreen />, 'ar');
+    await fireEvent.press(screen.getByRole('button', { name: 'غيّر اللغة إلى English' }));
     expect(switchLanguage).toHaveBeenCalledWith('en');
   });
 });

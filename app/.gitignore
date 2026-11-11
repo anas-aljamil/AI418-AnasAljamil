@@ -6,6 +6,8 @@ node_modules/
 # Expo
 .expo/
 dist/
+# a second build for checks, so the build the public link serves is not replaced mid-test
+dist-qa/
 web-build/
 expo-env.d.ts
 
