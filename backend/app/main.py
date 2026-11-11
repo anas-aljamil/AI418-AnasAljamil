@@ -44,6 +44,12 @@ def create_app() -> FastAPI:
 
     @api.get("/health", tags=["health"], summary="Liveness check (used to test the phone's connection)")
     def health() -> dict[str, str]:
+        if app.state.schema_problems is None:
+            # MySQL was not reachable when the API started: look again now, so starting MySQL
+            # later is enough (no API restart).
+            app.state.schema_problems = schema_check.schema_problems(get_engine())
+        if app.state.schema_problems is None:
+            raise AppError(503, "DATABASE_UNREACHABLE", schema_check.UNREACHABLE)
         if app.state.schema_problems:
             raise AppError(
                 503,

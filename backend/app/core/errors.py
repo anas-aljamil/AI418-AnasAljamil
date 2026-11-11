@@ -37,6 +37,8 @@ MYSQL_ERRORS = {
     1452: (422, "INVALID_REFERENCE", "A referenced record does not exist."),
     3819: (422, "CONSTRAINT_VIOLATION", "The data breaks a database rule."),
     1644: (409, "SLOT_TAKEN", "This time overlaps another appointment."),
+    # Cannot connect (MySQL not running): the server is temporarily unable to answer.
+    2003: (503, "DATABASE_UNREACHABLE", "The server cannot reach its database. Try again in a moment."),
     # Unknown table / unknown column: the database is older than the code (after a pull that
     # changed db/schema.sql). Say how to fix it instead of a bare 500.
     1146: (

@@ -123,6 +123,38 @@ def test_health_says_when_the_database_is_older_than_the_code(client):
     assert "table colleges is missing" in error["message"] and "reset_db.py" in error["message"]
 
 
+def test_an_unreachable_database_is_not_called_outdated(monkeypatch):
+    from sqlalchemy import create_engine
+
+    # Nothing listens on port 1: the check cannot know the schema, so it says so (None).
+    assert schema_check.schema_problems(create_engine("mysql+pymysql://x@127.0.0.1:1/x")) is None
+
+
+def test_health_checks_again_once_the_database_answers(client, monkeypatch):
+    """MySQL started after the API: health looks again instead of reporting the startup state."""
+    client.app.state.schema_problems = None  # unreachable at startup
+    answers = iter([None, []])
+    monkeypatch.setattr(schema_check, "schema_problems", lambda _engine: next(answers))
+    first = client.get("/api/v1/health")
+    assert first.status_code == 503
+    assert first.json()["error"]["code"] == "DATABASE_UNREACHABLE"
+    assert "MySQL" in first.json()["error"]["message"] and "reset_db" not in first.json()["error"]["message"]
+    assert client.get("/api/v1/health").json() == {"status": "ok"}
+
+
+def test_a_lost_connection_is_503_not_500(client):
+    import pymysql
+    from sqlalchemy.exc import OperationalError
+
+    def down():
+        raise OperationalError("SELECT 1", {}, pymysql.err.OperationalError(2003, "Can't connect"))
+
+    client.app.add_api_route("/database-down", down)
+    response = client.get("/database-down")
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "DATABASE_UNREACHABLE"
+
+
 def test_a_missing_table_or_column_says_the_database_is_outdated(client):
     """A database built before a schema change answers with how to fix it, not a bare 500."""
     import pymysql
