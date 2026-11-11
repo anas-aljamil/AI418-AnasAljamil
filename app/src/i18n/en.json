@@ -208,7 +208,7 @@
   "errors": {
     "INVALID_CREDENTIALS": "The email or password is incorrect.",
     "ACCOUNT_DISABLED": "This account is not active yet, or it has been deactivated. Contact the administrator.",
-    "DEMO_ACCOUNT_LOCAL_ONLY": "Demo accounts work only on the computer that runs Mawjood. Create your own account instead.",
+    "ADMIN_DEMO_PASSWORD": "The admin account still has the demo password, so it works only on the computer that runs Mawjood. Give it a private password first.",
     "RATE_LIMITED": "Too many attempts. Wait a minute, then try again.",
     "NETWORK": "Can't reach the Mawjood server. Check your connection, then try again.",
     "generic": "Something went wrong on the server. Try again in a moment.",

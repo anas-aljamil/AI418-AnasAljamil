@@ -7,7 +7,8 @@ This file covers the implementation of CLAUDE.md Section 8. The code is in `back
 - **No account enumeration:** a wrong password and an unknown email return the same 401 `INVALID_CREDENTIALS`. Both take the same time, because an unknown email is still checked against a dummy hash.
 - **Minimum length:** 8 characters for accounts created by the admin.
 - **Seed accounts:** they all share the password `Mawjood-Demo-2026`. These are fictional demo accounts; never reuse that password anywhere.
-- **Seed password on the public link:** that password is published, and it opens the admin account too. Through the public link (docs/run-on-phone.md, Section 3b) the API refuses it with 403 `DEMO_ACCOUNT_LOCAL_ONLY`, before checking the account, so the demo accounts sign in only on the computer that runs Mawjood or its Wi-Fi.
+- **Seed password on the public link (revised 2026-11-11, owner decision):** that password is published, and it opens the admin account too. Through the public link (docs/run-on-phone.md, Section 3b) the demo students and professors may sign in with it, because their data is fictional; an admin account still on it is refused with 403 `ADMIN_DEMO_PASSWORD`. The check runs after the password check, so without the password it reveals nothing. `scripts/set_password.py` gives the admin a private password (typed hidden, hashed with argon2, one parameterized UPDATE); after `reset_db.py` the admin is on the published password again and blocked again.
+- **What remains open by design:** anyone on the link can sign in as a demo student or professor and change their fictional data (book, message, set a status). Reseed with `reset_db.py --rebase` to restore it.
 
 ## Tokens
 

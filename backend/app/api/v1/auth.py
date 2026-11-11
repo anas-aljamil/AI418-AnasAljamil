@@ -48,8 +48,11 @@ CSRF_HEADER, CSRF_VALUE = "X-Requested-With", "mawjood"
 login_limiter = RateLimiter(get_settings().login_attempts_per_minute, 60)
 signup_limiter = RateLimiter(get_settings().signups_per_minute, 60)
 STUDENT_NUMBER = re.compile(r"[0-9]{4,12}")  # the local part of a student's university email
-# Every seed account shares this published password (db/seed.sql), the admin included, so it
-# signs in only from this computer or its Wi-Fi, never through the public link.
+# Every seed account shares this published password (db/seed.sql). Through the public link the
+# demo students and professors may use it (fictional data, owner decision 2026-11-11), but an
+# admin account still on it signs in only from this computer or its Wi-Fi: anyone who reads
+# the password could otherwise run the whole site. scripts/set_password.py gives the admin a
+# private password; after reset_db.py the admin is back on this one and blocked again.
 SEED_PASSWORD = "Mawjood-Demo-2026"  # noqa: S105
 
 
@@ -108,15 +111,17 @@ def login(
     clock: Clock = Depends(get_clock),
 ) -> TokenOut:
     login_limiter.check(f"{client_address(request)}|{body.email}")
-    if body.password == SEED_PASSWORD and came_through_tunnel(request):
-        raise AppError(
-            403,
-            "DEMO_ACCOUNT_LOCAL_ONLY",
-            "Demo accounts sign in only on the computer that runs Mawjood. Create your own account.",
-        )
     user = db.scalar(select(User).where(User.email == body.email))
     if not verify_password(body.password, user.password_hash if user else None):
         raise AppError(401, "INVALID_CREDENTIALS", "The email or password is incorrect.")
+    # Checked after the password, so it reveals nothing to someone without it.
+    if user.role == "admin" and body.password == SEED_PASSWORD and came_through_tunnel(request):
+        raise AppError(
+            403,
+            "ADMIN_DEMO_PASSWORD",
+            "The admin account still has the demo password, so it signs in only on the computer "
+            "that runs Mawjood. Give it a private password: python3 scripts/set_password.py.",
+        )
     if not user.is_active:
         raise AppError(
             403,
