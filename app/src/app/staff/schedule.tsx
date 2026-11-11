@@ -5,7 +5,8 @@
  * - Booking: the times students can book in, inside or outside office hours;
  * - Messages: the weekly hours when students cannot write.
  * Each item is added, edited and deleted in a sheet. Times are Riyadh times on a 15-minute
- * grid, picked on the 12-hour clock (hour, minutes, AM/PM); overlaps are refused by the API.
+ * grid, picked as a start and a length (TimeRangePicker); a new item may go on several days
+ * at once. Overlaps are refused by the API.
  */
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
@@ -32,13 +33,13 @@ import { Segmented } from '@/components/Segmented';
 import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { TimePicker } from '@/components/TimePicker';
+import { TimeRangePicker } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
+import { DayChips, saveEachDay } from '@/features/schedule/days';
 import { WeeklyRanges } from '@/features/schedule/WeeklyRanges';
 import { errorKey } from '@/lib/errors';
-import { clockText, minutesOfDay } from '@/lib/format';
-import { isQuarterHour } from '@/lib/validation';
+import { clockText, daysText } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
@@ -195,32 +196,37 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
   const save = useSaveBlock();
   const remove = useDeleteBlock();
   const [block, setBlock] = useState<BlockInput>(initial);
+  const [days, setDays] = useState([initial.day_of_week]);
   const [showErrors, setShowErrors] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const update = (patch: Partial<BlockInput>) => setBlock((current) => ({ ...current, ...patch }));
 
-  const startError = !isQuarterHour(block.start_time) ? t('schedule.time_invalid') : null;
-  const endError = !isQuarterHour(block.end_time)
-    ? t('schedule.time_invalid')
-    : !startError && minutesOfDay(block.end_time) <= minutesOfDay(block.start_time)
-      ? t('schedule.end_before_start')
-      : null;
+  const daysError = days.length === 0 ? t('schedule.days_missing') : undefined;
 
-  const submit = () => {
+  const submit = async () => {
     setShowErrors(true);
-    if (startError || endError) return;
+    if (daysError) return;
     setServerError(null);
-    save.mutate(
-      { id, block: { ...block, label: block.label?.trim() || null } },
-      {
-        onSuccess: () => {
-          toast(t('schedule.saved'));
-          onClose();
-        },
-        onError: (error) => setServerError(t(errorKey(error))),
-      },
+    setSaving(true);
+    const label = block.label?.trim() || null;
+    const result = await saveEachDay(
+      days,
+      (day) => save.mutateAsync({ id, block: { ...block, label, day_of_week: day } }),
+      t,
     );
+    setSaving(false);
+    if (result.failed.length === 0) {
+      toast(t('schedule.saved'));
+      onClose();
+      return;
+    }
+    // Keep only the days that still need saving, so trying again does not add duplicates.
+    if (result.saved.length > 0)
+      toast(t('schedule.saved_for', { days: daysText(result.saved, t) }));
+    setDays(result.failed);
+    setServerError(result.message);
   };
 
   const confirmDelete = () => {
@@ -244,19 +250,13 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
         title={t(id === null ? 'schedule.new_title' : 'schedule.edit_title')}
         onClose={onClose}
       >
-        <Text variant="label" role="heading">
-          {t('schedule.day')}
-        </Text>
-        <View style={styles.chips}>
-          {DAYS.map((day) => (
-            <Chip
-              key={day}
-              label={t(`weekday.${day}`)}
-              selected={block.day_of_week === day}
-              onPress={() => update({ day_of_week: day })}
-            />
-          ))}
-        </View>
+        <DayChips
+          days={DAYS}
+          value={days}
+          onChange={setDays}
+          multiple={id === null}
+          error={showErrors ? daysError : undefined}
+        />
         <Text variant="label" role="heading">
           {t('schedule.kind')}
         </Text>
@@ -270,18 +270,7 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
             />
           ))}
         </View>
-        <TimePicker
-          label={t('schedule.start')}
-          value={block.start_time}
-          onChange={(value) => update({ start_time: value })}
-          error={showErrors ? (startError ?? undefined) : undefined}
-        />
-        <TimePicker
-          label={t('schedule.end')}
-          value={block.end_time}
-          onChange={(value) => update({ end_time: value })}
-          error={showErrors ? (endError ?? undefined) : undefined}
-        />
+        <TimeRangePicker value={block} onChange={update} />
         <TextField
           label={t('schedule.label')}
           helper={t('schedule.label_helper')}
@@ -289,10 +278,15 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
           onChangeText={(value) => update({ label: value })}
           maxLength={40}
         />
+        {days.length > 0 ? (
+          <Text weight="medium" accessibilityLiveRegion="polite">
+            {t('schedule.day_line', { day: daysText(days, t), range: line(block) })}
+          </Text>
+        ) : null}
         <View accessibilityLiveRegion="polite" role={serverError ? 'alert' : undefined}>
           {serverError ? <Text color="danger">{serverError}</Text> : null}
         </View>
-        <Button label={t('schedule.save')} onPress={submit} disabled={save.isPending} block />
+        <Button label={t('schedule.save')} onPress={submit} disabled={saving} block />
         {id !== null ? (
           <Button
             variant="danger"

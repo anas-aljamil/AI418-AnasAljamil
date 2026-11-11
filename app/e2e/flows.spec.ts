@@ -104,11 +104,9 @@ test('a schedule block is edited with the time picker, and another deleted', asy
   await noura.getByRole('tab', { name: 'Schedule' }).click();
   await noura.getByRole('button', { name: '10:00 AM–12:00 PM Office hours', exact: true }).click();
   const sheet = noura.getByRole('dialog', { name: 'Edit block' });
-  await sheet.getByRole('button', { name: 'End, hour 11', exact: true }).click();
-  await sheet.getByRole('button', { name: 'End, 30 minutes', exact: true }).click();
-  // The hour keeps its half of the day (12 PM -> 11 PM), so morning is chosen too.
-  await sheet.getByRole('button', { name: 'End, AM', exact: true }).click();
-  await expect(sheet.getByText('11:30 AM', { exact: true })).toBeVisible();
+  // 10:00 AM for 2 hours; one length chip makes it end at 11:30 AM.
+  await sheet.getByRole('button', { name: 'Length, 1 hour 30 minutes', exact: true }).click();
+  await expect(sheet.getByText('1 hour 30 minutes, until 11:30 AM', { exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Save block', exact: true }).click();
   await expect(noura.getByText('Schedule saved', { exact: true })).toBeVisible();
   expect(sql('SELECT end_time FROM schedule_blocks WHERE block_id = 2')).toBe('11:30:00');
