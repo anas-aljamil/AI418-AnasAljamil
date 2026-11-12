@@ -1,15 +1,17 @@
 /**
  * Booking (DESIGN.md 7.5): a bottom sheet with the day strip (Sunday-Thursday, this week and
- * next), the free stretches of that day, a start on any 5-minute step (hour chips, then minute
- * chips), a length in 5-minute steps (a stepper and one-tap lengths, starting from the
- * professor's usual length and never past the next booking or the end of the booking time),
- * optional topic and note, a summary, then the one orchestrated moment: the door opens, a
- * check appears, "Booked with Dr. X, Sunday 10:30", and a success haptic.
+ * next), the free stretches of that day, a start on any 5-minute step (one menu, grouped by
+ * hour, owner request 2026-11-11), an optional length (the professor's usual length unless the
+ * student opens "Change length": a stepper and one-tap lengths in 5-minute steps, never past
+ * the next booking or the end of the booking time), optional topic and note, a summary, then
+ * the one orchestrated moment: the door opens, a check appears, "Booked with Dr. X, Sunday
+ * 10:30", and a success haptic.
  *
  * Times come from the professor's booking times, which may lie outside office hours; days
  * without one are dimmed. Steps from the profile: Book, (day, defaulted to the first day with
- * a booking time), time (start and length), confirm. Unavailable starts stay visible and say why when tapped. An error never
- * clears the day, topic or note; only a time that was just taken by someone else is unselected.
+ * a booking time), start, confirm. Unavailable starts stay in the menu, dimmed, and say why
+ * ("10:15 AM, booked"). An error never clears the day, topic or note; only a time that was
+ * just taken by someone else is unselected.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -24,6 +26,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
+import { MenuPicker, type MenuOption } from '@/components/MenuPicker';
 import { SkeletonRow } from '@/components/Placeholders';
 import { StepButton } from '@/components/StepButton';
 import { Text } from '@/components/Text';
@@ -34,7 +37,7 @@ import { addMinutes, bookingDays, clockText, hourText, whenText } from '@/lib/fo
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
-import { fitLength, freeWindows, hoursOf, QUICK_LENGTHS, STEP } from './times';
+import { fitLength, freeWindows, QUICK_LENGTHS, STEP } from './times';
 
 const TOPICS: Topic[] = ['assignment', 'exam_review', 'advising', 'other'];
 
@@ -54,9 +57,10 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
     (days.find((d) => bookableWeekdays.has(d.weekday)) ?? days[0])?.date ?? null,
   );
   const [slot, setSlot] = useState<Slot | null>(null);
-  const [hour, setHour] = useState<number | null>(null);
   // The length the student chose; until then the professor's usual length (both fitted).
   const [length, setLength] = useState<number | null>(null);
+  // Length is optional: its controls stay folded until the student asks to change it.
+  const [lengthOpen, setLengthOpen] = useState(false);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -70,6 +74,8 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
     if (booked) {
       setBooked(null);
       setSlot(null);
+      setLength(null);
+      setLengthOpen(false);
       setTopic(null);
       setNote('');
     }
@@ -79,31 +85,32 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   const chooseDay = (date: string) => {
     setDay(date);
     setSlot(null);
-    setHour(null);
     setMessage(null);
   };
 
   const daySlots = slots.data?.slots ?? [];
-  const hours = hoursOf(daySlots);
-  const hourOf = (option: Slot) => Number(option.local_time.slice(0, 2));
-  const shownHour =
-    hour ??
-    hours.find((h) => daySlots.some((s) => s.available && hourOf(s) === h)) ??
-    hours[0] ??
-    null;
   const windows = freeWindows(daySlots);
-  const minutes = slot
-    ? fitLength(length ?? slots.data?.slot_minutes ?? professor.slot_minutes, slot.max_minutes)
-    : 0;
+  const usual = slots.data?.slot_minutes ?? professor.slot_minutes;
+  const minutes = slot ? fitLength(length ?? usual, slot.max_minutes) : 0;
   const listSeparator = language === 'ar' ? '، ' : ', ';
+  // Every start of the day under its hour; taken and past ones stay, dimmed, and say why.
+  const startOptions: MenuOption[] = daySlots.map((option) => {
+    const time = clockText(option.local_time, t);
+    return {
+      value: option.starts_at,
+      label: option.available
+        ? time
+        : t(option.reason === 'past' ? 'booking.option_past' : 'booking.option_taken', { time }),
+      group: hourText(Number(option.local_time.slice(0, 2)), t),
+      disabled: !option.available,
+    };
+  });
 
-  const chooseSlot = (option: Slot) => {
-    if (option.available) {
-      setSlot(option);
-      setMessage(null);
-    } else {
-      setMessage(t(option.reason === 'past' ? 'booking.past' : 'booking.taken'));
-    }
+  const chooseSlot = (startsAt: string) => {
+    const option = daySlots.find((s) => s.starts_at === startsAt && s.available);
+    if (!option) return;
+    setSlot(option);
+    setMessage(null);
   };
 
   const confirm = () => {
@@ -192,38 +199,13 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
                     })
                   : t('booking.no_free')}
               </Text>
-              <View style={styles.wrap}>
-                {hours.map((h) => (
-                  <Chip
-                    key={h}
-                    label={hourText(h, t)}
-                    selected={shownHour === h}
-                    dimmed={!daySlots.some((s) => s.available && hourOf(s) === h)}
-                    onPress={() => setHour(h)}
-                  />
-                ))}
-              </View>
-              <View style={styles.wrap}>
-                {daySlots
-                  .filter((option) => hourOf(option) === shownHour)
-                  .map((option) => (
-                    <Chip
-                      key={option.starts_at}
-                      label={`:${option.local_time.slice(3, 5)}`}
-                      selected={slot?.starts_at === option.starts_at}
-                      dimmed={!option.available}
-                      // Said out loud too: the web build drops aria-disabled on a tappable chip.
-                      accessibilityLabel={
-                        option.available
-                          ? clockText(option.local_time, t)
-                          : t('booking.unavailable_label', {
-                              time: clockText(option.local_time, t),
-                            })
-                      }
-                      onPress={() => chooseSlot(option)}
-                    />
-                  ))}
-              </View>
+              <MenuPicker
+                label={t('booking.start')}
+                options={startOptions}
+                value={slot?.starts_at ?? ''}
+                onChange={chooseSlot}
+                placeholder={t('booking.choose_start')}
+              />
             </>
           ) : (
             <Text color="muted">{t('booking.no_times')}</Text>
@@ -234,47 +216,75 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
               <Text variant="label" role="heading">
                 {t('booking.length')}
               </Text>
-              <View style={styles.stepper}>
-                <StepButton
-                  label={t('booking.shorter')}
-                  disabled={minutes <= STEP}
-                  onPress={() => setLength(minutes - STEP)}
-                  icon="minus"
-                />
-                <Text
-                  weight="semibold"
-                  style={[styles.grow, styles.center]}
-                  accessibilityLiveRegion="polite"
-                >
-                  {t('booking.length_value', {
-                    minutes,
-                    end: clockText(addMinutes(slot.local_time, minutes), t),
-                  })}
-                </Text>
-                <StepButton
-                  label={t('booking.longer')}
-                  disabled={minutes >= slot.max_minutes}
-                  onPress={() => setLength(minutes + STEP)}
-                  icon="plus"
-                />
-              </View>
-              <View style={styles.wrap}>
-                {QUICK_LENGTHS.filter((option) => option <= slot.max_minutes).map((option) => (
-                  <Chip
-                    key={option}
-                    label={t('booking.minutes_chip', { minutes: option })}
-                    accessibilityLabel={t('booking.minutes_long', { minutes: option })}
-                    selected={minutes === option}
-                    onPress={() => setLength(option)}
+              {lengthOpen ? (
+                <>
+                  <View style={styles.stepper}>
+                    <StepButton
+                      label={t('booking.shorter')}
+                      disabled={minutes <= STEP}
+                      onPress={() => setLength(minutes - STEP)}
+                      icon="minus"
+                    />
+                    <Text
+                      weight="semibold"
+                      style={[styles.grow, styles.center]}
+                      accessibilityLiveRegion="polite"
+                    >
+                      {t('booking.length_value', {
+                        minutes,
+                        end: clockText(addMinutes(slot.local_time, minutes), t),
+                      })}
+                    </Text>
+                    <StepButton
+                      label={t('booking.longer')}
+                      disabled={minutes >= slot.max_minutes}
+                      onPress={() => setLength(minutes + STEP)}
+                      icon="plus"
+                    />
+                  </View>
+                  <View style={styles.wrap}>
+                    {QUICK_LENGTHS.filter((option) => option <= slot.max_minutes).map((option) => (
+                      <Chip
+                        key={option}
+                        label={t('booking.minutes_chip', { minutes: option })}
+                        accessibilityLabel={t('booking.minutes_long', { minutes: option })}
+                        selected={minutes === option}
+                        onPress={() => setLength(option)}
+                      />
+                    ))}
+                  </View>
+                  <Text variant="caption" color="muted">
+                    {t('booking.length_max', {
+                      minutes: slot.max_minutes,
+                      time: clockText(slot.local_time, t),
+                    })}
+                  </Text>
+                </>
+              ) : (
+                <View style={styles.stepper}>
+                  <View style={styles.grow}>
+                    <Text weight="semibold" accessibilityLiveRegion="polite">
+                      {t('booking.length_value', {
+                        minutes,
+                        end: clockText(addMinutes(slot.local_time, minutes), t),
+                      })}
+                    </Text>
+                    <Text variant="caption" color="muted">
+                      {minutes === usual
+                        ? t('booking.usual_length')
+                        : t('booking.length_max', {
+                            minutes: slot.max_minutes,
+                            time: clockText(slot.local_time, t),
+                          })}
+                    </Text>
+                  </View>
+                  <Button
+                    variant="quiet"
+                    label={t('booking.change_length')}
+                    onPress={() => setLengthOpen(true)}
                   />
-                ))}
-              </View>
-              <Text variant="caption" color="muted">
-                {t('booking.length_max', {
-                  minutes: slot.max_minutes,
-                  time: clockText(slot.local_time, t),
-                })}
-              </Text>
+                </View>
+              )}
             </>
           ) : null}
 

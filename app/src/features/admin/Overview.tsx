@@ -22,6 +22,7 @@ import { useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { SkeletonRow } from '@/components/Placeholders';
 import { Card } from '@/components/Surfaces';
+import { AppBar } from '@/components/AppBar';
 import { Text } from '@/components/Text';
 import { departmentName, fullName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -112,6 +113,7 @@ export function AdminOverview() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[styles.page, column, { paddingTop: insets.top + space.lg }]}
     >
+      <AppBar />
       <View>
         <Text variant="heading" role="heading">
           {t('admin.overview_title')}

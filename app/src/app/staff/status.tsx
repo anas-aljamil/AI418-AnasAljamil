@@ -23,6 +23,7 @@ import type { ManualStatus } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { AppBar } from '@/components/AppBar';
 import { Door } from '@/components/Door';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SkeletonRow } from '@/components/Placeholders';
@@ -126,12 +127,12 @@ export default function StatusScreen() {
       {/* Desktop: the status controls on the start side, today and the requests beside them. */}
       <View style={desktop ? styles.columns : styles.stack}>
         <View style={desktop ? styles.column : styles.stack}>
-          <View style={styles.headRow}>
-            <Text variant="heading" role="heading" style={styles.grow}>
-              {t('status_screen.title')}
-            </Text>
+          <AppBar>
             <NotificationBell />
-          </View>
+          </AppBar>
+          <Text variant="heading" role="heading">
+            {t('status_screen.title')}
+          </Text>
 
           {current && described ? (
             <>
@@ -317,7 +318,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
   },
   grow: { flex: 1 },
-  headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   start: { alignItems: 'flex-start' },

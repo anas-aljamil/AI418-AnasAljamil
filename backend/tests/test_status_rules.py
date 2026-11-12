@@ -40,6 +40,13 @@ def test_schedule_class_block_means_in_class():
     assert (result.status, result.source) == ("in_class", "schedule")
 
 
+def test_schedule_meeting_block_means_busy():
+    meeting = Block("meeting", 1, time(13), time(14))
+    result = effective_status(MON_1000 + timedelta(hours=3, minutes=15), [*WEEK, meeting], None)
+    assert (result.status, result.source, result.confirmed) == ("busy", "schedule", True)
+    assert result.until == datetime(2026, 10, 5, 11, 0)  # meeting ends 14:00 Riyadh
+
+
 def test_outside_all_blocks_means_away():
     result = effective_status(MON_1000 + timedelta(hours=5), WEEK, None)
     assert (result.status, result.confirmed) == ("away", True)

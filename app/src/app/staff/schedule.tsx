@@ -38,6 +38,7 @@ import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { DayChips, saveEachDay } from '@/features/schedule/days';
 import { WeeklyRanges } from '@/features/schedule/WeeklyRanges';
+import { BLOCK_KINDS, blockKindKey } from '@/lib/blocks';
 import { errorKey } from '@/lib/errors';
 import { clockText, daysText } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -76,7 +77,7 @@ export default function ScheduleScreen() {
     t('prof.block_line', {
       start: clockText(block.start_time, t),
       end: clockText(block.end_time, t),
-      kind: block.kind === 'office_hours' ? t('prof.office_hours') : t('prof.class'),
+      kind: t(blockKindKey(block.kind)),
     }) + (block.label ? ` (${block.label})` : '');
 
   const changeLength = (value: 15 | 30) => {
@@ -261,10 +262,10 @@ function BlockSheet({ id, initial, line, onClose }: BlockSheetProps) {
           {t('schedule.kind')}
         </Text>
         <View style={styles.chips}>
-          {(['office_hours', 'class'] as const).map((kind) => (
+          {BLOCK_KINDS.map((kind) => (
             <Chip
               key={kind}
-              label={t(kind === 'office_hours' ? 'prof.office_hours' : 'prof.class')}
+              label={t(blockKindKey(kind))}
               selected={block.kind === kind}
               onPress={() => update({ kind })}
             />

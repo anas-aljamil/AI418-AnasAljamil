@@ -87,7 +87,7 @@ erDiagram
     SCHEDULE_BLOCKS {
         int block_id PK
         int professor_id FK "UK (professor_id, day_of_week, start_time)"
-        varchar kind "office_hours | class"
+        varchar kind "office_hours | class | meeting"
         tinyint day_of_week "0 Sun - 4 Thu"
         time start_time "Riyadh, 15-min grid"
         time end_time "after start_time"

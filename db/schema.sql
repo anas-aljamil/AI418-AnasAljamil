@@ -194,7 +194,8 @@ CREATE TABLE professors (
 
 -- -----------------------------------------------------------------------------
 -- schedule_blocks: a professor's recurring weekly timetable.
--- 'office_hours' blocks derive "In office"; 'class' blocks derive "In class".
+-- 'office_hours' blocks derive "In office"; 'class' blocks derive "In class";
+-- 'meeting' blocks (department meetings, committees) derive "Busy".
 -- Bookings are not tied to these blocks: see booking_periods.
 -- Block times sit on a 15-minute grid (whole 5-minute steps).
 -- Overlapping blocks for one professor are rejected by the API.
@@ -211,7 +212,7 @@ CREATE TABLE schedule_blocks (
     CONSTRAINT uq_schedule_blocks_start UNIQUE (professor_id, day_of_week, start_time),
     CONSTRAINT fk_schedule_blocks_professor FOREIGN KEY (professor_id)
         REFERENCES professors (professor_id) ON DELETE CASCADE ON UPDATE RESTRICT,
-    CONSTRAINT ck_schedule_blocks_kind  CHECK (kind IN ('office_hours', 'class')),
+    CONSTRAINT ck_schedule_blocks_kind  CHECK (kind IN ('office_hours', 'class', 'meeting')),
     CONSTRAINT ck_schedule_blocks_day   CHECK (day_of_week BETWEEN 0 AND 4),
     CONSTRAINT ck_schedule_blocks_range CHECK (start_time >= '00:00:00' AND end_time < '24:00:00'),
     CONSTRAINT ck_schedule_blocks_order CHECK (start_time < end_time),

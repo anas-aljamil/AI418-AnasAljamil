@@ -76,17 +76,16 @@ async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   const days = sheet.getByRole('button', { name: /^\S+ \d+$/ });
   for (let i = 0; i < (await days.count()); i++) {
     await days.nth(i).click();
-    // Starts are minute chips under the hour chips. Taken and past ones are named
-    // "9:00 AM, unavailable"; free ones are just the time (Arabic: "9:00 ص" / "1:00 م").
-    const free = sheet.getByRole('button', { name: /^\d{1,2}:\d\d ([AP]M|ص|م)$/ });
-    if (
-      await free
-        .first()
-        .waitFor({ timeout: 3000 })
-        .then(() => true)
-        .catch(() => false)
-    ) {
-      await free.first().click();
+    // The start is one menu (the browser's own <select>); taken and past starts are disabled
+    // options named "9:00 AM, booked" or "9:00 AM, already passed".
+    const start = sheet.getByRole('combobox', { name: /^(Start|البداية)$/ });
+    const shown = await start
+      .waitFor({ timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    const free = start.locator('option:not([disabled])');
+    if (shown && (await free.count())) {
+      await start.selectOption((await free.first().getAttribute('value'))!);
       return sheet;
     }
   }
