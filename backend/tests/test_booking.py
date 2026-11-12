@@ -102,9 +102,9 @@ def test_any_5_minute_start_and_length_that_fits_a_booking_period(client, auth):
     )
     long_one = book(client, headers, NORA, "2026-10-11T10:45:00+03:00", minutes=75)  # to 12:00
     assert long_one.status_code == 201, long_one.text
-    # Without a length, the professor's usual length (Reem: 30 minutes), at any 5-minute start.
+    # Without a length, 15 minutes (no per-professor usual length since 2026-11-11).
     default = book(client, auth(MAHA), REEM, "2026-10-12T11:05:00+03:00")
-    assert (default.status_code, default.json()["ends_at"]) == (201, "2026-10-12T08:35:00Z")
+    assert (default.status_code, default.json()["ends_at"]) == (201, "2026-10-12T08:20:00Z")
 
 
 def test_start_and_length_must_stay_on_the_grid_inside_a_booking_period(client, auth):

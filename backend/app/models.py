@@ -5,9 +5,19 @@ the app never creates tables. tests/test_schema_sync.py checks these models
 against the live MySQL schema column by column.
 """
 
-from datetime import datetime, time
+from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Computed, DateTime, ForeignKey, ForeignKeyConstraint, Integer, String, Time
+from sqlalchemy import (
+    Boolean,
+    Computed,
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Time,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -84,7 +94,6 @@ class Professor(Base):
     office_id: Mapped[int | None] = mapped_column(ForeignKey("offices.office_id"))
     honorific: Mapped[str] = mapped_column(String(5), server_default="dr")
     academic_rank: Mapped[str] = mapped_column(String(20), server_default="assistant_professor")
-    slot_minutes: Mapped[int] = mapped_column(Integer, server_default="15")
     __table_args__ = (ForeignKeyConstraint(["professor_id", "role"], ["users.user_id", "users.role"]),)
 
     user: Mapped[User] = relationship(
@@ -93,13 +102,16 @@ class Professor(Base):
     department: Mapped[Department] = relationship()
     office: Mapped[Office | None] = relationship()
     blocks: Mapped[list["ScheduleBlock"]] = relationship(
-        order_by=lambda: [ScheduleBlock.day_of_week, ScheduleBlock.start_time], viewonly=True
+        order_by=lambda: [ScheduleBlock.on_date, ScheduleBlock.day_of_week, ScheduleBlock.start_time],
+        viewonly=True,
     )
     booking_periods: Mapped[list["BookingPeriod"]] = relationship(
-        order_by=lambda: [BookingPeriod.day_of_week, BookingPeriod.start_time], viewonly=True
+        order_by=lambda: [BookingPeriod.on_date, BookingPeriod.day_of_week, BookingPeriod.start_time],
+        viewonly=True,
     )
     chat_closures: Mapped[list["ChatClosedHours"]] = relationship(
-        order_by=lambda: [ChatClosedHours.day_of_week, ChatClosedHours.start_time], viewonly=True
+        order_by=lambda: [ChatClosedHours.on_date, ChatClosedHours.day_of_week, ChatClosedHours.start_time],
+        viewonly=True,
     )
 
 
@@ -108,10 +120,24 @@ class ScheduleBlock(Base):
     block_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     professor_id: Mapped[int] = mapped_column(ForeignKey("professors.professor_id"))
     kind: Mapped[str] = mapped_column(String(12), server_default="office_hours")
-    day_of_week: Mapped[int] = mapped_column(Integer)
+    day_of_week: Mapped[int | None] = mapped_column(Integer)
+    on_date: Mapped[date | None] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     label: Mapped[str | None] = mapped_column(String(40))
+
+    skips: Mapped[list["SkippedDate"]] = relationship(
+        primaryjoin="SkippedDate.block_id == ScheduleBlock.block_id",
+        foreign_keys="SkippedDate.block_id",
+        order_by="SkippedDate.skip_date",
+        lazy="selectin",
+        viewonly=True,
+    )
+
+    @property
+    def skipped_dates(self) -> list[date]:
+        return [s.skip_date for s in self.skips]
 
 
 class BookingPeriod(Base):
@@ -120,9 +146,23 @@ class BookingPeriod(Base):
     __tablename__ = "booking_periods"
     period_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     professor_id: Mapped[int] = mapped_column(ForeignKey("professors.professor_id"))
-    day_of_week: Mapped[int] = mapped_column(Integer)
+    day_of_week: Mapped[int | None] = mapped_column(Integer)
+    on_date: Mapped[date | None] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
+
+    skips: Mapped[list["SkippedDate"]] = relationship(
+        primaryjoin="SkippedDate.period_id == BookingPeriod.period_id",
+        foreign_keys="SkippedDate.period_id",
+        order_by="SkippedDate.skip_date",
+        lazy="selectin",
+        viewonly=True,
+    )
+
+    @property
+    def skipped_dates(self) -> list[date]:
+        return [s.skip_date for s in self.skips]
 
 
 class ChatClosedHours(Base):
@@ -132,9 +172,36 @@ class ChatClosedHours(Base):
     __tablename__ = "chat_closed_hours"
     closure_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     professor_id: Mapped[int] = mapped_column(ForeignKey("professors.professor_id"))
-    day_of_week: Mapped[int] = mapped_column(Integer)
+    day_of_week: Mapped[int | None] = mapped_column(Integer)
+    on_date: Mapped[date | None] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
+
+    skips: Mapped[list["SkippedDate"]] = relationship(
+        primaryjoin="SkippedDate.closure_id == ChatClosedHours.closure_id",
+        foreign_keys="SkippedDate.closure_id",
+        order_by="SkippedDate.skip_date",
+        lazy="selectin",
+        viewonly=True,
+    )
+
+    @property
+    def skipped_dates(self) -> list[date]:
+        return [s.skip_date for s in self.skips]
+
+
+class SkippedDate(Base):
+    """One date on which a weekly block, booking period or chat closure does not happen;
+    exactly one of the three ids is set (database triggers)."""
+
+    __tablename__ = "skipped_dates"
+    skip_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    block_id: Mapped[int | None] = mapped_column(ForeignKey("schedule_blocks.block_id"))
+    period_id: Mapped[int | None] = mapped_column(ForeignKey("booking_periods.period_id"))
+    closure_id: Mapped[int | None] = mapped_column(ForeignKey("chat_closed_hours.closure_id"))
+    skip_date: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class StatusOverride(Base):

@@ -1,7 +1,7 @@
 /**
- * Booking (DESIGN.md 7.5): a bottom sheet with the day strip (Sunday-Thursday, this week and
- * next), the free stretches of that day, a start on any 5-minute step (one menu, grouped by
- * hour, owner request 2026-11-11), an optional length (the professor's usual length unless the
+ * Booking (DESIGN.md 7.5): a bottom sheet with a calendar of this week and next (Sunday to
+ * Thursday, owner request 2026-11-11; days without a booking time are dimmed), the free stretches of that day, a start on any 5-minute step (one menu, grouped by
+ * hour, owner request 2026-11-11), an optional length (15 minutes unless the
  * student opens "Change length": a stepper and one-tap lengths in 5-minute steps, never past
  * the next booking or the end of the booking time), optional topic and note, a summary, then
  * the one orchestrated moment: the door opens, a check appears, "Booked with Dr. X, Sunday
@@ -9,12 +9,12 @@
  *
  * Times come from the professor's booking times, which may lie outside office hours; days
  * without one are dimmed. Steps from the profile: Book, (day, defaulted to the first day with
- * a booking time), start, confirm. Unavailable starts stay in the menu, dimmed, and say why
+ * a booking time, weekly or dated), start, confirm. Unavailable starts stay in the menu, dimmed, and say why
  * ("10:15 AM, booked"). An error never clears the day, topic or note; only a time that was
  * just taken by someone else is unselected.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import Check from 'lucide-react-native/icons/check';
@@ -24,6 +24,7 @@ import { useBook, useSlots } from '@/api/queries';
 import type { Appointment, ProfessorDetail, Slot, Topic } from '@/api/types';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
+import { Calendar } from '@/components/Calendar';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
 import { MenuPicker, type MenuOption } from '@/components/MenuPicker';
@@ -33,6 +34,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { insetEnd } from '@/lib/direction';
 import { errorKey } from '@/lib/errors';
+import { todayKey } from '@/lib/dates';
 import { addMinutes, bookingDays, clockText, hourText, whenText } from '@/lib/format';
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -40,6 +42,8 @@ import { space, type Language } from '@/theme/tokens';
 import { fitLength, freeWindows, QUICK_LENGTHS, STEP } from './times';
 
 const TOPICS: Topic[] = ['assignment', 'exam_review', 'advising', 'other'];
+/** The length offered first, as the API's default (no per-professor usual length). */
+const DEFAULT_MINUTES = 15;
 
 interface BookingSheetProps {
   professor: ProfessorDetail;
@@ -52,10 +56,9 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const name = professorName(professor, language, t);
   const days = useMemo(() => bookingDays(new Date()), []);
-  const bookableWeekdays = new Set(professor.booking_periods.map((p) => p.day_of_week));
-  const [day, setDay] = useState(
-    (days.find((d) => bookableWeekdays.has(d.weekday)) ?? days[0])?.date ?? null,
-  );
+  // The calendar's days with a booking time (weekly or dated), from the profile.
+  const bookable = new Set(professor.booking_days);
+  const [day, setDay] = useState((days.find((d) => bookable.has(d.date)) ?? days[0])?.date ?? null);
   const [slot, setSlot] = useState<Slot | null>(null);
   // The length the student chose; until then the professor's usual length (both fitted).
   const [length, setLength] = useState<number | null>(null);
@@ -90,7 +93,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
 
   const daySlots = slots.data?.slots ?? [];
   const windows = freeWindows(daySlots);
-  const usual = slots.data?.slot_minutes ?? professor.slot_minutes;
+  const usual = slots.data?.default_minutes ?? DEFAULT_MINUTES;
   const minutes = slot ? fitLength(length ?? usual, slot.max_minutes) : 0;
   const listSeparator = language === 'ar' ? '، ' : ', ';
   // Every start of the day under its hour; taken and past ones stay, dimmed, and say why.
@@ -159,22 +162,17 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
           <Text variant="label" role="heading">
             {t('booking.day')}
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.row}>
-              {days.map((option) => (
-                <Chip
-                  key={option.date}
-                  label={t('booking.day_chip', {
-                    day: t(`weekday_short.${option.weekday}`),
-                    date: option.dayOfMonth,
-                  })}
-                  selected={day === option.date}
-                  dimmed={!bookableWeekdays.has(option.weekday)}
-                  onPress={() => chooseDay(option.date)}
-                />
-              ))}
-            </View>
-          </ScrollView>
+          {days.length ? (
+            <Calendar
+              label={t('booking.day')}
+              value={day}
+              onChange={chooseDay}
+              from={days[0]!.date}
+              to={days[days.length - 1]!.date}
+              today={todayKey(new Date())}
+              enabled={(date) => bookable.has(date)}
+            />
+          ) : null}
 
           <Text variant="label" role="heading">
             {t('booking.time')}
@@ -379,7 +377,6 @@ function BookedMoment({ text, onDone }: { text: string; onDone: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: space.xs },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   moment: { alignItems: 'center', gap: space.sm, paddingVertical: space.sm },
   doorWithCheck: { alignItems: 'center', justifyContent: 'center' },

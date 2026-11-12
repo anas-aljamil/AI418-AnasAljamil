@@ -73,7 +73,8 @@ async function shoot(page: Page, name: string) {
 async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   const sheet = page.getByRole('dialog', { name: sheetName });
   await expect(sheet).toBeVisible();
-  const days = sheet.getByRole('button', { name: /^\S+ \d+$/ });
+  // Days are calendar radios (2026-11-11); those without a booking time are disabled.
+  const days = sheet.locator('[role="radiogroup"] [role="radio"]:not([aria-disabled="true"])');
   for (let i = 0; i < (await days.count()); i++) {
     await days.nth(i).click();
     // The start is one menu (our own on a computer); taken and past starts are disabled
@@ -269,13 +270,10 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   await expect(admin.getByRole('heading', { name: 'Academic' })).toBeVisible();
   await shoot(admin, 'en-11-admin-professor-form');
   await fill('Name in English', 'Test Professor Two');
-  await admin.getByRole('button', { name: '30 min' }).click();
   await save();
   expect(
-    sql(
-      "SELECT CONCAT(u.full_name_en, '/', p.slot_minutes) FROM users u JOIN professors p ON p.professor_id = u.user_id WHERE u.email = 'test.professor@university.example'",
-    ),
-  ).toBe('Test Professor Two/30');
+    sql("SELECT full_name_en FROM users WHERE email = 'test.professor@university.example'"),
+  ).toBe('Test Professor Two');
   await shoot(admin, 'en-8-admin-professors');
   await remove('Test Professor Two', true);
   expect(sql("SELECT COUNT(*) FROM users WHERE email = 'test.professor@university.example'")).toBe(

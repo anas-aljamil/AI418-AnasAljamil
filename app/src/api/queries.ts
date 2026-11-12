@@ -5,18 +5,17 @@ import type { Language } from '@/theme/tokens';
 import { api } from './client';
 import { POLL_MS } from './queryClient';
 import type {
-  AppNotification,
-  ChatMessage,
-  Conversation,
-  Unread,
   AdminProfessor,
   AdminStudent,
+  AppNotification,
   Appointment,
   Block,
   BookingPeriod,
   ChatClosure,
-  DaySlots,
+  ChatMessage,
   College,
+  Conversation,
+  DaySlots,
   Department,
   ManualStatus,
   MyStatus,
@@ -24,7 +23,9 @@ import type {
   Page,
   ProfessorDetail,
   ProfessorSummary,
+  Repeats,
   Topic,
+  Unread,
 } from './types';
 
 export const queryKeys = {
@@ -268,7 +269,7 @@ export function useMySchedule() {
   });
 }
 
-export type BlockInput = Omit<Block, 'block_id'>;
+export type BlockInput = Omit<Block, 'block_id' | 'skipped_dates'>;
 
 export function useSaveBlock() {
   const client = useQueryClient();
@@ -295,28 +296,25 @@ export function useDeleteBlock() {
   });
 }
 
-/** Weekly times that are not timetable blocks: booking periods and chat closed hours. */
+/** Times that are not timetable blocks: booking periods and chat closed hours. */
 export type RangeKind = 'booking-periods' | 'chat-closed-hours';
-export interface WeeklyRange {
+export interface WeeklyRange extends Repeats {
   id: number;
-  day_of_week: number;
   start_time: string;
   end_time: string;
 }
-export type RangeInput = Omit<WeeklyRange, 'id'>;
+export type RangeInput = Omit<WeeklyRange, 'id' | 'skipped_dates'>;
 
-const rangeOf = (row: BookingPeriod | ChatClosure): WeeklyRange => ({
-  id: 'period_id' in row ? row.period_id : row.closure_id,
-  day_of_week: row.day_of_week,
-  start_time: row.start_time,
-  end_time: row.end_time,
+const rangeOf = ({ period_id, closure_id, ...row }: BookingPeriod & ChatClosure): WeeklyRange => ({
+  id: period_id ?? closure_id,
+  ...row,
 });
 
 export function useMyRanges(kind: RangeKind) {
   return useQuery({
     queryKey: queryKeys.myRanges(kind),
     queryFn: () =>
-      api<Page<BookingPeriod | ChatClosure>>(`/me/${kind}?limit=100`).then((page) =>
+      api<Page<BookingPeriod & ChatClosure>>(`/me/${kind}?limit=100`).then((page) =>
         page.items.map(rangeOf),
       ),
   });
@@ -352,10 +350,25 @@ export function useDeleteRange(kind: RangeKind) {
   });
 }
 
-export function useSlotLength() {
+/**
+ * Leave one date out of a weekly block, booking period or closed hours, or bring it back
+ * (POST and DELETE /me/{path}/{id}/skips).
+ */
+export function useSkipDate(path: 'schedule' | RangeKind) {
+  const client = useQueryClient();
   return useMutation({
-    mutationFn: (slotMinutes: 15 | 30) =>
-      api<unknown>('/me/professor-settings', 'PATCH', { slot_minutes: slotMinutes }),
+    mutationFn: ({ id, date, skip }: { id: number; date: string; skip: boolean }) =>
+      skip
+        ? api<unknown>(`/me/${path}/${id}/skips`, 'POST', { skip_date: date })
+        : api<unknown>(`/me/${path}/${id}/skips/${date}`, 'DELETE'),
+    onSettled: () => {
+      client.invalidateQueries({
+        queryKey: path === 'schedule' ? queryKeys.mySchedule : queryKeys.myRanges(path),
+      });
+      client.invalidateQueries({ queryKey: ['professor'] });
+      if (path === 'chat-closed-hours')
+        client.invalidateQueries({ queryKey: queryKeys.conversations });
+    },
   });
 }
 

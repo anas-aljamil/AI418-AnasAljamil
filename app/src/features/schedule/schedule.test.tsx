@@ -8,12 +8,16 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ApiError, api } from '@/api/client';
 import { renderWithProviders } from '@/test-utils';
 import i18n from '@/i18n';
+import { addDays, dateText, todayKey, weekdayOf } from '@/lib/dates';
 import { nowLine, rangeLine, WeeklyRanges } from './WeeklyRanges';
 
 jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: jest.fn() }));
 const mockApi = api as jest.MockedFunction<typeof api>;
 
 const page = <T,>(items: T[]) => ({ items, total: items.length, limit: 100, offset: 0 });
+
+// A weekly row with no end date or skipped dates.
+const weekly = { on_date: null, ends_on: null, skipped_dates: [] };
 
 beforeEach(() => mockApi.mockReset());
 
@@ -26,8 +30,7 @@ async function choose(field: string, option: string) {
 it('says how each kind of closed range reads', async () => {
   await renderWithProviders(<></>);
   const t = i18n.t.bind(i18n);
-  const line = (start_time: string, end_time: string) =>
-    rangeLine({ day_of_week: 4, start_time, end_time }, t);
+  const line = (start_time: string, end_time: string) => rangeLine({ start_time, end_time }, t);
   expect(line('10:00', '12:00')).toBe('10:00 AM–12:00 PM');
   expect(line('20:00', '08:00')).toBe('8:00 PM to 8:00 AM the next day');
   expect(line('16:00', '00:00')).toBe('4:00 PM until midnight');
@@ -59,7 +62,13 @@ it('adds one booking time to the whole working week in a few taps', async () => 
   await fireEvent.press(screen.getByText('Save booking time'));
   await waitFor(() => expect(posts('/me/booking-periods')).toHaveLength(5));
   expect(posts('/me/booking-periods').map(([, , body]) => body)).toEqual(
-    [0, 1, 2, 3, 4].map((day) => ({ day_of_week: day, start_time: '09:00', end_time: '11:00' })),
+    [0, 1, 2, 3, 4].map((day) => ({
+      day_of_week: day,
+      on_date: null,
+      ends_on: null,
+      start_time: '09:00',
+      end_time: '11:00',
+    })),
   );
 });
 
@@ -113,8 +122,10 @@ it('asks for a day when none is chosen', async () => {
 it('saves overnight closed hours, which may end before they start', async () => {
   mockApi.mockImplementation(async (path: string, method = 'GET') => {
     if (method === 'POST')
-      return { closure_id: 9, day_of_week: 0, start_time: '20:00', end_time: '08:00' };
-    return page([{ closure_id: 1, day_of_week: 6, start_time: '00:00', end_time: '00:00' }]);
+      return { ...weekly, closure_id: 9, day_of_week: 0, start_time: '20:00', end_time: '08:00' };
+    return page([
+      { ...weekly, closure_id: 1, day_of_week: 6, start_time: '00:00', end_time: '00:00' },
+    ]);
   });
   await renderWithProviders(<WeeklyRanges kind="chat-closed-hours" />);
   expect(await screen.findByText('All day')).toBeTruthy(); // Saturday, a day off
@@ -125,6 +136,8 @@ it('saves overnight closed hours, which may end before they start', async () => 
   await waitFor(() =>
     expect(mockApi).toHaveBeenCalledWith('/me/chat-closed-hours', 'POST', {
       day_of_week: 0,
+      on_date: null,
+      ends_on: null,
       start_time: '20:00',
       end_time: '08:00',
     }),
@@ -144,6 +157,8 @@ it('closes a whole day as an end equal to the start', async () => {
   await waitFor(() =>
     expect(mockApi).toHaveBeenCalledWith('/me/chat-closed-hours', 'POST', {
       day_of_week: 0,
+      on_date: null,
+      ends_on: null,
       start_time: '00:00',
       end_time: '00:00',
     }),
@@ -156,8 +171,8 @@ it('says what holds now, across midnight and the end of the week', async () => {
   // Monday 2026-10-05, 10:00 in Riyadh.
   const now = new Date('2026-10-05T07:00:00Z');
   const booking = [
-    { day_of_week: 1, start_time: '09:00', end_time: '11:00' },
-    { day_of_week: 3, start_time: '12:00', end_time: '13:00' },
+    { ...weekly, day_of_week: 1, start_time: '09:00', end_time: '11:00' },
+    { ...weekly, day_of_week: 3, start_time: '12:00', end_time: '13:00' },
   ];
   expect(nowLine('booking-periods', booking, now, t)).toBe(
     'Students can book now, until 11:00 AM.',
@@ -170,14 +185,14 @@ it('says what holds now, across midnight and the end of the week', async () => {
   );
   // Closed from Sunday 8 PM and on Monday morning, back to back: one stretch until noon.
   const closed = [
-    { day_of_week: 0, start_time: '20:00', end_time: '08:00' },
-    { day_of_week: 1, start_time: '08:00', end_time: '12:00' },
+    { ...weekly, day_of_week: 0, start_time: '20:00', end_time: '08:00' },
+    { ...weekly, day_of_week: 1, start_time: '08:00', end_time: '12:00' },
   ];
   expect(nowLine('chat-closed-hours', closed, now, t)).toBe(
     'Messages are closed now, until 12:00 PM.',
   );
   // Saturday night into Sunday wraps around the week.
-  const weekend = [{ day_of_week: 6, start_time: '22:00', end_time: '06:00' }];
+  const weekend = [{ ...weekly, day_of_week: 6, start_time: '22:00', end_time: '06:00' }];
   expect(nowLine('chat-closed-hours', weekend, now, t)).toBe(
     'Messages are open now, until Saturday at 10:00 PM.',
   );
@@ -185,4 +200,118 @@ it('says what holds now, across midnight and the end of the week', async () => {
     'Messages are closed now, until 6:00 AM.',
   );
   expect(nowLine('chat-closed-hours', [], now, t)).toBe('Students can write to you at any time.');
+});
+
+it('saves closed hours on one date, picked on the calendar', async () => {
+  mockApi.mockImplementation(async (path: string, method = 'GET') =>
+    method === 'POST' ? {} : page([]),
+  );
+  await renderWithProviders(<WeeklyRanges kind="chat-closed-hours" />);
+  await fireEvent.press(await screen.findByText('Add closed hours'));
+  await choose('Repeats', 'On one date only');
+  // Today is picked first; the next day is one tap on the calendar.
+  const tomorrow = addDays(todayKey(new Date()), 1);
+  await fireEvent.press(screen.getByRole('radio', { name: dateText(tomorrow, i18n.t.bind(i18n)) }));
+  await fireEvent.press(screen.getByText('Save closed hours'));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/me/chat-closed-hours', 'POST', {
+      day_of_week: null,
+      on_date: tomorrow,
+      ends_on: null,
+      start_time: '20:00',
+      end_time: '08:00',
+    }),
+  );
+});
+
+it('repeats every week until a last date, and asks for that date first', async () => {
+  mockApi.mockImplementation(async (path: string, method = 'GET') =>
+    method === 'POST' ? {} : page([]),
+  );
+  await renderWithProviders(<WeeklyRanges kind="booking-periods" />);
+  await fireEvent.press(await screen.findByText('Add booking time'));
+  await choose('Repeats', 'Every week until a date');
+  await fireEvent.press(screen.getByText('Save booking time'));
+  expect(await screen.findByText('Choose the last date.')).toBeTruthy();
+  const last = addDays(todayKey(new Date()), 3);
+  await fireEvent.press(screen.getByRole('radio', { name: dateText(last, i18n.t.bind(i18n)) }));
+  await fireEvent.press(screen.getByText('Save booking time'));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/me/booking-periods', 'POST', {
+      day_of_week: 0,
+      on_date: null,
+      ends_on: last,
+      start_time: '10:00',
+      end_time: '11:00',
+    }),
+  );
+});
+
+it('leaves out one date of a saved weekly item and brings it back', async () => {
+  const today = todayKey(new Date());
+  // A weekly booking time on today's weekday, with next week's date already left out.
+  const row = {
+    period_id: 4,
+    day_of_week: weekdayOf(today) <= 4 ? weekdayOf(today) : 0,
+    on_date: null,
+    ends_on: null,
+    skipped_dates: [] as string[],
+    start_time: '10:00',
+    end_time: '11:00',
+  };
+  const nextWeek = addDays(today, 7 + ((row.day_of_week - weekdayOf(today) + 7) % 7));
+  row.skipped_dates = [nextWeek];
+  mockApi.mockImplementation(async (path: string, method = 'GET') =>
+    method === 'GET' ? page([row]) : {},
+  );
+  await renderWithProviders(<WeeklyRanges kind="booking-periods" />);
+  await fireEvent.press(await screen.findByRole('button', { name: /^10:00 AM–11:00 AM, / }));
+  const t = i18n.t.bind(i18n);
+  await fireEvent.press(
+    await screen.findByRole('button', { name: `Bring back ${dateText(nextWeek, t)}` }),
+  );
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith(`/me/booking-periods/4/skips/${nextWeek}`, 'DELETE'),
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Leave out a date' }));
+  const inTwoWeeks = addDays(nextWeek, 7);
+  // Only the item's own weekday can be left out.
+  expect(
+    screen.getByRole('radio', { name: dateText(addDays(inTwoWeeks, 1), t) + ', unavailable' }),
+  ).toBeDisabled();
+  await fireEvent.press(screen.getByRole('radio', { name: dateText(inTwoWeeks, t) }));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/me/booking-periods/4/skips', 'POST', {
+      skip_date: inTwoWeeks,
+    }),
+  );
+});
+
+it('counts dated items and left-out dates in what holds now', async () => {
+  await renderWithProviders(<></>);
+  const t = i18n.t.bind(i18n);
+  const now = new Date('2026-10-05T07:00:00Z'); // Monday 10:00 in Riyadh
+  const monday = { ...weekly, day_of_week: 1, start_time: '09:00', end_time: '11:00' };
+  // The Monday booking time is left out today, so the next one is next Monday.
+  expect(nowLine('booking-periods', [{ ...monday, skipped_dates: ['2026-10-05'] }], now, t)).toBe(
+    'Next booking time: Monday at 9:00 AM.',
+  );
+  // A dated booking time on Wednesday is the next one.
+  const once = {
+    ...weekly,
+    day_of_week: null,
+    on_date: '2026-10-07',
+    start_time: '13:00',
+    end_time: '14:00',
+  };
+  expect(nowLine('booking-periods', [once], now, t)).toBe(
+    'Next booking time: Wednesday at 1:00 PM.',
+  );
+  // A dated one in a month is not within the week.
+  expect(nowLine('booking-periods', [{ ...once, on_date: '2026-11-04' }], now, t)).toBe(
+    'No booking times in the next 7 days.',
+  );
+  // Weekly closed hours that ended last week no longer count.
+  const ended = { ...monday, ends_on: '2026-09-28' };
+  expect(nowLine('chat-closed-hours', [ended], now, t)).toBe('Messages are open now.');
 });

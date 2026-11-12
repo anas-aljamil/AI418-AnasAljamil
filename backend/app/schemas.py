@@ -16,6 +16,7 @@ from pydantic import (
     Field,
     PlainSerializer,
     field_validator,
+    model_validator,
 )
 
 from app.core.clock import to_naive_utc
@@ -102,26 +103,36 @@ class OfficeOut(Out):
 class BlockOut(Out):
     block_id: int
     kind: BlockKind
-    day_of_week: int
+    day_of_week: int | None  # weekly rows; None for a dated row
+    on_date: date | None  # the date of a row that happens once
+    ends_on: date | None  # the last date of a weekly row, if it ends
+    skipped_dates: list[date]  # dates a weekly row does not happen
     start_time: ClockTime
     end_time: ClockTime
     label: str | None
 
 
 class PeriodOut(Out):
-    """A weekly booking period (Sunday-Thursday)."""
+    """A booking period: weekly (Sunday-Thursday) or on one working day."""
 
     period_id: int
-    day_of_week: int
+    day_of_week: int | None  # weekly rows; None for a dated row
+    on_date: date | None  # the date of a row that happens once
+    ends_on: date | None  # the last date of a weekly row, if it ends
+    skipped_dates: list[date]  # dates a weekly row does not happen
     start_time: ClockTime
     end_time: ClockTime
 
 
 class ClosureOut(Out):
-    """Weekly closed hours for student messages; end <= start runs into the next day."""
+    """Closed hours for student messages, weekly or on one date; end <= start runs into the
+    next day."""
 
     closure_id: int
-    day_of_week: int
+    day_of_week: int | None  # weekly rows; None for a dated row
+    on_date: date | None  # the date of a row that happens once
+    ends_on: date | None  # the last date of a weekly row, if it ends
+    skipped_dates: list[date]  # dates a weekly row does not happen
     start_time: ClockTime
     end_time: ClockTime
 
@@ -155,7 +166,6 @@ class StudentProfileOut(Out):
 class ProfessorProfileOut(Out):
     honorific: str
     academic_rank: str
-    slot_minutes: int
     department: DepartmentOut
     office: OfficeOut | None
 
@@ -213,10 +223,11 @@ class TodayOut(BaseModel):
 
 
 class ProfessorDetailOut(ProfessorSummaryOut):
-    slot_minutes: int
     today: TodayOut
-    # The weekly times students can book in; empty means the professor cannot be booked.
+    # The times students can book in; empty means the professor cannot be booked.
     booking_periods: list[PeriodOut]
+    # The days of the booking window (this week and next) that have a booking time.
+    booking_days: list[date]
     # Set while the professor's closed hours are on: students can write again at this time.
     messages_closed_until: UtcDatetime | None
 
@@ -233,8 +244,8 @@ class SlotOut(BaseModel):
 class DaySlotsOut(BaseModel):
     professor_id: int
     date: date
-    # The professor's usual length, offered first; any length in 5-minute steps is allowed.
-    slot_minutes: int
+    # The length offered first; any length in 5-minute steps is allowed.
+    default_minutes: int
     step_minutes: int
     slots: list[SlotOut]
 
@@ -246,9 +257,31 @@ class StatusIn(BaseModel):
     expires_at: AwareDatetime | None = None
 
 
-class BlockIn(BaseModel):
+class WhenIn(BaseModel):
+    """Every week on day_of_week (until ends_on, when set), or once on on_date; exactly one of
+    day_of_week and on_date (owner decision 2026-11-11)."""
+
+    day_of_week: int | None = Field(default=None, ge=0, le=6, description="0 = Sunday ... 6 = Saturday")
+    on_date: date | None = None
+    ends_on: date | None = Field(default=None, description="last date of a weekly row")
+    # Timetable blocks and booking periods are on working days only.
+    _working_days: bool = True
+
+    @model_validator(mode="after")
+    def one_when(self):
+        if (self.day_of_week is None) == (self.on_date is None):
+            raise ValueError("set exactly one of day_of_week and on_date")
+        if self.ends_on is not None and self.day_of_week is None:
+            raise ValueError("ends_on is only for a weekly row")
+        if self._working_days:
+            day = self.day_of_week if self.on_date is None else (self.on_date.weekday() + 1) % 7
+            if day > 4:
+                raise ValueError("must be a working day (Sunday to Thursday)")
+        return self
+
+
+class BlockIn(WhenIn):
     kind: BlockKind = "office_hours"
-    day_of_week: int = Field(ge=0, le=4, description="0 = Sunday ... 4 = Thursday")
     start_time: QuarterHour
     end_time: QuarterHour
     label: OptionalText40
@@ -262,8 +295,7 @@ class BlockIn(BaseModel):
         return end
 
 
-class PeriodIn(BaseModel):
-    day_of_week: int = Field(ge=0, le=4, description="0 = Sunday ... 4 = Thursday")
+class PeriodIn(WhenIn):
     start_time: QuarterHour
     end_time: QuarterHour
 
@@ -276,17 +308,19 @@ class PeriodIn(BaseModel):
         return end
 
 
-class ClosureIn(BaseModel):
+class ClosureIn(WhenIn):
     """end_time at or before start_time means the closure runs past midnight
-    ("20:00" to "08:00"); equal times close the whole day."""
+    ("20:00" to "08:00"); equal times close the whole day. Any day of the week."""
 
-    day_of_week: int = Field(ge=0, le=6, description="0 = Sunday ... 6 = Saturday")
+    _working_days: bool = False
     start_time: QuarterHour
     end_time: QuarterHour
 
 
-class ProfessorSettingsIn(BaseModel):
-    slot_minutes: Literal[15, 30] | None = None
+class SkipIn(BaseModel):
+    """A date on which a weekly row does not happen."""
+
+    skip_date: date
 
 
 # --- appointments ------------------------------------------------------------
@@ -394,7 +428,6 @@ class AdminProfessorIn(AccountIn):
     office_id: int | None = None
     honorific: Honorific = "dr"
     academic_rank: Rank = "assistant_professor"
-    slot_minutes: Literal[15, 30] = 15
 
 
 class AdminProfessorPatch(AccountPatch):
@@ -402,7 +435,6 @@ class AdminProfessorPatch(AccountPatch):
     office_id: int | None = None
     honorific: Honorific | None = None
     academic_rank: Rank | None = None
-    slot_minutes: Literal[15, 30] | None = None
 
 
 class AdminStudentIn(AccountIn):
@@ -467,7 +499,6 @@ class AdminProfessorOut(AccountOut):
     office: OfficeOut | None
     honorific: str
     academic_rank: str
-    slot_minutes: int
 
 
 class AdminStudentOut(AccountOut):

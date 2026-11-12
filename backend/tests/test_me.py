@@ -120,7 +120,8 @@ def test_professor_manages_the_weekly_schedule(client, auth):
     )
     assert moved.json()["day_of_week"] == 3
     assert client.delete(f"{SCHEDULE}/{block['block_id']}", headers=headers).status_code == 204
-    assert client.get(SCHEDULE, headers=headers).json()["total"] == 5
+    # 5 weekly blocks and the dated exam committee (block 34).
+    assert client.get(SCHEDULE, headers=headers).json()["total"] == 6
 
 
 def test_schedule_blocks_cannot_overlap(client, auth):
@@ -144,12 +145,77 @@ def test_professors_cannot_edit_each_others_schedule(client, auth):
     assert client.delete(f"{SCHEDULE}/1", headers=auth(KHALID)).status_code == 404  # block 1 is Noura's
 
 
-def test_professor_changes_the_usual_appointment_length(client, auth):
-    headers = auth(NORA)
-    updated = client.patch("/api/v1/me/professor-settings", json={"slot_minutes": 30}, headers=headers).json()
-    assert updated["slot_minutes"] == 30 and "open_messages" not in updated
-    bad = client.patch("/api/v1/me/professor-settings", json={"slot_minutes": 20}, headers=headers)
-    assert bad.json()["error"]["code"] == "VALIDATION_ERROR"
+def test_a_dated_block_counts_on_its_date_only_and_may_share_a_skipped_weekly_time(client, auth, clock):
+    headers = auth(KHALID)
+    # Khalid's weekly office hours are Monday 09:00-11:00 (block 6).
+    clash = client.post(
+        SCHEDULE,
+        json={"on_date": "2026-10-12", "kind": "meeting", "start_time": "10:00", "end_time": "11:00"},
+        headers=headers,
+    )
+    assert clash.json()["error"]["code"] == "SCHEDULE_OVERLAP"
+    # Skip that Monday, and the meeting fits.
+    skipped = client.post(f"{SCHEDULE}/6/skips", json={"skip_date": "2026-10-12"}, headers=headers)
+    assert skipped.status_code == 201 and skipped.json()["skipped_dates"] == ["2026-10-12"]
+    meeting = client.post(
+        SCHEDULE,
+        json={"on_date": "2026-10-12", "kind": "meeting", "start_time": "10:00", "end_time": "11:00"},
+        headers=headers,
+    )
+    assert meeting.status_code == 201, meeting.text
+    assert (meeting.json()["day_of_week"], meeting.json()["on_date"]) == (None, "2026-10-12")
+    # Bringing the office hours back would clash with the meeting now.
+    back = client.delete(f"{SCHEDULE}/6/skips/2026-10-12", headers=headers)
+    assert back.json()["error"]["code"] == "SCHEDULE_OVERLAP"
+
+    clock.at = datetime(2026, 10, 12, 7, 30)  # Monday 12 October, 10:30 Riyadh
+    status = client.get(f"/api/v1/professors/{KHALID}", headers=auth(SAAD)).json()
+    assert (status["status"]["status"], status["status"]["source"]) == ("busy", "schedule")
+    assert [b["kind"] for b in status["today"]["blocks"]] == ["meeting", "class"]
+    clock.at = datetime(2026, 10, 5, 7, 30)  # the Monday before: office hours as every week
+    assert client.get(STATUS, headers=auth(KHALID)).json()["status"] == "in_office"
+
+
+def test_skipped_dates_must_be_dates_of_a_weekly_row(client, auth):
+    headers = auth(KHALID)
+    wrong_day = client.post(f"{SCHEDULE}/6/skips", json={"skip_date": "2026-10-13"}, headers=headers)
+    assert wrong_day.json()["error"]["code"] == "SKIP_WRONG_DATE"  # block 6 is on Mondays
+    dated = client.post(
+        SCHEDULE,
+        json={"on_date": "2026-10-14", "start_time": "15:00", "end_time": "16:00"},
+        headers=headers,
+    ).json()
+    not_weekly = client.post(
+        f"{SCHEDULE}/{dated['block_id']}/skips", json={"skip_date": "2026-10-14"}, headers=headers
+    )
+    assert not_weekly.json()["error"]["code"] == "SKIP_NOT_WEEKLY"
+    # Someone else's row is not found.
+    other = client.post(f"{SCHEDULE}/2/skips", json={"skip_date": "2026-10-11"}, headers=headers)
+    assert other.status_code == 404
+
+
+def test_weekly_or_dated_input_is_validated(client, auth):
+    headers = auth(KHALID)
+    for body in (
+        {"start_time": "15:00", "end_time": "16:00"},  # neither
+        {"day_of_week": 2, "on_date": "2026-10-13", "start_time": "15:00", "end_time": "16:00"},  # both
+        {"on_date": "2026-10-16", "start_time": "15:00", "end_time": "16:00"},  # a Friday
+        {"on_date": "2026-10-14", "ends_on": "2026-12-31", "start_time": "15:00", "end_time": "16:00"},
+    ):
+        assert client.post(SCHEDULE, json=body, headers=headers).json()["error"]["code"] == "VALIDATION_ERROR"
+    # Closed hours may be dated on a Friday; a weekly row may end on a date.
+    friday = client.post(
+        "/api/v1/me/chat-closed-hours",
+        json={"on_date": "2026-10-16", "start_time": "00:00", "end_time": "00:00"},
+        headers=headers,
+    )
+    assert friday.status_code == 201, friday.text
+    until = client.post(
+        "/api/v1/me/booking-periods",
+        json={"day_of_week": 4, "ends_on": "2026-12-31", "start_time": "13:00", "end_time": "14:00"},
+        headers=headers,
+    )
+    assert until.json()["ends_on"] == "2026-12-31"
 
 
 def test_student_pins_and_unpins_professors(client, auth):

@@ -160,7 +160,6 @@ def professor_out(professor: Professor) -> AdminProfessorOut:
         office=OfficeOut.model_validate(professor.office) if professor.office else None,
         honorific=professor.honorific,
         academic_rank=professor.academic_rank,
-        slot_minutes=professor.slot_minutes,
     )
 
 
@@ -188,7 +187,6 @@ def create_professor(
         office_id=body.office_id,
         honorific=body.honorific,
         academic_rank=body.academic_rank,
-        slot_minutes=body.slot_minutes,
     )
     db.add(professor)
     db.commit()

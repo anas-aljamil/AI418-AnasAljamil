@@ -275,16 +275,6 @@ export function professorsConfig(
           ['lecturer', 'assistant_professor', 'associate_professor', 'professor'] as const
         ).map((r) => ({ value: r, label: t(`rank.${r}`) })),
       },
-      {
-        type: 'choice',
-        key: 'slot_minutes',
-        label: t('schedule.slot_length'),
-        section: 'academic',
-        options: [
-          { value: '15', label: t('schedule.minutes_15') },
-          { value: '30', label: t('schedule.minutes_30') },
-        ],
-      },
       activeField(t, t('admin.active_hint_professor')),
     ],
     valuesOf: (p: AdminProfessor | null) => ({
@@ -297,7 +287,6 @@ export function professorsConfig(
       office_id: p?.office ? String(p.office.office_id) : '',
       honorific: p?.honorific ?? 'dr',
       academic_rank: p?.academic_rank ?? 'assistant_professor',
-      slot_minutes: String(p?.slot_minutes ?? 15),
       is_active: String(p?.is_active ?? true),
     }),
     bodyOf: (v, editing) => ({
@@ -306,7 +295,6 @@ export function professorsConfig(
       office_id: v.office_id ? Number(v.office_id) : null,
       honorific: v.honorific,
       academic_rank: v.academic_rank,
-      slot_minutes: Number(v.slot_minutes),
     }),
   };
 }

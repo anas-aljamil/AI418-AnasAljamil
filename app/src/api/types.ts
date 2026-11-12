@@ -43,7 +43,6 @@ export interface Me {
   professor?: {
     honorific: Honorific;
     academic_rank: Rank;
-    slot_minutes: 15 | 30;
     department: Department;
     office: Office | null;
   } | null;
@@ -122,40 +121,49 @@ export type ManualStatus = 'in_office' | 'in_class' | 'busy' | 'away';
 
 export type BlockKind = 'office_hours' | 'class' | 'meeting';
 
-export interface Block {
+/**
+ * Weekly (day_of_week, 0 = Sunday, until ends_on when set) or once (on_date); dates are
+ * "YYYY-MM-DD" in Riyadh. A weekly row does not happen on its skipped dates (2026-11-11).
+ */
+export interface Repeats {
+  day_of_week: number | null;
+  on_date: string | null;
+  ends_on: string | null;
+  skipped_dates: string[];
+}
+
+export interface Block extends Repeats {
   block_id: number;
   kind: BlockKind;
-  day_of_week: number; // 0 = Sunday ... 4 = Thursday
   start_time: string; // "HH:MM", Riyadh
   end_time: string;
   label: string | null;
 }
 
-/** A weekly time the professor takes bookings in (Sunday-Thursday, Riyadh "HH:MM"). */
-export interface BookingPeriod {
+/** A time the professor takes bookings in (working days, Riyadh "HH:MM"). */
+export interface BookingPeriod extends Repeats {
   period_id: number;
-  day_of_week: number;
   start_time: string;
   end_time: string;
 }
 
 /**
- * Weekly closed hours for student messages (day 0 = Sunday ... 6 = Saturday). An end at or
- * before the start runs into the next day; equal times close the whole day.
+ * Closed hours for student messages (any day). An end at or before the start runs into the
+ * next day; equal times close the whole day.
  */
-export interface ChatClosure {
+export interface ChatClosure extends Repeats {
   closure_id: number;
-  day_of_week: number;
   start_time: string;
   end_time: string;
 }
 
 export interface ProfessorDetail extends ProfessorSummary {
   academic_rank: Rank;
-  slot_minutes: 15 | 30;
   today: { date: string; day_of_week: number; now_local_time: string; blocks: Block[] };
   /** When students can book; empty means the professor cannot be booked. */
   booking_periods: BookingPeriod[];
+  /** The dates of this week and next with a booking time (the booking calendar). */
+  booking_days: string[];
   /** Set while the professor's closed hours are on: students can write again at this time. */
   messages_closed_until: string | null;
 }
@@ -173,8 +181,8 @@ export interface Slot {
 export interface DaySlots {
   professor_id: number;
   date: string;
-  /** The professor's usual length, offered first. */
-  slot_minutes: number;
+  /** The length offered first (15 minutes). */
+  default_minutes: number;
   step_minutes: number;
   slots: Slot[];
 }
@@ -199,7 +207,6 @@ export interface AdminProfessor extends Account {
   office: Office | null;
   honorific: Honorific;
   academic_rank: Rank;
-  slot_minutes: 15 | 30;
 }
 
 export interface AdminStudent extends Account {

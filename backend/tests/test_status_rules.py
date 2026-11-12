@@ -1,7 +1,7 @@
 """CLAUDE.md section 4: effective status, override expiry and staleness (pure function, no database)."""
 
-from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta
 
 from app.services.status import effective_status
 
@@ -9,9 +9,12 @@ from app.services.status import effective_status
 @dataclass
 class Block:
     kind: str
-    day_of_week: int
+    day_of_week: int | None
     start_time: time
     end_time: time
+    on_date: date | None = None
+    ends_on: date | None = None
+    skipped_dates: list[date] = field(default_factory=list)
 
 
 @dataclass
@@ -45,6 +48,19 @@ def test_schedule_meeting_block_means_busy():
     result = effective_status(MON_1000 + timedelta(hours=3, minutes=15), [*WEEK, meeting], None)
     assert (result.status, result.source, result.confirmed) == ("busy", "schedule", True)
     assert result.until == datetime(2026, 10, 5, 11, 0)  # meeting ends 14:00 Riyadh
+
+
+def test_a_block_counts_until_its_end_date_and_not_on_a_skipped_date():
+    office = Block(
+        "office_hours", 1, time(9), time(11), ends_on=date(2026, 10, 12), skipped_dates=[date(2026, 10, 5)]
+    )
+    assert effective_status(MON_1000, [office], None).status == "away"  # skipped
+    next_week = MON_1000 + timedelta(days=7)
+    assert effective_status(next_week, [office], None).status == "in_office"  # the last date
+    assert effective_status(next_week + timedelta(days=7), [office], None).status == "away"  # ended
+    once = Block("meeting", None, time(10), time(11), on_date=date(2026, 10, 6))
+    assert effective_status(MON_1000 + timedelta(days=1), [once], None).status == "busy"
+    assert effective_status(MON_1000 + timedelta(days=8), [once], None).status == "away"
 
 
 def test_outside_all_blocks_means_away():

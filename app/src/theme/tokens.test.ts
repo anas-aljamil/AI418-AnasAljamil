@@ -58,7 +58,9 @@ describe.each(schemes)('%s theme contrast (WCAG 2.2 AA)', (scheme) => {
 
 describe('tokens match the approved palette (DESIGN.md Section 11)', () => {
   it.each(schemes)('%s', (scheme) => {
-    const approved = (palettesJson as unknown as Record<string, Record<string, string>>)[`A ${scheme}`]!;
+    const approved = (palettesJson as unknown as Record<string, Record<string, string>>)[
+      `A ${scheme}`
+    ]!;
     const p = palettes[scheme];
     expect({
       bg: p.bg,

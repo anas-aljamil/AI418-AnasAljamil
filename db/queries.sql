@@ -57,10 +57,17 @@ latest_override AS (
     WHERE o.created_at <= c.now_utc
 ),
 current_block AS (
+    -- Blocks that happen today and are on now: weekly on this weekday until their
+    -- end date, or dated today; never on one of their skipped dates.
     SELECT b.professor_id, b.kind, b.end_time
     FROM schedule_blocks AS b
     CROSS JOIN clock AS c
-    WHERE b.day_of_week = DAYOFWEEK(c.now_riyadh) - 1      -- DAYOFWEEK: 1 = Sunday
+    WHERE ((b.on_date IS NULL
+            AND b.day_of_week = DAYOFWEEK(c.now_riyadh) - 1      -- DAYOFWEEK: 1 = Sunday
+            AND (b.ends_on IS NULL OR b.ends_on >= DATE(c.now_riyadh)))
+           OR b.on_date = DATE(c.now_riyadh))
+      AND NOT EXISTS (SELECT 1 FROM skipped_dates AS k
+                      WHERE k.block_id = b.block_id AND k.skip_date = DATE(c.now_riyadh))
       AND b.start_time <= TIME(c.now_riyadh)
       AND TIME(c.now_riyadh) < b.end_time
 ),
@@ -433,13 +440,13 @@ INNER JOIN departments AS d ON d.department_id = p.department_id
 LEFT JOIN offices AS o      ON o.office_id = p.office_id
 ORDER BY d.code, u.full_name_en;
 
--- P2. Professors whose usual appointment is 30 minutes, or who close their
--- messages on a Friday or Saturday (days off).
-SELECT u.full_name_en, p.slot_minutes
+-- P2. Professors who close their messages on a Friday or Saturday (days off),
+-- every week or on one such date (DAYOFWEEK: 6 = Friday, 7 = Saturday).
+SELECT u.full_name_en, u.email
 FROM professors AS p
 INNER JOIN users AS u ON u.user_id = p.professor_id
-WHERE p.slot_minutes IN (30)
-   OR p.professor_id IN (SELECT h.professor_id FROM chat_closed_hours AS h WHERE h.day_of_week IN (5, 6))
+WHERE p.professor_id IN (SELECT h.professor_id FROM chat_closed_hours AS h
+                         WHERE h.day_of_week IN (5, 6) OR DAYOFWEEK(h.on_date) IN (6, 7))
 ORDER BY u.full_name_en;
 
 -- P3. Aggregate: professors per academic rank, in rank order.
@@ -520,13 +527,30 @@ WHERE b.kind = 'class'
   AND b.label LIKE 'SE %'
 ORDER BY b.label;
 
--- B6. Blocks happening right now in Riyadh (what the timetable alone says).
+-- B6. Blocks happening right now in Riyadh (what the timetable alone says):
+-- weekly ones on today's weekday until their end date, dated ones today, none on
+-- a skipped date.
 SELECT u.full_name_en, b.kind, b.start_time, b.end_time
 FROM schedule_blocks AS b
 INNER JOIN users AS u ON u.user_id = b.professor_id
-WHERE b.day_of_week = DAYOFWEEK(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')) - 1
+WHERE ((b.on_date IS NULL
+        AND b.day_of_week = DAYOFWEEK(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')) - 1
+        AND (b.ends_on IS NULL OR b.ends_on >= DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00'))))
+       OR b.on_date = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')))
+  AND NOT EXISTS (SELECT 1 FROM skipped_dates AS k
+                  WHERE k.block_id = b.block_id
+                    AND k.skip_date = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')))
   AND TIME(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')) >= b.start_time
   AND TIME(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00')) < b.end_time;
+
+-- B7. Blocks that do not simply repeat for ever: those on one date (on_date) and
+-- weekly ones with a last date (ends_on). App: Schedule ("once", "until ...").
+SELECT u.full_name_en, b.kind, b.label, b.on_date, b.ends_on,
+       IF(b.on_date IS NULL, 'every week until', 'once on') AS repeats
+FROM schedule_blocks AS b
+INNER JOIN users AS u ON u.user_id = b.professor_id
+WHERE b.on_date IS NOT NULL OR b.ends_on IS NOT NULL
+ORDER BY COALESCE(b.on_date, b.ends_on);
 
 
 -- =============================================================================
@@ -584,6 +608,14 @@ INNER JOIN users AS u ON u.user_id = b.professor_id
 WHERE b.day_of_week IN (0, 1)
   AND b.start_time BETWEEN '11:00:00' AND '13:00:00'
 ORDER BY b.day_of_week, b.start_time;
+
+-- BP7. Booking times on one date only (extra bookings that day). App: the
+-- booking calendar enables that day.
+SELECT u.full_name_en, b.on_date, DAYNAME(b.on_date) AS weekday, b.start_time, b.end_time
+FROM booking_periods AS b
+INNER JOIN users AS u ON u.user_id = b.professor_id
+WHERE b.on_date IS NOT NULL
+ORDER BY b.on_date, b.start_time;
 
 
 -- =============================================================================
@@ -656,7 +688,79 @@ ORDER BY u.full_name_en;
 
 
 -- =============================================================================
--- 11. status_overrides
+-- 11. skipped_dates
+-- =============================================================================
+
+-- SK1. Every skipped date with what it leaves out, read as text. App: Schedule
+-- ("not on 18 October").
+SELECT k.skip_date, u.full_name_en,
+       CASE WHEN k.block_id  IS NOT NULL THEN CONCAT(b.kind, ' at ', TIME_FORMAT(b.start_time, '%H:%i'))
+            WHEN k.period_id IS NOT NULL THEN CONCAT('booking time at ', TIME_FORMAT(bp.start_time, '%H:%i'))
+            ELSE CONCAT('closed messages at ', TIME_FORMAT(h.start_time, '%H:%i')) END AS leaves_out
+FROM skipped_dates AS k
+LEFT JOIN schedule_blocks AS b   ON b.block_id = k.block_id
+LEFT JOIN booking_periods AS bp  ON bp.period_id = k.period_id
+LEFT JOIN chat_closed_hours AS h ON h.closure_id = k.closure_id
+INNER JOIN users AS u ON u.user_id = COALESCE(b.professor_id, bp.professor_id, h.professor_id)
+ORDER BY k.skip_date, u.full_name_en;
+
+-- SK2. Aggregate: skipped dates per professor, split by what they skip.
+SELECT u.full_name_en,
+       SUM(k.block_id IS NOT NULL) AS timetable, SUM(k.period_id IS NOT NULL) AS booking,
+       SUM(k.closure_id IS NOT NULL) AS messages, COUNT(*) AS total
+FROM skipped_dates AS k
+LEFT JOIN schedule_blocks AS b   ON b.block_id = k.block_id
+LEFT JOIN booking_periods AS bp  ON bp.period_id = k.period_id
+LEFT JOIN chat_closed_hours AS h ON h.closure_id = k.closure_id
+INNER JOIN users AS u ON u.user_id = COALESCE(b.professor_id, bp.professor_id, h.professor_id)
+GROUP BY u.user_id, u.full_name_en
+ORDER BY total DESC, u.full_name_en;
+
+-- SK3. Office hours skipped between 18 and 25 October, and whether the booking
+-- time at the same weekday and start is skipped too (otherwise students could
+-- still book a professor who will not be in).
+SELECT u.full_name_en, k.skip_date, b.start_time,
+       EXISTS (SELECT 1
+               FROM skipped_dates AS k2
+               INNER JOIN booking_periods AS bp ON bp.period_id = k2.period_id
+               WHERE bp.professor_id = b.professor_id AND bp.day_of_week = b.day_of_week
+                 AND bp.start_time = b.start_time AND k2.skip_date = k.skip_date) AS booking_skipped_too
+FROM skipped_dates AS k
+INNER JOIN schedule_blocks AS b ON b.block_id = k.block_id
+INNER JOIN users AS u ON u.user_id = b.professor_id
+WHERE b.kind = 'office_hours'
+  AND k.skip_date BETWEEN '2026-10-18' AND '2026-10-25'
+ORDER BY k.skip_date;
+
+-- SK4. Aggregate: skipped dates per month, with the first and the last one.
+SELECT DATE_FORMAT(skip_date, '%Y-%m') AS month, COUNT(*) AS skipped,
+       MIN(skip_date) AS first_date, MAX(skip_date) AS last_date
+FROM skipped_dates
+GROUP BY DATE_FORMAT(skip_date, '%Y-%m')
+ORDER BY month;
+
+-- SK5. Data quality: skipped dates that are not one of their row's dates (a
+-- dated row, another weekday, or after the row's last date). Expected: no rows;
+-- the API refuses them, the database cannot (the rule spans two tables).
+SELECT k.skip_id, k.skip_date
+FROM skipped_dates AS k
+LEFT JOIN schedule_blocks AS b   ON b.block_id = k.block_id
+LEFT JOIN booking_periods AS bp  ON bp.period_id = k.period_id
+LEFT JOIN chat_closed_hours AS h ON h.closure_id = k.closure_id
+WHERE COALESCE(b.day_of_week, bp.day_of_week, h.day_of_week) IS NULL
+   OR DAYOFWEEK(k.skip_date) - 1 <> COALESCE(b.day_of_week, bp.day_of_week, h.day_of_week)
+   OR k.skip_date > COALESCE(b.ends_on, bp.ends_on, h.ends_on, '9999-12-31');
+
+-- SK6. Professors who left out a date of their booking times, once each.
+SELECT DISTINCT u.full_name_en
+FROM skipped_dates AS k
+INNER JOIN booking_periods AS bp ON bp.period_id = k.period_id
+INNER JOIN users AS u ON u.user_id = bp.professor_id
+ORDER BY u.full_name_en;
+
+
+-- =============================================================================
+-- 12. status_overrides
 -- =============================================================================
 
 -- SO1. Dr. Noura's manual status history, newest first.
@@ -702,7 +806,7 @@ WHERE created_at BETWEEN '2026-09-27 00:00:00' AND '2026-10-01 23:59:59'
 
 
 -- =============================================================================
--- 12. appointments
+-- 13. appointments
 -- =============================================================================
 
 -- A1. Saad's upcoming appointments, soonest first (view V3). App: Appointments.
@@ -769,7 +873,7 @@ HAVING COUNT(*) > 1;
 
 
 -- =============================================================================
--- 13. pins
+-- 14. pins
 -- =============================================================================
 
 -- PN1. Saad's pinned professors with their live status (view V1). App: Home.
@@ -818,7 +922,7 @@ WHERE pn.professor_id IS NULL;
 
 
 -- =============================================================================
--- 14. conversations
+-- 15. conversations
 -- =============================================================================
 
 -- C1. Dr. Noura's conversations, latest activity first, with the unread count.
@@ -886,7 +990,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 15. messages
+-- 16. messages
 -- =============================================================================
 
 -- M1. One thread in order, with the sender's name (the sender is the
@@ -942,7 +1046,7 @@ ORDER BY created_at;
 
 
 -- =============================================================================
--- 16. notifications
+-- 17. notifications
 -- =============================================================================
 
 -- N1. Dr. Noura's notifications, newest first, with the sentence the app shows
@@ -1009,7 +1113,7 @@ WHERE n.user_id NOT IN (COALESCE(a.student_id, c.student_id), COALESCE(a.profess
 
 
 -- =============================================================================
--- 17. across tables
+-- 18. across tables
 -- =============================================================================
 
 -- X1. Saad's activity in one timeline: appointments booked, messages sent and
@@ -1050,7 +1154,7 @@ ORDER BY student_id, professor_id;
 
 
 -- =============================================================================
--- 18. double-booking trigger demo
+-- 19. double-booking trigger demo
 -- =============================================================================
 
 -- T1. Remove a demo procedure left over from an interrupted run, if any.

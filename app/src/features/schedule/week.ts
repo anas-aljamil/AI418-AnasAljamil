@@ -1,15 +1,23 @@
 /**
- * Weekly ranges as minutes of the Riyadh week (0 = Sunday 00:00, 10079 = Saturday 23:59), for
- * the schedule views: what is going on now, what comes next, and how a range that runs past
- * midnight splits over two days. Ranges repeat every week, so the week wraps around.
+ * Times as minutes of the Riyadh week (0 = Sunday 00:00), for the schedule views: what is going
+ * on now, what comes next, and how a range that runs past midnight splits over two days. Rows
+ * are weekly or dated with skipped dates (lib/dates.ts), so "now" and "next" look at the
+ * actual dates from yesterday to a week ahead; minutes past Saturday night keep counting.
  */
+import type { Repeats } from '@/api/types';
+import { addDays, occursOn, todayKey, weekdayOf } from '@/lib/dates';
 import { minutesOfDay } from '@/lib/format';
 
 export const DAY = 24 * 60;
-export const WEEK = 7 * DAY;
 
 export interface WeekRange {
   day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+/** A weekly or dated row with its times. */
+export interface DatedRange extends Repeats {
   start_time: string;
   end_time: string;
 }
@@ -21,57 +29,53 @@ export function weekMinute(now: Date): number {
 }
 
 /** Start and length in minutes; an end at or before the start runs into the next day. */
-export function span(range: WeekRange, overnight: boolean): { start: number; length: number } {
+export function span(
+  range: Pick<WeekRange, 'start_time' | 'end_time'>,
+  overnight: boolean,
+): { start: number; length: number } {
   const start = minutesOfDay(range.start_time);
   let length = minutesOfDay(range.end_time) - start;
   if (overnight && length <= 0) length += DAY;
   return { start, length };
 }
 
-/** Each range as [from, to) in week minutes; `to` may pass the end of the week (it wraps). */
-function intervals(ranges: WeekRange[], overnight: boolean): [number, number][] {
-  return ranges
-    .map((range) => {
+/**
+ * Every occurrence from yesterday to a week ahead as [from, to) in minutes from the Sunday of
+ * this week (yesterday may be negative), with back-to-back and overlapping ones joined.
+ */
+export function stretches(ranges: DatedRange[], overnight: boolean, now: Date): [number, number][] {
+  const today = todayKey(now);
+  const base = weekdayOf(today) * DAY;
+  const found: [number, number][] = [];
+  for (let offset = -1; offset <= 7; offset++) {
+    const date = addDays(today, offset);
+    for (const range of ranges) {
+      if (!occursOn(range, date)) continue;
       const { start, length } = span(range, overnight);
-      const from = range.day_of_week * DAY + start;
-      return [from, from + length] as [number, number];
-    })
-    .sort((a, b) => a[0] - b[0]);
-}
-
-/** Back-to-back or overlapping ranges joined into stretches, wrapping around the week. */
-export function stretches(ranges: WeekRange[], overnight: boolean): [number, number][] {
+      const from = base + offset * DAY + start;
+      found.push([from, from + length]);
+    }
+  }
+  found.sort((a, b) => a[0] - b[0]);
   const merged: [number, number][] = [];
-  for (const [from, to] of intervals(ranges, overnight)) {
+  for (const [from, to] of found) {
     const last = merged[merged.length - 1];
     if (last && from <= last[1]) last[1] = Math.max(last[1], to);
     else merged.push([from, to]);
   }
-  // A stretch that runs past Saturday night may join the first one on Sunday.
-  const first = merged[0];
-  const last = merged[merged.length - 1];
-  if (merged.length > 1 && first && last && last[1] - WEEK >= first[0]) {
-    last[1] = Math.max(last[1], first[1] + WEEK);
-    merged.shift();
-  }
   return merged;
 }
 
-/** The stretch going on at a week minute, if any, as [from, to) shifted to contain `at`. */
-export function current(ranges: WeekRange[], overnight: boolean, at: number) {
-  for (const [from, to] of stretches(ranges, overnight)) {
-    for (const shift of [0, -WEEK, WEEK]) {
-      if (from + shift <= at && at < to + shift) return { from: from + shift, to: to + shift };
-    }
-  }
-  return null;
+/** The stretch going on at a week minute, if any. */
+export function current(stretched: [number, number][], at: number) {
+  const hit = stretched.find(([from, to]) => from <= at && at < to);
+  return hit ? { from: hit[0], to: hit[1] } : null;
 }
 
-/** Minutes from `at` until the next range starts (0 to one week), or null without ranges. */
-export function untilNext(ranges: WeekRange[], overnight: boolean, at: number): number | null {
-  const starts = stretches(ranges, overnight).map(([from]) => from);
-  if (starts.length === 0) return null;
-  return Math.min(...starts.map((from) => (((from - at) % WEEK) + WEEK) % WEEK));
+/** Minutes from `at` until the next stretch starts (within a week), or null when none does. */
+export function untilNext(stretched: [number, number][], at: number): number | null {
+  const ahead = stretched.filter(([from]) => from > at).map(([from]) => from - at);
+  return ahead.length ? Math.min(...ahead) : null;
 }
 
 /** The parts of a range per day: one, or two when it runs past midnight (end of day, then the next). */
