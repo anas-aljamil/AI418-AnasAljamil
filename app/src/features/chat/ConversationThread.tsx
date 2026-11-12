@@ -8,6 +8,12 @@
  * replaced by when messages open again; the professor sees the same time and can still write.
  * On desktop the thread also opens in a pane beside the conversation list (Messages tab), with
  * no back button there (docs/desktop-plan.md).
+ * Message actions (owner request 2026-11-11): tapping a message (or a long press) opens Reply,
+ * Copy (browser), Edit (your own, for 15 minutes) and Delete (your own, for both sides, after a
+ * confirmation). A reply shows the message it quotes inside its bubble, and tapping the quote
+ * scrolls to that message; a deleted message keeps its place as "This message was deleted";
+ * an edited one says "edited" with its time. Reply and Edit show a bar above the composer
+ * with a button that cancels them.
  */
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -23,21 +29,27 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import X from 'lucide-react-native/icons/x';
 
 import {
   useConversations,
+  useDeleteMessage,
+  useEditMessage,
   useMarkConversationRead,
   useMessages,
   useSendMessage,
 } from '@/api/queries';
-import type { ChatMessage } from '@/api/types';
+import type { ChatMessage, QuotedMessage } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { SkeletonRow } from '@/components/Placeholders';
 import { IconButton } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { clockText, laterText, riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
@@ -55,18 +67,27 @@ interface Outgoing {
   body: string;
   state: 'sending' | 'failed';
   created_at: string;
+  reply_to: QuotedMessage | null;
+}
+
+/** The browser can copy text; React Native would need another library (none added). */
+function canCopy(): boolean {
+  return (
+    Platform.OS === 'web' && typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
+  );
 }
 
 type Item = { kind: 'sent'; message: ChatMessage } | { kind: 'outgoing'; message: Outgoing };
 
 let outgoingCount = 0;
-function newOutgoing(body: string): Outgoing {
+function newOutgoing(body: string, replyTo: QuotedMessage | null): Outgoing {
   outgoingCount += 1;
   return {
     key: `local-${outgoingCount}`,
     body,
     state: 'sending',
     created_at: new Date().toISOString(),
+    reply_to: replyTo,
   };
 }
 
@@ -86,10 +107,20 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
   const conversation = useConversations().data?.find((c) => c.conversation_id === conversationId);
   const messages = useMessages(conversationId);
   const send = useSendMessage(conversationId);
+  const edit = useEditMessage(conversationId);
+  const remove = useDeleteMessage(conversationId);
   const markRead = useMarkConversationRead(conversationId);
+  const toast = useToast();
+  const list = useRef<FlatList<Item>>(null);
   const [draft, setDraft] = useState('');
   const [outbox, setOutbox] = useState<Outgoing[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // The message whose actions are open, the one being answered or changed, and the one
+  // waiting for the delete confirmation.
+  const [actionsFor, setActionsFor] = useState<ChatMessage | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [deleting, setDeleting] = useState<ChatMessage | null>(null);
 
   const name = conversation ? participantName(conversation.other, language, t) : '';
   // Polled with the conversation list; compared with the clock so it reopens on time.
@@ -116,23 +147,82 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
       ...current.filter((o) => o.key !== item.key),
     ]);
     setError(null);
-    send.mutate(item.body, {
-      onSuccess: () => setOutbox((current) => current.filter((o) => o.key !== item.key)),
-      onError: (failure) => {
-        setOutbox((current) =>
-          current.map((o) => (o.key === item.key ? { ...o, state: 'failed' } : o)),
-        );
-        setError(t(errorKey(failure)));
+    send.mutate(
+      { body: item.body, reply_to_id: item.reply_to?.message_id ?? null },
+      {
+        onSuccess: () => setOutbox((current) => current.filter((o) => o.key !== item.key)),
+        onError: (failure) => {
+          setOutbox((current) =>
+            current.map((o) => (o.key === item.key ? { ...o, state: 'failed' } : o)),
+          );
+          setError(t(errorKey(failure)));
+        },
       },
-    });
+    );
   };
+
+  const quoteOf = (message: ChatMessage): QuotedMessage => ({
+    message_id: message.message_id,
+    mine: message.mine,
+    body: message.body,
+  });
 
   const submit = (body: string) => {
     const text = body.trim();
     if (!text) return;
+    if (editing) {
+      setError(null);
+      edit.mutate(
+        { id: editing.message_id, body: text },
+        {
+          onSuccess: () => {
+            setEditing(null);
+            setDraft('');
+          },
+          onError: (failure) => setError(t(errorKey(failure))),
+        },
+      );
+      return;
+    }
     setDraft('');
-    deliver(newOutgoing(text));
+    deliver(newOutgoing(text, replyTo ? quoteOf(replyTo) : null));
+    setReplyTo(null);
   };
+
+  const startEdit = (message: ChatMessage) => {
+    setReplyTo(null);
+    setEditing(message);
+    setDraft(message.body ?? '');
+  };
+  const copy = (message: ChatMessage) => {
+    navigator.clipboard
+      .writeText(message.body ?? '')
+      .then(() => toast(t('chat.copied')))
+      .catch(() => undefined);
+  };
+  const confirmDelete = () => {
+    if (!deleting) return;
+    remove.mutate(deleting.message_id, {
+      onSuccess: () => {
+        if (editing?.message_id === deleting.message_id) {
+          setEditing(null);
+          setDraft('');
+        }
+        setDeleting(null);
+      },
+      onError: (failure) => {
+        setDeleting(null);
+        setError(t(errorKey(failure)));
+      },
+    });
+  };
+  /** Scrolls to the quoted message when it is loaded. */
+  const showQuoted = (id: number) => {
+    const index = items.findIndex((i) => i.kind === 'sent' && i.message.message_id === id);
+    if (index >= 0) list.current?.scrollToIndex({ index, viewPosition: 0.5 });
+  };
+  const canEdit = (message: ChatMessage) =>
+    !!message.editable_until && new Date(message.editable_until) > now && !studentBlocked;
 
   // Newest first, for the inverted list: unconfirmed messages, then the server's.
   const items: Item[] = [
@@ -162,8 +252,17 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
     } else if (item.message.message_id === latestMine && outbox.length === 0) {
       receipt = item.message.read_at ? t('chat.read') : t('chat.sent');
     }
-    const meta = spokenList([showTime ? clockText(riyadhTime(at), t) : null, receipt], t);
+    const sent = item.kind === 'sent' ? item.message : null;
+    const deleted = !!sent?.deleted_at;
+    const edited = !!sent?.edited_at && !deleted;
+    const meta = spokenList(
+      [showTime ? clockText(riyadhTime(at), t) : null, edited ? t('chat.edited') : null, receipt],
+      t,
+    );
     const failed = item.kind === 'outgoing' && item.message.state === 'failed';
+    const quoted = item.message.reply_to;
+    const quoteName = (q: QuotedMessage) => (q.mine ? t('chat.me') : name);
+    const text = deleted ? t('chat.deleted') : (message.body ?? '');
     return (
       <View>
         {firstOfDay ? (
@@ -172,18 +271,63 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
           </Text>
         ) : null}
         <Pressable
-          disabled={!failed}
-          onPress={() => item.kind === 'outgoing' && deliver(item.message)}
-          accessibilityRole={failed ? 'button' : undefined}
+          disabled={deleted || (item.kind === 'outgoing' && !failed)}
+          onPress={() =>
+            item.kind === 'outgoing' ? deliver(item.message) : setActionsFor(item.message)
+          }
+          onLongPress={sent && !deleted ? () => setActionsFor(sent) : undefined}
+          accessibilityRole={failed || (sent && !deleted) ? 'button' : undefined}
+          accessibilityLabel={spokenList(
+            [
+              quoted
+                ? t('chat.quote_label', {
+                    name: quoteName(quoted),
+                    body: quoted.body ?? t('chat.deleted'),
+                  })
+                : null,
+              text,
+            ],
+            t,
+          )}
+          accessibilityHint={sent && !deleted ? t('chat.bubble_hint') : undefined}
           style={[
             styles.bubble,
-            mine
-              ? [styles.mine, { backgroundColor: colors.primary }]
-              : [styles.theirs, { backgroundColor: colors.surface, borderColor: colors.line }],
+            deleted
+              ? [
+                  mine ? styles.mine : styles.theirs,
+                  styles.deleted,
+                  { borderColor: colors.line, backgroundColor: 'transparent' },
+                ]
+              : mine
+                ? [styles.mine, { backgroundColor: colors.primary }]
+                : [styles.theirs, { backgroundColor: colors.surface, borderColor: colors.line }],
             item.kind === 'outgoing' && item.message.state === 'sending' && styles.pending,
           ]}
         >
-          <Text color={mine ? 'onPrimary' : 'text'}>{message.body}</Text>
+          {quoted && !deleted ? (
+            <Pressable
+              onPress={() => showQuoted(quoted.message_id)}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.quote_label', {
+                name: quoteName(quoted),
+                body: quoted.body ?? t('chat.deleted'),
+              })}
+              style={[styles.quote, { borderColor: mine ? colors.onPrimary : colors.primary }]}
+            >
+              <Text variant="caption" weight="semibold" color={mine ? 'onPrimary' : 'primary'}>
+                {quoteName(quoted)}
+              </Text>
+              <Text variant="caption" color={mine ? 'onPrimary' : 'muted'} numberOfLines={2}>
+                {quoted.body ?? t('chat.deleted')}
+              </Text>
+            </Pressable>
+          ) : null}
+          <Text
+            color={deleted ? 'muted' : mine ? 'onPrimary' : 'text'}
+            style={deleted ? styles.deletedText : undefined}
+          >
+            {text}
+          </Text>
         </Pressable>
         {meta ? (
           <Text
@@ -248,7 +392,9 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
         </View>
       ) : (
         <FlatList
+          ref={list}
           inverted
+          onScrollToIndexFailed={() => undefined}
           style={styles.fill}
           contentContainerStyle={styles.list}
           data={items}
@@ -298,6 +444,31 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
             </View>
           </ScrollView>
         ) : null}
+        {replyTo || editing ? (
+          <View style={[styles.banner, { borderColor: colors.primary }]}>
+            <View style={styles.grow}>
+              <Text variant="caption" weight="semibold" color="primary">
+                {editing
+                  ? t('chat.editing')
+                  : t('chat.replying_to', { name: replyTo!.mine ? t('chat.me') : name })}
+              </Text>
+              {replyTo ? (
+                <Text variant="caption" color="muted" numberOfLines={1}>
+                  {replyTo.body ?? t('chat.deleted')}
+                </Text>
+              ) : null}
+            </View>
+            <IconButton
+              label={editing ? t('chat.cancel_edit') : t('chat.cancel_reply')}
+              onPress={() => {
+                if (editing) setDraft('');
+                setEditing(null);
+                setReplyTo(null);
+              }}
+              icon={<X color={colors.muted} size={20} strokeWidth={1.75} />}
+            />
+          </View>
+        ) : null}
         {studentBlocked ? null : (
           <View style={styles.composeRow}>
             <View style={styles.grow}>
@@ -310,10 +481,83 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
                 counterLabel={() => ''}
               />
             </View>
-            <Button label={t('chat.send')} onPress={() => submit(draft)} disabled={!draft.trim()} />
+            <Button
+              label={editing ? t('chat.save_edit') : t('chat.send')}
+              onPress={() => submit(draft)}
+              disabled={!draft.trim() || edit.isPending}
+            />
           </View>
         )}
       </View>
+
+      <BottomSheet
+        visible={actionsFor !== null}
+        title={t('chat.message_actions')}
+        onClose={() => setActionsFor(null)}
+      >
+        {actionsFor ? (
+          <View style={styles.actions}>
+            <Text color="muted" numberOfLines={3}>
+              {actionsFor.body}
+            </Text>
+            {studentBlocked ? null : (
+              <Button
+                variant="secondary"
+                label={t('chat.reply')}
+                block
+                onPress={() => {
+                  setEditing(null);
+                  setReplyTo(actionsFor);
+                  setActionsFor(null);
+                }}
+              />
+            )}
+            {canCopy() ? (
+              <Button
+                variant="secondary"
+                label={t('chat.copy')}
+                block
+                onPress={() => {
+                  copy(actionsFor);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {canEdit(actionsFor) ? (
+              <Button
+                variant="secondary"
+                label={t('chat.edit')}
+                block
+                onPress={() => {
+                  startEdit(actionsFor);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {actionsFor.mine ? (
+              <Button
+                variant="danger"
+                label={t('chat.delete_message')}
+                block
+                onPress={() => {
+                  setDeleting(actionsFor);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+          </View>
+        ) : null}
+      </BottomSheet>
+      <ConfirmSheet
+        visible={deleting !== null}
+        title={t('chat.delete_title')}
+        body={t('chat.delete_body')}
+        confirmLabel={t('chat.delete_message')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+        busy={remove.isPending}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -343,6 +587,22 @@ const styles = StyleSheet.create({
   mine: { alignSelf: 'flex-end' },
   theirs: { alignSelf: 'flex-start', borderWidth: StyleSheet.hairlineWidth },
   pending: { opacity: 0.7 },
+  deleted: { borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed' },
+  deletedText: { fontStyle: 'italic' },
+  quote: {
+    borderStartWidth: space.xxs,
+    paddingStart: space.xs,
+    marginBottom: space.xxs,
+    gap: space.xxs,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    borderStartWidth: space.xxs,
+    paddingStart: space.sm,
+  },
+  actions: { gap: space.xs },
   metaMine: { alignSelf: 'flex-end', marginBottom: space.xs },
   metaTheirs: { alignSelf: 'flex-start', marginBottom: space.xs },
   composer: {

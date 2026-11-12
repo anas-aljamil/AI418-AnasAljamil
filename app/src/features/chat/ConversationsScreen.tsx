@@ -40,10 +40,11 @@ export function ConversationsScreen() {
   const row = (conversation: Conversation) => {
     const name = participantName(conversation.other, language, t);
     const last = conversation.last_message;
+    const text = last ? (last.body ?? t('chat.deleted')) : '';
     const preview = last
       ? last.mine
-        ? t('chat.you', { body: last.body })
-        : last.body
+        ? t('chat.you', { body: text })
+        : text
       : t('chat.no_messages');
     const when = last ? shortWhen(new Date(last.created_at), now, t) : '';
     const unread = conversation.unread_count

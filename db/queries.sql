@@ -1045,6 +1045,18 @@ WHERE created_at BETWEEN '2026-09-29 21:00:00' AND '2026-09-30 20:59:59'
 ORDER BY created_at;
 
 
+-- M7. Edited, deleted and reply messages, with what each reply quotes (a
+-- self-join; a deleted message shows as such). App: the thread.
+SELECT m.message_id, m.conversation_id,
+       IF(m.deleted_at IS NOT NULL, '(deleted)', m.body) AS body,
+       m.edited_at IS NOT NULL AS edited,
+       IF(q.deleted_at IS NOT NULL, '(deleted)', q.body) AS quotes
+FROM messages AS m
+LEFT JOIN messages AS q ON q.message_id = m.reply_to_id
+WHERE m.edited_at IS NOT NULL OR m.deleted_at IS NOT NULL OR m.reply_to_id IS NOT NULL
+ORDER BY m.created_at;
+
+
 -- =============================================================================
 -- 17. notifications
 -- =============================================================================

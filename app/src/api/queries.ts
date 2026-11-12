@@ -494,8 +494,8 @@ export function useOpenConversation() {
 export function useSendMessage(conversationId: number) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      api<ChatMessage>(`/conversations/${conversationId}/messages`, 'POST', { body }),
+    mutationFn: (message: { body: string; reply_to_id: number | null }) =>
+      api<ChatMessage>(`/conversations/${conversationId}/messages`, 'POST', message),
     onSuccess: (message) => {
       client.setQueryData<ChatMessage[]>(queryKeys.messages(conversationId), (current = []) => [
         message,
@@ -503,6 +503,38 @@ export function useSendMessage(conversationId: number) {
       ]);
       client.invalidateQueries({ queryKey: queryKeys.conversations });
     },
+  });
+}
+
+/** Puts the server's copy of a changed message into the thread, and refreshes the list. */
+function useReplaceMessage(conversationId: number) {
+  const client = useQueryClient();
+  return (message: ChatMessage) => {
+    client.setQueryData<ChatMessage[]>(queryKeys.messages(conversationId), (current) =>
+      current?.map((m) => (m.message_id === message.message_id ? message : m)),
+    );
+    client.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+    client.invalidateQueries({ queryKey: queryKeys.conversations });
+  };
+}
+
+/** Changes the text of my message (within 15 minutes of sending it). */
+export function useEditMessage(conversationId: number) {
+  const onSuccess = useReplaceMessage(conversationId);
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: string }) =>
+      api<ChatMessage>(`/conversations/${conversationId}/messages/${id}`, 'PATCH', { body }),
+    onSuccess,
+  });
+}
+
+/** Deletes my message for both sides; its place stays, marked deleted. */
+export function useDeleteMessage(conversationId: number) {
+  const onSuccess = useReplaceMessage(conversationId);
+  return useMutation({
+    mutationFn: (id: number) =>
+      api<ChatMessage>(`/conversations/${conversationId}/messages/${id}`, 'DELETE'),
+    onSuccess,
   });
 }
 

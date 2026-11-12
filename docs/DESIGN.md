@@ -137,7 +137,7 @@ Upcoming and Past via a segmented control.
 Each appointment: professor, time, location, state pill (Pending, Approved, Declined, Cancelled, Completed).
 Actions: Message, Cancel (with confirmation). Inside the 1-hour cancellation window, Cancel is disabled and explains why.
 7.7 Messages
-Conversation list and thread. Bubbles follow reading direction (correct in RTL and LTR), grouped timestamps, sent and read indicators.
+Conversation list and thread. Bubbles follow reading direction (correct in RTL and LTR), grouped timestamps, sent and read indicators. Message actions (2026-11-11): Reply, Copy, Edit (your own, within 15 minutes) and Delete (your own, for both sides).
 Professor quick replies: "Come now", "Running 10 minutes late", "Let's reschedule".
 7.8 Professor home ("My status")
 
@@ -262,6 +262,7 @@ Append entries as: date, decision, reason.
 2026-11-11, Booking days are picked on a calendar (this week and next, Sunday to Thursday, one row per week under the month's name) instead of the day strip: the chosen day is filled in the primary colour, today has a ring, days without a booking time are dimmed and named "..., unavailable", Reason: owner request ("add a calendar, not just weekdays"); a calendar shows which date a weekday is and where the week breaks.
 2026-11-11, Schedule items (timetable, booking times, closed message hours) repeat every week, every week until a last date, or happen on one date, chosen from a Repeats menu; dates are picked on a calendar a month at a time (working days only for the timetable and booking times). A saved weekly item lists the dates it leaves out ("Dates left out", each one a chip that brings it back) and "Leave out a date" opens a calendar of its own days. The week view shows weekly items with "until 31 December, not on 18 October", and dated ones under "On one date", Reason: owner request (a calendar and a repeating week in the schedule); a conference day or a one-off committee no longer means editing the whole week.
 2026-11-11, The usual appointment length setting (15 or 30 minutes) is gone; booking offers 15 minutes first ("The suggested length") and the student may change it, Reason: owner request ("no need for it"); since the length became the student's choice, the setting only picked the first suggestion.
+2026-11-11, Message actions open from the bubble itself (a tap, or a long press on phones) as a sheet: Reply, Copy (browser only), Edit for your own message within 15 minutes, and Delete for your own message after a confirmation; a reply carries the quoted message inside its bubble (a bar at the start edge, the author and two lines) and tapping it scrolls there; a deleted message keeps its place as a dashed, italic "This message was deleted"; an edited one adds "edited" to its time; Reply and Edit show a bar above the composer with a close button, and Send reads Save while editing. Search inside a conversation was left out, Reason: owner request (the features chats usually have); a tap on the bubble is reachable by keyboard and screen readers, where a hidden long press or hover menu would not be; copying in the Expo Go app would need a new library, so it is offered in the browser only.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

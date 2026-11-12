@@ -292,7 +292,9 @@ INSERT INTO conversations (conversation_id, student_id, professor_id, created_at
     (5, 15, 7, '2026-10-01 18:00:00');
 
 -- -----------------------------------------------------------------------------
--- messages (10). read_at NULL = not yet read by the recipient.
+-- messages (10). read_at NULL = not yet read by the recipient. Message 7
+-- replies to message 6, message 9 was edited a minute after it was sent, and
+-- message 8 was deleted by its sender (no text, its place kept).
 -- -----------------------------------------------------------------------------
 INSERT INTO messages (message_id, conversation_id, sender_role, body, created_at, read_at) VALUES
     (1,  1, 'student',   'السلام عليكم دكتورة، هل أحضر مسودة التقرير معي في موعد الأحد؟', '2026-09-30 17:00:00', '2026-09-30 18:10:00'),
@@ -305,6 +307,11 @@ INSERT INTO messages (message_id, conversation_id, sender_role, body, created_at
     (8,  4, 'student',   'Hi Dr. Marsh, sorry I had to cancel Wednesday''s meeting.',    '2026-09-29 16:05:00', '2026-09-29 17:00:00'),
     (9,  4, 'professor', 'No problem, Sarah. Book another slot when you are ready.',    '2026-09-29 17:01:00', NULL),
     (10, 5, 'student',   'دكتورة ريم، هل تشمل المراجعة الفصل الخامس؟',                   '2026-10-01 18:00:00', NULL);
+
+UPDATE messages SET reply_to_id = 6 WHERE message_id = 7;
+UPDATE messages SET body = 'No problem, Sarah. Book another time when you are ready.',
+                    edited_at = '2026-09-29 17:02:00' WHERE message_id = 9;
+UPDATE messages SET body = NULL, deleted_at = '2026-09-29 17:30:00' WHERE message_id = 8;
 
 -- -----------------------------------------------------------------------------
 -- notifications (10). Each goes to a participant of the linked appointment or

@@ -33,6 +33,7 @@ erDiagram
     STUDENTS ||--o{ CONVERSATIONS : "chats in"
     PROFESSORS ||--o{ CONVERSATIONS : "chats in"
     CONVERSATIONS ||--|{ MESSAGES : contains
+    MESSAGES |o--o{ MESSAGES : "is quoted by"
     USERS ||--o{ NOTIFICATIONS : receives
     APPOINTMENTS |o--o{ NOTIFICATIONS : "is about"
     CONVERSATIONS |o--o{ NOTIFICATIONS : "is about"
@@ -159,8 +160,11 @@ erDiagram
         int message_id PK
         int conversation_id FK
         varchar sender_role "student | professor"
-        varchar body "1-1000 chars"
+        varchar body "1-1000 chars; NULL exactly when deleted"
+        int reply_to_id FK "nullable, SET NULL; same conversation (trigger)"
         datetime created_at
+        datetime edited_at "nullable, after created_at"
+        datetime deleted_at "nullable, after created_at"
         datetime read_at "nullable"
     }
     NOTIFICATIONS {
@@ -226,7 +230,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
 | APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |
-| MESSAGE | <ins>message_id</ins>, sender_role, body, created_at, read_at | none |
+| MESSAGE | <ins>message_id</ins>, sender_role, body, created_at, edited_at, deleted_at, read_at | edited, deleted (whether those times are set) |
 | NOTIFICATION | <ins>notification_id</ins>, type, created_at, read_at | text (rendered in the reader's language) |
 
 Alternate keys (also unique, but not underlined):
@@ -274,6 +278,7 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 | STARTS | STUDENT (1) | CONVERSATION (N) | partial | **total** | none |
 | ANSWERS | PROFESSOR (1) | CONVERSATION (N) | partial | **total** | none |
 | CONTAINS | CONVERSATION (1) | MESSAGE (N) | **total** (at least one message) | **total** | none |
+| REPLIES_TO | MESSAGE (1, quoted) | MESSAGE (N, replies) | partial | partial (most messages are not replies) | none; a recursive relationship, both ends in the same conversation (trigger) |
 | NOTIFIES | USER (1) | NOTIFICATION (N) | partial | **total** | none |
 | ABOUT_APPOINTMENT | APPOINTMENT (1) | NOTIFICATION (N) | partial | partial (only appointment notifications) | none |
 | ABOUT_CONVERSATION | CONVERSATION (1) | NOTIFICATION (N) | partial | partial (only message notifications) | none |
