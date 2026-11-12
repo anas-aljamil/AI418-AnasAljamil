@@ -224,7 +224,8 @@ test('a professor adds a booking time outside office hours and a student sees it
   await professor.getByRole('button', { name: 'Sunday', exact: true }).click();
   await professor.getByRole('button', { name: 'Tuesday', exact: true }).click();
   // 1:00 PM for the default hour: Khalid has no office hours or classes then.
-  await professor.getByRole('button', { name: 'Start, 1 PM', exact: true }).click();
+  await professor.getByRole('button', { name: /^Start, / }).click();
+  await professor.getByRole('radio', { name: '1:00 PM', exact: true }).click();
   await expect(shown(professor, 'Tuesday, 1:00 PM–2:00 PM')).toBeVisible();
   await shoot(professor, 'en-7-booking-time-sheet');
   await professor.getByRole('button', { name: 'Save booking time' }).click();

@@ -71,9 +71,13 @@ test('status presets, a note, and back to the schedule', async ({ browser }) => 
   await expect(noura.getByText(/until 10:15 AM/)).toBeVisible();
   expect(latestOverride(1)).toBe('away/-/2026-10-05 07:15:00');
 
+  // The note opens from a button and, once saved, shows as students see it (2026-11-11).
+  await noura.getByRole('button', { name: 'Add a note for students', exact: true }).click();
   await noura.getByLabel('Note for students').fill('In the lab, back soon');
   await noura.getByRole('button', { name: 'Save note', exact: true }).click();
   await expect(noura.getByText('Note saved', { exact: true })).toBeVisible();
+  await expect(noura.getByText('Note: In the lab, back soon', { exact: true })).toBeVisible();
+  await expect(noura.getByText('Students see it until 10:15 AM.', { exact: true })).toBeVisible();
   expect(latestOverride(1)).toBe('away/In the lab, back soon/2026-10-05 07:15:00');
 
   await noura.getByRole('button', { name: 'Away for today', exact: true }).click();
@@ -81,8 +85,10 @@ test('status presets, a note, and back to the schedule', async ({ browser }) => 
 
   await noura.getByRole('button', { name: 'Follow my schedule', exact: true }).click();
   await expect(noura.getByText(/^Following your schedule/)).toBeVisible();
-  // Nothing set by hand is left: no override counts, and the note field is empty again.
-  await expect(noura.getByLabel('Note for students')).toHaveValue('');
+  // Nothing set by hand is left: no override counts, and there is no note to show.
+  await expect(
+    noura.getByRole('button', { name: 'Add a note for students', exact: true }),
+  ).toBeVisible();
   expect(
     sql(
       `SELECT COUNT(*) FROM status_overrides WHERE professor_id = 1 AND created_at <= '2026-10-05 07:00:00' ` +
@@ -102,16 +108,19 @@ test('a schedule block is edited with the time picker, and another deleted', asy
 }) => {
   const noura = await open(browser, 'n.alharbi@university.example');
   await noura.getByRole('tab', { name: 'Schedule' }).click();
-  await noura.getByRole('button', { name: '10:00 AM–12:00 PM Office hours', exact: true }).click();
+  await noura.getByRole('button', { name: /^10:00 AM–12:00 PM, Office hours, / }).click();
   const sheet = noura.getByRole('dialog', { name: 'Edit block' });
-  // 10:00 AM for 2 hours; one length chip makes it end at 11:30 AM.
-  await sheet.getByRole('button', { name: 'Length, 1 hour 30 minutes', exact: true }).click();
+  // 10:00 AM for 2 hours; the length menu makes it end at 11:30 AM.
+  await sheet.getByRole('button', { name: /^Length, / }).click();
+  await noura
+    .getByRole('radio', { name: '1 hour 30 minutes, until 11:30 AM', exact: true })
+    .click();
   await expect(sheet.getByText('1 hour 30 minutes, until 11:30 AM', { exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Save block', exact: true }).click();
   await expect(noura.getByText('Schedule saved', { exact: true })).toBeVisible();
   expect(sql('SELECT end_time FROM schedule_blocks WHERE block_id = 2')).toBe('11:30:00');
 
-  await noura.getByRole('button', { name: /^1:00 PM–2:30 PM Class/ }).click();
+  await noura.getByRole('button', { name: /^1:00 PM–2:30 PM, Class/ }).click();
   await noura.getByRole('button', { name: 'Delete block', exact: true }).click();
   await noura
     .getByRole('dialog', { name: 'Delete this block?' })
@@ -180,7 +189,8 @@ test('a cancellation frees time and the next student moves earlier in one tap', 
   await lama.getByRole('button', { name: 'Book', exact: true }).click();
   const sheet = lama.getByRole('dialog', { name: /^Book with/ });
   await sheet.getByRole('button', { name: 'Sun 11', exact: true }).click();
-  await sheet.getByRole('combobox', { name: 'Start' }).selectOption({ label: '10:00 AM' });
+  await sheet.getByRole('button', { name: /^Start, / }).click();
+  await lama.getByRole('radio', { name: '10:00 AM', exact: true }).click();
   await sheet.getByRole('button', { name: 'Change length', exact: true }).click();
   await sheet.getByRole('button', { name: '30 minutes', exact: true }).click();
   await expect(sheet.getByText('30 min, until 10:30 AM', { exact: true })).toBeVisible();

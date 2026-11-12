@@ -1,6 +1,8 @@
 /**
  * Weekly times that are not timetable blocks (owner decisions 2026-11-07), edited like the
- * timetable: a list per day and a sheet to add, change or delete one.
+ * timetable: a week view (WeekAgenda) and a sheet to add, change or delete one. A line at the
+ * top says what holds now ("Students can book now, until 12:00 PM", "Messages are closed now,
+ * until 8:00 AM tomorrow"); booking times also say whether they fall in office hours.
  * - Booking times (Sunday-Thursday): students can book only inside them, whether they fall in
  *   office hours or not. No booking times means nobody can book.
  * - Closed message hours (any day): students cannot write then. A length past midnight runs
@@ -11,12 +13,16 @@
  */
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import CalendarCheck from 'lucide-react-native/icons/calendar-check';
+import Moon from 'lucide-react-native/icons/moon';
+import Plus from 'lucide-react-native/icons/plus';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
 import {
   useDeleteRange,
   useMyRanges,
+  useMySchedule,
   useSaveRange,
   type RangeInput,
   type RangeKind,
@@ -26,15 +32,18 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { SkeletonRow } from '@/components/Placeholders';
-import { ListRow } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { TimeRangePicker, type TimeRange } from '@/components/TimeRangePicker';
 import { useToast } from '@/components/Toast';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
-import { clockText, daysText, minutesOfDay } from '@/lib/format';
+import { clockText, daysText, minutesOfDay, timeOfDay } from '@/lib/format';
+import { useNow } from '@/lib/hooks';
+import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 import { DayChips, saveEachDay } from './days';
+import { WeekAgenda } from './WeekAgenda';
+import { current, DAY, dayParts, overlap, untilNext, weekMinute, type WeekRange } from './week';
 
 const WORKING_DAYS = [0, 1, 2, 3, 4];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -48,7 +57,7 @@ const KINDS = {
     keys: {
       intro: 'schedule.booking_intro',
       add: 'schedule.add_period',
-      empty: 'schedule.no_periods',
+      title: 'schedule.booking_time',
       newTitle: 'schedule.new_period_title',
       editTitle: 'schedule.edit_period_title',
       save: 'schedule.save_period',
@@ -66,7 +75,7 @@ const KINDS = {
     keys: {
       intro: 'schedule.chat_intro',
       add: 'schedule.add_closure',
-      empty: 'schedule.no_closures',
+      title: 'schedule.closed_time',
       newTitle: 'schedule.new_closure_title',
       editTitle: 'schedule.edit_closure_title',
       save: 'schedule.save_closure',
@@ -90,18 +99,77 @@ export function rangeLine(range: RangeInput, t: TFunction): string {
   return t('schedule.range_overnight', times);
 }
 
+/**
+ * "10:00 AM" ("today at 10:00 AM" with todayKey), "tomorrow at 8:00 AM" or "Sunday at 8:00 AM":
+ * a week minute seen from `at`.
+ */
+export function atText(
+  target: number,
+  at: number,
+  t: TFunction,
+  todayKey = 'schedule.at_today',
+): string {
+  const time = clockText(timeOfDay(target % DAY), t);
+  const days = Math.floor(target / DAY) - Math.floor(at / DAY);
+  if (days === 0) return t(todayKey, { time });
+  if (days === 1) return t('schedule.at_tomorrow', { time });
+  return t('schedule.at_day', { day: t(`weekday.${Math.floor(target / DAY) % 7}`), time });
+}
+
+/** What holds now for booking times or closed message hours, as one sentence. */
+export function nowLine(kind: RangeKind, ranges: WeekRange[], now: Date, t: TFunction): string {
+  const overnight = KINDS[kind].overnight;
+  const at = weekMinute(now);
+  const live = current(ranges, overnight, at);
+  const next = untilNext(ranges, overnight, at);
+  if (kind === 'booking-periods') {
+    if (next === null) return t('schedule.booking_none');
+    if (live) return t('schedule.booking_open_now', { when: atText(live.to, at, t) });
+    return t('schedule.booking_next', {
+      when: atText(at + next, at, t, 'schedule.today_at'),
+    });
+  }
+  if (next === null) return t('schedule.chat_always_open');
+  if (live) return t('schedule.chat_closed_now', { when: atText(live.to, at, t) });
+  return t('schedule.chat_open_now', { when: atText(at + next, at, t) });
+}
+
 export function WeeklyRanges({ kind }: { kind: RangeKind }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const config = KINDS[kind];
   const ranges = useMyRanges(kind);
+  // Booking times say whether they fall in office hours.
+  const schedule = useMySchedule();
+  const now = useNow(60_000);
   const [editing, setEditing] = useState<{ id: number | null; range: RangeInput } | null>(null);
+  const booking = kind === 'booking-periods';
+
+  const officeNote = (range: WeeklyRange): string | null => {
+    if (!booking || !schedule.data) return null;
+    const [part] = dayParts(range, false);
+    if (!part) return null;
+    const inside = schedule.data
+      .filter((b) => b.kind === 'office_hours' && b.day_of_week === range.day_of_week)
+      .reduce((sum, b) => sum + overlap(part, dayParts(b, false)[0]!), 0);
+    if (inside === 0) return t('schedule.outside_office');
+    return inside >= part.to - part.from
+      ? t('schedule.inside_office')
+      : t('schedule.partly_office');
+  };
 
   return (
     <>
       <Text color="muted">{t(config.keys.intro)}</Text>
+      {ranges.data ? (
+        <Text weight="medium" accessibilityLiveRegion="polite">
+          {nowLine(kind, ranges.data, now, t)}
+        </Text>
+      ) : null}
       <View style={styles.start}>
         <Button
           label={t(config.keys.add)}
+          icon={<Plus color={colors.onPrimary} size={20} strokeWidth={2} />}
           onPress={() =>
             setEditing({
               id: null,
@@ -116,34 +184,25 @@ export function WeeklyRanges({ kind }: { kind: RangeKind }) {
       ) : ranges.error ? (
         <SectionError message={t(errorKey(ranges.error))} onRetry={() => ranges.refetch()} />
       ) : (
-        <>
-          {ranges.data?.length === 0 ? (
-            <Text weight="medium" accessibilityLiveRegion="polite">
-              {t(config.keys.empty)}
-            </Text>
-          ) : null}
-          {config.days.map((day) => {
-            const rows = (ranges.data ?? []).filter((r) => r.day_of_week === day);
-            return (
-              <View key={day} style={styles.section}>
-                <Text variant="title" role="heading">
-                  {t(`weekday.${day}`)}
-                </Text>
-                {rows.length === 0 ? (
-                  <Text color="muted">{t('schedule.empty_day')}</Text>
-                ) : (
-                  rows.map((range: WeeklyRange) => (
-                    <ListRow
-                      key={range.id}
-                      title={rangeLine(range, t)}
-                      onPress={() => setEditing({ id: range.id, range })}
-                    />
-                  ))
-                )}
-              </View>
-            );
-          })}
-        </>
+        <WeekAgenda
+          days={[...config.days]}
+          overnight={config.overnight}
+          overview
+          items={(ranges.data ?? []).map((range) => ({
+            key: String(range.id),
+            range,
+            title: t(config.keys.title),
+            note: officeNote(range),
+            color: booking ? colors.primary : colors.status.away,
+            pattern: booking ? 'solid' : 'dashed',
+            icon: booking ? (
+              <CalendarCheck color={colors.primary} size={20} strokeWidth={1.75} />
+            ) : (
+              <Moon color={colors.muted} size={20} strokeWidth={1.75} />
+            ),
+            onPress: () => setEditing({ id: range.id, range }),
+          }))}
+        />
       )}
 
       {editing ? (

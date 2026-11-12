@@ -75,6 +75,50 @@ export const palettes: Record<ColorScheme, Palette> = {
   },
 };
 
+/**
+ * Colour vision (owner request 2026-11-11): the status colours for people who tell some
+ * colours apart poorly. Chosen with scripts/check_palette.py: every colour keeps 3:1 on the
+ * wall and the plate in its theme, and the four statuses stay at least delta E 22 apart under
+ * the vision type they are for (greyscale: about 13, where the doors and labels carry it).
+ * "normal" is the palette above.
+ */
+export type ColorVision = 'normal' | 'red_green' | 'blue_yellow' | 'none';
+export const COLOR_VISIONS: ColorVision[] = ['normal', 'red_green', 'blue_yellow', 'none'];
+
+type StatusColors = Record<StatusKey, string>;
+const withAway = (scheme: ColorScheme, colors: Omit<StatusColors, 'away' | 'unknown'>) => ({
+  ...colors,
+  away: palettes[scheme].status.away,
+  unknown: palettes[scheme].status.unknown,
+});
+
+export const visionStatus: Record<
+  Exclude<ColorVision, 'normal'>,
+  Record<ColorScheme, StatusColors>
+> = {
+  // Blue, amber and dark red: protanopia and deuteranopia keep them apart by lightness.
+  red_green: {
+    light: withAway('light', { in_office: '#16418F', in_class: '#C27A0A', busy: '#861317' }),
+    dark: withAway('dark', { in_office: '#3D7DF5', in_class: '#F2B50D', busy: '#CC3333' }),
+  },
+  // Green, orange and raspberry: tritanopia keeps them apart.
+  blue_yellow: {
+    light: withAway('light', { in_office: '#1B7F4C', in_class: '#A35400', busy: '#B0124A' }),
+    dark: withAway('dark', { in_office: '#5BD6A8', in_class: '#F2A65A', busy: '#FF6B8B' }),
+  },
+  // Shades of grey; "in office" has the most contrast.
+  none: {
+    light: withAway('light', { in_office: '#262626', in_class: '#454545', busy: '#8C8C8C' }),
+    dark: withAway('dark', { in_office: '#E3E3E3', in_class: '#BABABA', busy: '#6E6E6E' }),
+  },
+};
+
+/** The palette for a theme and a colour vision. */
+export function paletteFor(scheme: ColorScheme, vision: ColorVision): Palette {
+  if (vision === 'normal') return palettes[scheme];
+  return { ...palettes[scheme], status: visionStatus[vision][scheme] };
+}
+
 /** 4-unit spacing scale (DESIGN.md 4.3). */
 export const space = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24, xl: 32, xxl: 48, xxxl: 64 } as const;
 

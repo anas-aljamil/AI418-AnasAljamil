@@ -205,6 +205,7 @@ export function BookingSheet({ professor, visible, onClose }: BookingSheetProps)
                 value={slot?.starts_at ?? ''}
                 onChange={chooseSlot}
                 placeholder={t('booking.choose_start')}
+                compact
               />
             </>
           ) : (

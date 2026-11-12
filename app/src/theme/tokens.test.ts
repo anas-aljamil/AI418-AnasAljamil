@@ -4,7 +4,7 @@
  * colour-blind separation of the status colours).
  */
 import palettesJson from '../../../docs/design-plan/palettes.json';
-import { palettes, type ColorScheme } from './tokens';
+import { COLOR_VISIONS, paletteFor, palettes, type ColorScheme } from './tokens';
 
 function luminance(hex: string): number {
   const channels = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -58,7 +58,7 @@ describe.each(schemes)('%s theme contrast (WCAG 2.2 AA)', (scheme) => {
 
 describe('tokens match the approved palette (DESIGN.md Section 11)', () => {
   it.each(schemes)('%s', (scheme) => {
-    const approved = (palettesJson as Record<string, Record<string, string>>)[`A ${scheme}`]!;
+    const approved = (palettesJson as unknown as Record<string, Record<string, string>>)[`A ${scheme}`]!;
     const p = palettes[scheme];
     expect({
       bg: p.bg,
@@ -74,5 +74,23 @@ describe('tokens match the approved palette (DESIGN.md Section 11)', () => {
       busy: p.status.busy,
       away: p.status.away,
     }).toEqual(approved);
+  });
+});
+
+// Colour vision (2026-11-11): every status colour of every setting keeps the same contrast rules.
+describe.each(COLOR_VISIONS)('colour vision %s', (vision) => {
+  it.each(schemes)('status colours reach 3:1 and keep the door marks visible (%s)', (scheme) => {
+    const p = paletteFor(scheme, vision);
+    for (const [status, color] of Object.entries(p.status)) {
+      for (const background of [p.bg, p.surface]) {
+        expect({ status, ok: contrast(color, background) >= 3 }).toEqual({ status, ok: true });
+      }
+    }
+    for (const status of ['in_class', 'busy', 'away'] as const) {
+      expect({ status, ok: contrast(p.surface, p.status[status]) >= 3 }).toEqual({
+        status,
+        ok: true,
+      });
+    }
   });
 });

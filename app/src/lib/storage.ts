@@ -10,6 +10,7 @@ export const preferenceKeys = {
   theme: 'mawjood.theme',
   user: 'mawjood.user',
   textSize: 'mawjood.textSize',
+  colorVision: 'mawjood.colorVision',
   notifications: 'mawjood.notifications',
   /** The language a direction reload was last tried for (stops a reload loop). */
   directionReload: 'mawjood.directionReload',

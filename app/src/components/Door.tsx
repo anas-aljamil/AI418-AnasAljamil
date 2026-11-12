@@ -45,7 +45,9 @@ interface DoorProps {
 }
 
 export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
-  const { colors } = useTheme();
+  const { colors, colorVision } = useTheme();
+  // With a colour-vision setting the marks are bolder, so the shape carries more of the meaning.
+  const bold = colorVision !== 'normal';
   const { i18n } = useTranslation();
   const reduceMotion = useReducedMotion();
   const color = colors.status[status];
@@ -121,15 +123,29 @@ export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
             d={BOOK}
             fill="none"
             stroke={colors.surface}
-            strokeWidth={1.2}
+            strokeWidth={bold ? 1.7 : 1.2}
             strokeLinejoin="round"
           />
         )}
         {status === 'busy' && (
-          <Rect x={8.5} y={11.5} width={5.4} height={2} rx={1} fill={colors.surface} />
+          <Rect
+            x={bold ? 8.2 : 8.5}
+            y={bold ? 11.1 : 11.5}
+            width={bold ? 6 : 5.4}
+            height={bold ? 2.8 : 2}
+            rx={bold ? 1.4 : 1}
+            fill={colors.surface}
+          />
         )}
         {status === 'away' && (
-          <Path d="M16 13a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z" fill={colors.surface} />
+          <Path
+            d={
+              bold
+                ? 'M16.4 13a1.4 1.4 0 1 1-2.8 0a1.4 1.4 0 0 1 2.8 0Z'
+                : 'M16 13a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z'
+            }
+            fill={colors.surface}
+          />
         )}
         <Path d="M3.5 21h17" stroke={color} strokeWidth={1.75} strokeLinecap="round" />
       </Svg>

@@ -10,12 +10,13 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { Block } from '@/api/types';
-import { BLOCK_STATUS, blockKindKey } from '@/lib/blocks';
+import { BLOCK_PATTERN, BLOCK_STATUS, blockKindKey } from '@/lib/blocks';
 import { clockText, minutesOfDay } from '@/lib/format';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space } from '@/theme/tokens';
 import { Door } from './Door';
+import { Rail } from './Rail';
 import { Pill } from './Surfaces';
 import { Text } from './Text';
 
@@ -102,7 +103,7 @@ function BlockRow({ block, stage }: { block: Block; stage: Stage }) {
           {end}
         </Text>
       </View>
-      <View style={[styles.rail, { backgroundColor: colors.status[status] }]} />
+      <Rail color={colors.status[status]} pattern={BLOCK_PATTERN[block.kind]} />
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <Door status={status} size={24} />
@@ -186,7 +187,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   times: { width: 76 },
-  rail: { width: 4, borderRadius: 2 },
   gap: {
     flexDirection: 'row',
     alignItems: 'stretch',

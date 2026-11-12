@@ -12,7 +12,11 @@ status colours in_office, in_class, busy, away. Checks:
     vision and simulated protanopia / deuteranopia (Machado et al. 2009).
     Status is always icon + label + colour, so colour only needs to support
     the shape and the word; the plan targets a minimum delta E of 20.
-Exits with status 1 if any contrast check fails or a delta E falls below 20.
+A theme may name the vision types it is for ("vision": ["tritanopia"]) and its
+own minimum ("min_delta_e"); the colour-vision settings of 2026-11-11 do (the
+greyscale one is checked for normal vision with a lower minimum, since grey can
+only differ in lightness).
+Exits with status 1 if any contrast check fails or a delta E falls below the minimum.
 """
 import itertools, json, math, sys
 
@@ -27,6 +31,7 @@ def contrast(a, b):
 CVD = {
     "protanopia": [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
     "deuteranopia": [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+    "tritanopia": [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]],
 }
 def simulate(h, kind):
     v = [lin(c) for c in hex_rgb(h)]; m = CVD[kind]
@@ -56,7 +61,7 @@ def check(name, theme):
     need("hairline vs surface (decorative, informational only)", p["line"], p["surface"], 1.0)
     statuses = ["in_office", "in_class", "busy", "away"]
     cvd = {}
-    for kind in ("normal", "protanopia", "deuteranopia"):
+    for kind in ("normal", *theme.get("vision", ["protanopia", "deuteranopia"])):
         col = {s: (p[s] if kind == "normal" else simulate(p[s], kind)) for s in statuses}
         cvd[kind] = {f"{a}/{b}": round(delta_e(col[a], col[b]), 1) for a, b in itertools.combinations(statuses, 2)}
     return rows, fails, cvd
@@ -64,17 +69,20 @@ def check(name, theme):
 MIN_DELTA_E = 20
 
 if __name__ == "__main__":
+    # "ΔE" in the report: Windows consoles default to a code page without it.
+    sys.stdout.reconfigure(encoding="utf-8")
     path = sys.argv[1] if len(sys.argv) > 1 else "docs/design-plan/palettes.json"
     themes = json.load(open(path, encoding="utf-8"))
     failed = False
     for name, theme in themes.items():
         rows, fails, cvd = check(name, theme)
-        weak = [k for k, pairs in cvd.items() if min(pairs.values()) < MIN_DELTA_E]
+        minimum = theme.get("min_delta_e", MIN_DELTA_E)
+        weak = [k for k, pairs in cvd.items() if min(pairs.values()) < minimum]
         failed |= bool(fails or weak)
         print(f"\n=== {name}: {'PASS' if not (fails or weak) else 'FAIL ' + ', '.join(fails + weak)}")
         for label, fg, bg, r, m, ok in rows:
             print(f"  {'ok ' if ok else 'BAD'} {r:>5}:1 (min {m})  {label:<45} {fg} on {bg}")
         for kind, pairs in cvd.items():
             worst = min(pairs.items(), key=lambda kv: kv[1])
-            print(f"  ΔE {kind:<12} min {worst[1]:>5} ({worst[0]})   " + "  ".join(f"{k}={v}" for k, v in pairs.items()))
+            print(f"  ΔE {kind:<12} min {worst[1]:>5} ({worst[0]}, need {minimum})   " + "  ".join(f"{k}={v}" for k, v in pairs.items()))
     sys.exit(1 if failed else 0)

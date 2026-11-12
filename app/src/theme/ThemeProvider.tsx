@@ -11,7 +11,15 @@ import { Platform, useColorScheme } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 
 import { preferenceKeys, readPreference, writePreference } from '@/lib/storage';
-import { elevation, palettes, type ColorScheme, type Palette } from './tokens';
+import {
+  COLOR_VISIONS,
+  elevation,
+  paletteFor,
+  palettes,
+  type ColorScheme,
+  type ColorVision,
+  type Palette,
+} from './tokens';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -21,6 +29,9 @@ interface ThemeValue {
   shadow: string;
   preference: ThemePreference;
   setPreference: (preference: ThemePreference) => void;
+  /** Status colours for the viewer's colour vision (device setting, default normal). */
+  colorVision: ColorVision;
+  setColorVision: (vision: ColorVision) => void;
 }
 
 const ThemeContext = createContext<ThemeValue | null>(null);
@@ -32,11 +43,21 @@ function isPreference(value: string | null): value is ThemePreference {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const [colorVision, setColorVisionState] = useState<ColorVision>('normal');
 
   useEffect(() => {
     readPreference(preferenceKeys.theme).then((stored) => {
       if (isPreference(stored)) setPreferenceState(stored);
     });
+    readPreference(preferenceKeys.colorVision).then((stored) => {
+      const known = COLOR_VISIONS.find((vision) => vision === stored);
+      if (known) setColorVisionState(known);
+    });
+  }, []);
+
+  const setColorVision = useCallback((next: ColorVision) => {
+    setColorVisionState(next);
+    writePreference(preferenceKeys.colorVision, next);
   }, []);
 
   const setPreference = useCallback((next: ThemePreference) => {
@@ -49,12 +70,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       scheme,
-      colors: palettes[scheme],
+      colors: paletteFor(scheme, colorVision),
       shadow: elevation[scheme].floating,
       preference,
       setPreference,
+      colorVision,
+      setColorVision,
     }),
-    [scheme, preference, setPreference],
+    [scheme, preference, setPreference, colorVision, setColorVision],
   );
 
   useEffect(() => {
