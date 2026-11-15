@@ -8,6 +8,11 @@ status colours in_office, in_class, busy, away. Checks:
   * text, muted text and primary-as-text: 4.5:1 on bg and surface;
   * status colours (icons, UI components): 3:1 on bg and surface;
   * on_primary text on the primary colour: 4.5:1;
+  * with a "tint" (the pill behind the current tab's icon): primary 4.5:1 on it;
+  * with a "danger" (destructive text): 4.5:1 on bg and surface;
+  * with a "band" (the corridor, dark in both themes): on_band and on_band_muted
+    4.5:1, band_status (doors) 3:1 and band_status_text (words) 4.5:1 on it, and
+    on_band 4.5:1 on band_raised (the current item in the side rail);
   * how far apart the four status colours stay (CIE76 delta E) for normal
     vision and simulated protanopia / deuteranopia (Machado et al. 2009).
     Status is always icon + label + colour, so colour only needs to support
@@ -58,6 +63,16 @@ def check(name, theme):
         for s in ("in_office", "in_class", "busy", "away"):
             need(f"status {s} (icon, UI 3:1) on {bg_name}", p[s], p[bg_name], 3.0)
     need("text on primary button", p["on_primary"], p["primary"], 4.5)
+    if "tint" in p: need("primary on tint (current tab)", p["primary"], p["tint"], 4.5)
+    if "danger" in p:
+        for bg_name in ("bg", "surface"): need(f"danger text on {bg_name}", p["danger"], p[bg_name], 4.5)
+    if "band" in p:
+        need("text on band", p["on_band"], p["band"], 4.5)
+        need("muted text on band", p["on_band_muted"], p["band"], 4.5)
+        need("text on band_raised (current rail item)", p["on_band"], p["band_raised"], 4.5)
+        need("band floor line (UI 3:1 not required, informational)", p["band_line"], p["band"], 1.0)
+        for s, colour in p["band_status"].items(): need(f"band door {s} (UI 3:1)", colour, p["band"], 3.0)
+        for s, colour in p["band_status_text"].items(): need(f"band status word {s}", colour, p["band"], 4.5)
     need("hairline vs surface (decorative, informational only)", p["line"], p["surface"], 1.0)
     statuses = ["in_office", "in_class", "busy", "away"]
     cvd = {}

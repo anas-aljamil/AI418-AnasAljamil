@@ -55,105 +55,285 @@
     "away": "#93A6A9",
     "lamp": "#FFD27A"
   },
-  "A light vision red_green": {
-    "bg": "#F2F5F8",
+  "Corridor light": {
+    "bg": "#F1F4F8",
     "surface": "#FFFFFF",
-    "text": "#15212E",
+    "text": "#101C2B",
     "muted": "#4B5A69",
-    "primary": "#1F4F8C",
+    "primary": "#1B5BD0",
     "on_primary": "#FFFFFF",
+    "tint": "#E3ECFB",
+    "line": "#D6DEE6",
+    "in_office": "#178C55",
+    "in_class": "#B06C00",
+    "busy": "#9F1F1A",
+    "away": "#66727F",
+    "lamp": "#FFD56B",
+    "danger": "#9F1F1A",
+    "band": "#0E2441",
+    "band_raised": "#1D3A63",
+    "on_band": "#FFFFFF",
+    "on_band_muted": "#B4C3D6",
+    "band_line": "#3A5578",
+    "band_status": {
+      "in_office": "#63D69A",
+      "in_class": "#F2B544",
+      "busy": "#E8524C",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#63D69A",
+      "in_class": "#F2B544",
+      "busy": "#F06A64",
+      "away": "#94A2B1"
+    }
+  },
+  "Corridor dark": {
+    "bg": "#0C1420",
+    "surface": "#141F2E",
+    "text": "#E8EEF6",
+    "muted": "#A3B2C2",
+    "primary": "#86B4FF",
+    "on_primary": "#0C1420",
+    "tint": "#1C2E4A",
+    "line": "#263445",
+    "in_office": "#63D69A",
+    "in_class": "#F2B544",
+    "busy": "#E8524C",
+    "away": "#94A2B1",
+    "lamp": "#F8D572",
+    "danger": "#F06A64",
+    "band": "#060C15",
+    "band_raised": "#16233A",
+    "on_band": "#E8EEF6",
+    "on_band_muted": "#A3B2C2",
+    "band_line": "#2C3C52",
+    "band_status": {
+      "in_office": "#63D69A",
+      "in_class": "#F2B544",
+      "busy": "#E8524C",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#63D69A",
+      "in_class": "#F2B544",
+      "busy": "#F06A64",
+      "away": "#94A2B1"
+    }
+  },
+  "Corridor light vision red_green": {
+    "bg": "#F1F4F8",
+    "surface": "#FFFFFF",
+    "text": "#101C2B",
+    "muted": "#4B5A69",
+    "primary": "#1B5BD0",
+    "on_primary": "#FFFFFF",
+    "tint": "#E3ECFB",
     "line": "#D6DEE6",
     "in_office": "#16418F",
     "in_class": "#C27A0A",
     "busy": "#861317",
     "away": "#66727F",
-    "lamp": "#FFE9A8",
+    "lamp": "#FFD56B",
+    "danger": "#9F1F1A",
+    "band": "#0E2441",
+    "band_raised": "#1D3A63",
+    "on_band": "#FFFFFF",
+    "on_band_muted": "#B4C3D6",
+    "band_line": "#3A5578",
+    "band_status": {
+      "in_office": "#3D7DF5",
+      "in_class": "#F2B50D",
+      "busy": "#CC3333",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#FFFFFF",
+      "in_class": "#FFFFFF",
+      "busy": "#FFFFFF",
+      "away": "#FFFFFF"
+    },
     "vision": [
       "protanopia",
       "deuteranopia"
     ]
   },
-  "A dark vision red_green": {
-    "bg": "#0D151E",
-    "surface": "#152030",
-    "text": "#E7EEF5",
+  "Corridor dark vision red_green": {
+    "bg": "#0C1420",
+    "surface": "#141F2E",
+    "text": "#E8EEF6",
     "muted": "#A3B2C2",
-    "primary": "#8AB6EE",
-    "on_primary": "#0D151E",
+    "primary": "#86B4FF",
+    "on_primary": "#0C1420",
+    "tint": "#1C2E4A",
     "line": "#263445",
     "in_office": "#3D7DF5",
     "in_class": "#F2B50D",
     "busy": "#CC3333",
     "away": "#94A2B1",
-    "lamp": "#F6D985",
+    "lamp": "#F8D572",
+    "danger": "#F06A64",
+    "band": "#060C15",
+    "band_raised": "#16233A",
+    "on_band": "#E8EEF6",
+    "on_band_muted": "#A3B2C2",
+    "band_line": "#2C3C52",
+    "band_status": {
+      "in_office": "#3D7DF5",
+      "in_class": "#F2B50D",
+      "busy": "#CC3333",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#E8EEF6",
+      "in_class": "#E8EEF6",
+      "busy": "#E8EEF6",
+      "away": "#E8EEF6"
+    },
     "vision": [
       "protanopia",
       "deuteranopia"
     ]
   },
-  "A light vision blue_yellow": {
-    "bg": "#F2F5F8",
+  "Corridor light vision blue_yellow": {
+    "bg": "#F1F4F8",
     "surface": "#FFFFFF",
-    "text": "#15212E",
+    "text": "#101C2B",
     "muted": "#4B5A69",
-    "primary": "#1F4F8C",
+    "primary": "#1B5BD0",
     "on_primary": "#FFFFFF",
+    "tint": "#E3ECFB",
     "line": "#D6DEE6",
     "in_office": "#1B7F4C",
     "in_class": "#A35400",
     "busy": "#B0124A",
     "away": "#66727F",
-    "lamp": "#FFE9A8",
+    "lamp": "#FFD56B",
+    "danger": "#9F1F1A",
+    "band": "#0E2441",
+    "band_raised": "#1D3A63",
+    "on_band": "#FFFFFF",
+    "on_band_muted": "#B4C3D6",
+    "band_line": "#3A5578",
+    "band_status": {
+      "in_office": "#5BD6A8",
+      "in_class": "#F2A65A",
+      "busy": "#FF6B8B",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#FFFFFF",
+      "in_class": "#FFFFFF",
+      "busy": "#FFFFFF",
+      "away": "#FFFFFF"
+    },
     "vision": [
       "tritanopia"
     ]
   },
-  "A dark vision blue_yellow": {
-    "bg": "#0D151E",
-    "surface": "#152030",
-    "text": "#E7EEF5",
+  "Corridor dark vision blue_yellow": {
+    "bg": "#0C1420",
+    "surface": "#141F2E",
+    "text": "#E8EEF6",
     "muted": "#A3B2C2",
-    "primary": "#8AB6EE",
-    "on_primary": "#0D151E",
+    "primary": "#86B4FF",
+    "on_primary": "#0C1420",
+    "tint": "#1C2E4A",
     "line": "#263445",
     "in_office": "#5BD6A8",
     "in_class": "#F2A65A",
     "busy": "#FF6B8B",
     "away": "#94A2B1",
-    "lamp": "#F6D985",
+    "lamp": "#F8D572",
+    "danger": "#F06A64",
+    "band": "#060C15",
+    "band_raised": "#16233A",
+    "on_band": "#E8EEF6",
+    "on_band_muted": "#A3B2C2",
+    "band_line": "#2C3C52",
+    "band_status": {
+      "in_office": "#5BD6A8",
+      "in_class": "#F2A65A",
+      "busy": "#FF6B8B",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#E8EEF6",
+      "in_class": "#E8EEF6",
+      "busy": "#E8EEF6",
+      "away": "#E8EEF6"
+    },
     "vision": [
       "tritanopia"
     ]
   },
-  "A light vision none": {
-    "bg": "#F2F5F8",
+  "Corridor light vision none": {
+    "bg": "#F1F4F8",
     "surface": "#FFFFFF",
-    "text": "#15212E",
+    "text": "#101C2B",
     "muted": "#4B5A69",
-    "primary": "#1F4F8C",
+    "primary": "#1B5BD0",
     "on_primary": "#FFFFFF",
+    "tint": "#E3ECFB",
     "line": "#D6DEE6",
     "in_office": "#262626",
     "in_class": "#454545",
     "busy": "#8C8C8C",
     "away": "#66727F",
-    "lamp": "#FFE9A8",
+    "lamp": "#FFD56B",
+    "danger": "#9F1F1A",
+    "band": "#0E2441",
+    "band_raised": "#1D3A63",
+    "on_band": "#FFFFFF",
+    "on_band_muted": "#B4C3D6",
+    "band_line": "#3A5578",
+    "band_status": {
+      "in_office": "#E3E3E3",
+      "in_class": "#BABABA",
+      "busy": "#6E6E6E",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#FFFFFF",
+      "in_class": "#FFFFFF",
+      "busy": "#FFFFFF",
+      "away": "#FFFFFF"
+    },
     "vision": [],
     "min_delta_e": 13
   },
-  "A dark vision none": {
-    "bg": "#0D151E",
-    "surface": "#152030",
-    "text": "#E7EEF5",
+  "Corridor dark vision none": {
+    "bg": "#0C1420",
+    "surface": "#141F2E",
+    "text": "#E8EEF6",
     "muted": "#A3B2C2",
-    "primary": "#8AB6EE",
-    "on_primary": "#0D151E",
+    "primary": "#86B4FF",
+    "on_primary": "#0C1420",
+    "tint": "#1C2E4A",
     "line": "#263445",
     "in_office": "#E3E3E3",
     "in_class": "#BABABA",
     "busy": "#6E6E6E",
     "away": "#94A2B1",
-    "lamp": "#F6D985",
+    "lamp": "#F8D572",
+    "danger": "#F06A64",
+    "band": "#060C15",
+    "band_raised": "#16233A",
+    "on_band": "#E8EEF6",
+    "on_band_muted": "#A3B2C2",
+    "band_line": "#2C3C52",
+    "band_status": {
+      "in_office": "#E3E3E3",
+      "in_class": "#BABABA",
+      "busy": "#6E6E6E",
+      "away": "#94A2B1"
+    },
+    "band_status_text": {
+      "in_office": "#E8EEF6",
+      "in_class": "#E8EEF6",
+      "busy": "#E8EEF6",
+      "away": "#E8EEF6"
+    },
     "vision": [],
     "min_delta_e": 13
   }

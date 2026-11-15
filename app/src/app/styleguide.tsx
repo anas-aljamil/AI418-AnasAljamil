@@ -4,21 +4,32 @@
  * which helps when setting up a phone (docs/run-on-phone.md).
  */
 import { useEffect, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import CalendarDays from 'lucide-react-native/icons/calendar-days';
 import CircleCheck from 'lucide-react-native/icons/circle-check';
 import CircleX from 'lucide-react-native/icons/circle-x';
+import House from 'lucide-react-native/icons/house';
 import LoaderCircle from 'lucide-react-native/icons/loader-circle';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
+import Search from 'lucide-react-native/icons/search';
+import UserRound from 'lucide-react-native/icons/user-round';
 
+import type { Block, ProfessorStatus } from '@/api/types';
+import { AppBar } from '@/components/AppBar';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { Band, Corridor, CorridorDoor } from '@/components/Corridor';
+import { DayRibbon } from '@/components/DayRibbon';
 import { Door } from '@/components/Door';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
-import { StatusLabel } from '@/components/StatusLabel';
+import { StatusLabel, statusSentence } from '@/components/StatusLabel';
 import { Card, ListRow } from '@/components/Surfaces';
+import { TabIconPill } from '@/components/tabs';
+import { TallDoor } from '@/components/TallDoor';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
@@ -26,6 +37,7 @@ import { switchLanguage } from '@/i18n';
 import { apiUrl } from '@/lib/apiUrl';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import {
+  layout,
   radii,
   space,
   type Language,
@@ -36,19 +48,87 @@ import {
 
 const STATUSES: StatusKey[] = ['in_office', 'in_class', 'busy', 'away', 'unknown'];
 const VARIANTS: TextVariant[] = ['display', 'heading', 'title', 'body', 'label', 'caption'];
-const COLOR_KEYS: (keyof Omit<Palette, 'status'>)[] = [
+type ColorKey = { [K in keyof Palette]: Palette[K] extends string ? K : never }[keyof Palette];
+const COLOR_KEYS: ColorKey[] = [
   'bg',
   'surface',
   'text',
   'muted',
   'primary',
   'onPrimary',
+  'tint',
   'line',
   'lamp',
   'danger',
+  'band',
+  'bandRaised',
+  'onBand',
+  'onBandMuted',
+  'bandLine',
 ];
 const TOPICS = ['topic_assignment', 'topic_exam_review', 'topic_advising', 'topic_other'] as const;
 const minutesAgo = (n: number) => new Date(Date.now() - n * 60000);
+
+// The corridor, sentences and ribbon are shown at one fixed moment (Monday 10:00 AM in Riyadh,
+// the seed's demo moment), so the page and its screenshots do not change with the clock.
+const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
+const sampleStatus = (
+  status: ProfessorStatus['status'],
+  until: string | null,
+  rest: Partial<ProfessorStatus> = {},
+): ProfessorStatus => ({
+  status,
+  confirmed: true,
+  source: 'schedule',
+  note: null,
+  until,
+  updated_at: null,
+  ...rest,
+});
+const CORRIDOR: { name: string; status: ProfessorStatus }[] = [
+  { name: 'sample.corridor_1', status: sampleStatus('in_office', '2026-10-05T09:00:00Z') },
+  { name: 'sample.corridor_2', status: sampleStatus('in_class', '2026-10-05T08:00:00Z') },
+  {
+    name: 'sample.corridor_3',
+    status: sampleStatus('in_office', '2026-10-05T08:30:00Z', {
+      confirmed: false,
+      updated_at: '2026-10-05T02:00:00Z',
+    }),
+  },
+  {
+    name: 'sample.corridor_4',
+    status: sampleStatus('busy', '2026-10-05T07:30:00Z', { source: 'override' }),
+  },
+  // Riyadh midnight: an away status without a return time.
+  {
+    name: 'sample.corridor_5',
+    status: sampleStatus('away', '2026-10-05T21:00:00Z', { source: 'override' }),
+  },
+];
+const sampleBlock = (block_id: number, kind: Block['kind'], start: string, end: string): Block => ({
+  block_id,
+  kind,
+  start_time: start,
+  end_time: end,
+  label: null,
+  day_of_week: 1,
+  on_date: null,
+  ends_on: null,
+  skipped_dates: [],
+});
+const DAY: Block[] = [
+  sampleBlock(1, 'class', '08:00', '09:00'),
+  sampleBlock(2, 'office_hours', '09:30', '12:00'),
+  sampleBlock(3, 'meeting', '13:00', '14:00'),
+  sampleBlock(4, 'class', '14:30', '16:00'),
+];
+const TABS = [
+  { key: 'home', Icon: House },
+  { key: 'search', Icon: Search },
+  { key: 'appointments', Icon: CalendarDays },
+  { key: 'messages', Icon: MessageCircle },
+  { key: 'profile', Icon: UserRound },
+] as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -97,6 +177,8 @@ function ConnectionCheck() {
 export default function Styleguide() {
   const { t, i18n } = useTranslation();
   const { colors, preference, setPreference } = useTheme();
+  const { width } = useWindowDimensions();
+  const doorSize = width >= layout.desktopMin ? 92 : 72;
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const [demoStatus, setDemoStatus] = useState<StatusKey>('in_office');
@@ -165,14 +247,47 @@ export default function Styleguide() {
         <ConnectionCheck />
       </Section>
 
+      <Section title={t('styleguide.corridor')}>
+        <Text color="muted">{t('styleguide.corridor_hint')}</Text>
+        <Band style={styles.band}>
+          <AppBar onBand />
+          <Corridor doorSize={doorSize}>
+            {CORRIDOR.map(({ name, status }) => (
+              <CorridorDoor
+                key={name}
+                name={t(name)}
+                status={status}
+                now={DEMO_NOW}
+                doorSize={doorSize}
+                onPress={() => undefined}
+              />
+            ))}
+          </Corridor>
+        </Band>
+        <Band style={[styles.band, styles.myDoor]}>
+          <TallDoor status={demoStatus} size={104} onBand />
+          <View style={styles.grow}>
+            <Text variant="caption" color="onBandMuted">
+              {t('styleguide.my_door')}
+            </Text>
+            <Text variant="heading" color="onBand">
+              {t(`status.${demoStatus}`)}
+            </Text>
+          </View>
+        </Band>
+      </Section>
+
       <Section title={t('styleguide.doors')}>
         <Text color="muted">{t('styleguide.door_hint')}</Text>
         <Card style={styles.demo}>
-          <Door
-            status={demoStatus}
-            size={96}
-            accessibilityLabel={t('status.door', { status: t(`status.${demoStatus}`) })}
-          />
+          <View style={styles.demoDoors}>
+            <TallDoor status={demoStatus} size={96} />
+            <Door
+              status={demoStatus}
+              size={96}
+              accessibilityLabel={t('status.door', { status: t(`status.${demoStatus}`) })}
+            />
+          </View>
           <View style={styles.wrap}>
             {STATUSES.map((status) => (
               <Chip
@@ -194,7 +309,7 @@ export default function Styleguide() {
               ]}
             >
               <View style={styles.doorSizes}>
-                <Door status={status} size={56} />
+                <TallDoor status={status} size={56} />
                 <Door status={status} size={24} />
                 <Door status={status} size={16} />
               </View>
@@ -202,6 +317,85 @@ export default function Styleguide() {
             </View>
           ))}
         </View>
+      </Section>
+
+      <Section title={t('styleguide.sentences')}>
+        <View>
+          {CORRIDOR.map(({ name, status }) => {
+            const { door, sentence } = statusSentence(status, DEMO_NOW, language, t);
+            return (
+              <ListRow
+                key={name}
+                leading={<Door status={door} size={32} />}
+                title={t(name)}
+                subtitle={sentence}
+              />
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title={t('styleguide.ribbon')}>
+        <Text color="muted">{t('styleguide.ribbon_hint')}</Text>
+        <Card>
+          <DayRibbon blocks={DAY} now="10:00" />
+        </Card>
+        <Band style={styles.band}>
+          <DayRibbon blocks={DAY} now="10:00" onBand />
+        </Band>
+      </Section>
+
+      <Section title={t('styleguide.tabs')}>
+        <Text color="muted">{t('styleguide.tabs_hint')}</Text>
+        <View
+          style={[styles.tabBar, { backgroundColor: colors.surface, borderColor: colors.line }]}
+        >
+          {TABS.map(({ key, Icon }, index) => (
+            <View key={key} style={styles.tab}>
+              <TabIconPill
+                Icon={Icon}
+                focused={index === 0}
+                color={index === 0 ? colors.primary : colors.muted}
+                size={24}
+                rail={false}
+              />
+              <Text
+                variant="caption"
+                weight={index === 0 ? 'semibold' : 'medium'}
+                color={index === 0 ? 'primary' : 'muted'}
+                numberOfLines={1}
+              >
+                {t(`tabs.${key}`)}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <Band style={[styles.band, styles.rail]}>
+          {TABS.map(({ key, Icon }, index) => (
+            <View
+              key={key}
+              style={[
+                styles.railItem,
+                { backgroundColor: index === 0 ? colors.bandRaised : 'transparent' },
+              ]}
+            >
+              <TabIconPill
+                Icon={Icon}
+                focused={index === 0}
+                color={index === 0 ? colors.onBand : colors.onBandMuted}
+                size={24}
+                rail
+              />
+              <Text
+                variant="label"
+                weight={index === 0 ? 'semibold' : 'medium'}
+                color={index === 0 ? 'onBand' : 'onBandMuted'}
+              >
+                {t(`tabs.${key}`)}
+              </Text>
+            </View>
+          ))}
+        </Band>
       </Section>
 
       <Section title={t('styleguide.colors')}>
@@ -429,6 +623,26 @@ const styles = StyleSheet.create({
   stack: { gap: space.sm, alignItems: 'flex-start' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   demo: { alignItems: 'center', gap: space.md },
+  demoDoors: { flexDirection: 'row', alignItems: 'flex-end', gap: space.lg },
+  band: { borderRadius: radii.card, padding: space.md, gap: space.sm },
+  myDoor: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  grow: { flex: 1 },
+  tabBar: {
+    flexDirection: 'row',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.card,
+    paddingVertical: space.xs,
+  },
+  tab: { flex: 1, alignItems: 'center', gap: 2 },
+  rail: { maxWidth: layout.rail, gap: space.xxs },
+  railItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: 48,
+    paddingHorizontal: space.sm,
+    borderRadius: radii.input,
+  },
   doorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   doorCell: {
     flexGrow: 1,

@@ -12,11 +12,13 @@ import {
   IBMPlexSansArabic_400Regular,
   IBMPlexSansArabic_500Medium,
   IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold,
 } from '@expo-google-fonts/ibm-plex-sans-arabic';
 import {
   IBMPlexSans_400Regular,
   IBMPlexSans_500Medium,
   IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
 } from '@expo-google-fonts/ibm-plex-sans';
 import { Platform, StyleSheet, View } from 'react-native';
 import { enableScreens } from 'react-native-screens';
@@ -67,9 +69,11 @@ export default function RootLayout() {
     IBMPlexSansArabic_400Regular,
     IBMPlexSansArabic_500Medium,
     IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
     IBMPlexSans_400Regular,
     IBMPlexSans_500Medium,
     IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
   });
   const [languageReady, setLanguageReady] = useState(false);
 

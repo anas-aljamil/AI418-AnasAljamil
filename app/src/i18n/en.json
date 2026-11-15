@@ -9,7 +9,8 @@
     "busy": "Busy",
     "away": "Away",
     "unknown": "Not confirmed",
-    "door": "Status: {{status}}"
+    "door": "Status: {{status}}",
+    "sentence": "{{status}} {{when}}"
   },
   "time": {
     "just_now": "updated just now",
@@ -92,7 +93,12 @@
     "empty_title": "No professors pinned yet",
     "empty_body": "Search for your professors and pin them to see their status here.",
     "empty_action": "Search professors",
-    "department_and_office": "Computer Science, Building A, room 214"
+    "department_and_office": "Computer Science, Building A, room 214",
+    "corridor_1": "Dr. Noura",
+    "corridor_2": "Prof. Khalid",
+    "corridor_3": "Dr. Omar",
+    "corridor_4": "Dr. Huda",
+    "corridor_5": "Dr. Reem"
   },
   "styleguide": {
     "title": "Styleguide",
@@ -124,7 +130,16 @@
     "variant_body": "Body 17",
     "variant_title": "Title 20",
     "variant_heading": "Heading 24",
-    "variant_display": "Display 30"
+    "variant_display": "Display 30",
+    "corridor": "The corridor",
+    "corridor_hint": "A lit door means the professor is in. The row scrolls sideways.",
+    "tall_doors": "Tall doors",
+    "sentences": "Status sentences",
+    "ribbon": "Day ribbon",
+    "ribbon_hint": "Today as one line: office hours solid, classes striped, meetings dotted.",
+    "tabs": "Tab bar",
+    "tabs_hint": "The current tab has a filled pill behind its icon, and a heavier label.",
+    "my_door": "Students see you now"
   },
   "honorific": {
     "dr": "Dr.",

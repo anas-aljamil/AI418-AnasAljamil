@@ -4,7 +4,7 @@
  * colour-blind separation of the status colours).
  */
 import palettesJson from '../../../docs/design-plan/palettes.json';
-import { COLOR_VISIONS, paletteFor, palettes, type ColorScheme } from './tokens';
+import { COLOR_VISIONS, paletteFor, palettes, type ColorScheme, type Palette } from './tokens';
 
 function luminance(hex: string): number {
   const channels = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -54,28 +54,62 @@ describe.each(schemes)('%s theme contrast (WCAG 2.2 AA)', (scheme) => {
       });
     }
   });
+
+  it('the current tab (primary on the tint pill) reaches 4.5:1', () => {
+    expect(contrast(p.primary, p.tint)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('text on the band and on its raised item reaches 4.5:1', () => {
+    expect(contrast(p.onBand, p.band)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(p.onBandMuted, p.band)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(p.onBand, p.bandRaised)).toBeGreaterThanOrEqual(4.5);
+  });
 });
+
+const approved = palettesJson as unknown as Record<string, Record<string, unknown>>;
+const withoutUnknown = ({ unknown: _unknown, ...rest }: Record<string, string>) => rest;
+
+/** A palette in the shape of docs/design-plan/palettes.json. */
+function asApproved(p: Palette) {
+  return {
+    bg: p.bg,
+    surface: p.surface,
+    text: p.text,
+    muted: p.muted,
+    primary: p.primary,
+    on_primary: p.onPrimary,
+    tint: p.tint,
+    line: p.line,
+    in_office: p.status.in_office,
+    in_class: p.status.in_class,
+    busy: p.status.busy,
+    away: p.status.away,
+    lamp: p.lamp,
+    danger: p.danger,
+    band: p.band,
+    band_raised: p.bandRaised,
+    on_band: p.onBand,
+    on_band_muted: p.onBandMuted,
+    band_line: p.bandLine,
+    band_status: withoutUnknown(p.bandStatus),
+    band_status_text: withoutUnknown(p.bandStatusText),
+  };
+}
 
 describe('tokens match the approved palette (DESIGN.md Section 11)', () => {
   it.each(schemes)('%s', (scheme) => {
-    const approved = (palettesJson as unknown as Record<string, Record<string, string>>)[
-      `A ${scheme}`
-    ]!;
-    const p = palettes[scheme];
-    expect({
-      bg: p.bg,
-      surface: p.surface,
-      text: p.text,
-      muted: p.muted,
-      primary: p.primary,
-      on_primary: p.onPrimary,
-      line: p.line,
-      lamp: p.lamp,
-      in_office: p.status.in_office,
-      in_class: p.status.in_class,
-      busy: p.status.busy,
-      away: p.status.away,
-    }).toEqual(approved);
+    expect(asApproved(palettes[scheme])).toEqual(approved[`Corridor ${scheme}`]);
+  });
+
+  it.each(schemes)('%s, each colour-vision setting', (scheme) => {
+    for (const vision of COLOR_VISIONS.filter((v) => v !== 'normal')) {
+      const {
+        vision: _kinds,
+        min_delta_e: _min,
+        ...colours
+      } = approved[`Corridor ${scheme} vision ${vision}`] as Record<string, unknown>;
+      expect({ vision, ...asApproved(paletteFor(scheme, vision)) }).toEqual({ vision, ...colours });
+    }
   });
 });
 
@@ -93,6 +127,17 @@ describe.each(COLOR_VISIONS)('colour vision %s', (vision) => {
         status,
         ok: true,
       });
+    }
+  });
+
+  // On the band the door marks are drawn in the band colour, so one check covers both.
+  it.each(schemes)('doors reach 3:1 and status words 4.5:1 on the band (%s)', (scheme) => {
+    const p = paletteFor(scheme, vision);
+    for (const [status, color] of Object.entries(p.bandStatus)) {
+      expect({ status, ok: contrast(color, p.band) >= 3 }).toEqual({ status, ok: true });
+    }
+    for (const [status, color] of Object.entries(p.bandStatusText)) {
+      expect({ status, ok: contrast(color, p.band) >= 4.5 }).toEqual({ status, ok: true });
     }
   });
 });

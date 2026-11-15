@@ -9,7 +9,8 @@
     "busy": "مشغول",
     "away": "خارج المكتب",
     "unknown": "غير مؤكد",
-    "door": "الحالة: {{status}}"
+    "door": "الحالة: {{status}}",
+    "sentence": "{{status}} {{when}}"
   },
   "time": {
     "just_now": "آخر تحديث الآن",
@@ -92,7 +93,12 @@
     "empty_title": "لم تثبّت أي أستاذ بعد",
     "empty_body": "ابحث عن أساتذتك وثبّتهم لترى حالتهم هنا.",
     "empty_action": "ابحث عن أستاذ",
-    "department_and_office": "علوم الحاسب، مبنى A، غرفة 214"
+    "department_and_office": "علوم الحاسب، مبنى A، غرفة 214",
+    "corridor_1": "د. نورة",
+    "corridor_2": "أ.د. خالد",
+    "corridor_3": "د. عمر",
+    "corridor_4": "د. هدى",
+    "corridor_5": "د. ريم"
   },
   "styleguide": {
     "title": "دليل التصميم",
@@ -124,7 +130,16 @@
     "variant_body": "نص 17",
     "variant_title": "عنوان 20",
     "variant_heading": "عنوان رئيسي 24",
-    "variant_display": "عرض 30"
+    "variant_display": "عرض 30",
+    "corridor": "الممر",
+    "corridor_hint": "الباب المضاء يعني أن الأستاذ في مكتبه. الصف يتحرك جانبيًا.",
+    "tall_doors": "الأبواب الطويلة",
+    "sentences": "جمل الحالة",
+    "ribbon": "شريط اليوم",
+    "ribbon_hint": "اليوم في خط واحد: الساعات المكتبية مصمتة، والمحاضرات مخططة، والاجتماعات منقطة.",
+    "tabs": "شريط التبويب",
+    "tabs_hint": "التبويب الحالي خلف أيقونته كبسولة ملونة، واسمه أثقل.",
+    "my_door": "يراك الطلاب الآن"
   },
   "honorific": {
     "dr": "د.",

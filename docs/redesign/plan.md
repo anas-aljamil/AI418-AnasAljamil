@@ -1,8 +1,12 @@
 # Mawjood: redesign plan (two directions)
 
-> **Status: waiting for the owner's choice.** No app code has changed. Owner request
+> **Status: the owner chose the recommended mix (Section 6) on 2026-11-15.** Phase R1
+> (foundations) is built and waits for review; no screen is rebuilt yet. Owner request
 > (2026-11-14): rebuild the interface so it is more beautiful, more modern, more practical,
 > and innovative. This follows the process in [DESIGN.md](../DESIGN.md) Section 10, step 1.
+>
+> Changed while building R1 (reasons in DESIGN.md Section 11): the light band is `#0E2441`,
+> not `#0F2747`; the status sentence says "until 11:00 AM", not "back at 11:00 AM".
 
 Live preview: open [preview.html](preview.html) in a browser and switch direction and theme
 with the buttons. Screenshots of it:
