@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>موجود: اتجاهان للواجهة الجديدة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* The project's own font files first (work offline); Google Fonts is the fallback. */
+@font-face{font-family:'Plex Local';font-weight:400;src:url('../../app/node_modules/@expo-google-fonts/ibm-plex-sans-arabic/400Regular/IBMPlexSansArabic_400Regular.ttf')}
+@font-face{font-family:'Plex Local';font-weight:500;src:url('../../app/node_modules/@expo-google-fonts/ibm-plex-sans-arabic/500Medium/IBMPlexSansArabic_500Medium.ttf')}
+@font-face{font-family:'Plex Local';font-weight:600;src:url('../../app/node_modules/@expo-google-fonts/ibm-plex-sans-arabic/600SemiBold/IBMPlexSansArabic_600SemiBold.ttf')}
+@font-face{font-family:'Plex Local';font-weight:700;src:url('../../app/node_modules/@expo-google-fonts/ibm-plex-sans-arabic/700Bold/IBMPlexSansArabic_700Bold.ttf')}
+/* ---------- Preview page chrome (not part of the app) ---------- */
+*{box-sizing:border-box;margin:0}
+html{font-family:'Plex Local','IBM Plex Sans Arabic',system-ui,sans-serif;line-height:1.7}
+body{background:#E6EAEE;color:#141C26;padding:24px 16px 64px}
+body.dark{background:#04070B;color:#E8EEF6}
+.pv-head{max-width:1200px;margin:0 auto 24px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:end;justify-content:space-between}
+.pv-head h1{font-size:24px;font-weight:600;line-height:1.5}
+.pv-head p{font-size:15px;opacity:.75;max-width:60ch}
+.pv-controls{display:flex;flex-wrap:wrap;gap:12px}
+.pv-switch{display:inline-flex;padding:4px;border-radius:999px;background:rgba(127,140,155,.22)}
+.pv-switch button{font:inherit;font-size:15px;font-weight:500;border:0;background:none;color:inherit;padding:8px 16px;border-radius:999px;cursor:pointer;min-height:44px}
+.pv-switch button[aria-pressed="true"]{background:#141C26;color:#fff}
+body.dark .pv-switch button[aria-pressed="true"]{background:#E8EEF6;color:#04070B}
+.pv-switch button:focus-visible{outline:3px solid #1B5BD0;outline-offset:2px}
+.pv-stage{max-width:1200px;margin:0 auto}
+.pv-row{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start;justify-content:center;margin-bottom:40px}
+.pv-cap{font-size:13px;opacity:.7;margin-top:8px;text-align:center}
+.pv-notes{flex:1 1 280px;max-width:380px;font-size:15px}
+.pv-notes h2{font-size:20px;font-weight:600;margin-bottom:8px}
+.pv-notes h3{font-size:15px;font-weight:600;margin:16px 0 4px}
+.pv-notes ul{padding-inline-start:20px}
+.pv-notes li{margin-bottom:6px}
+.pv-deskwrap{overflow-x:auto}
+
+/* ---------- Tokens: Direction 1 "The corridor" ---------- */
+.pv-stage[data-dir="1"]{--head:'Plex Local','IBM Plex Sans Arabic';--hw:700}
+.pv-stage[data-dir="1"][data-theme="light"]{
+  --wall:#F1F4F8;--plate:#FFFFFF;--ink:#101C2B;--muted:#4A5868;--line:#D5DDE7;
+  --primary:#1B5BD0;--on-primary:#FFFFFF;--link:#1B5BD0;--lamp:#FFD56B;
+  --band:#0F2747;--band-2:#183662;--band-ink:#F2F6FB;--band-muted:#B7C5D8;--band-line:#2E4D7C;
+  --in:#178C55;--cls:#B06C00;--busy:#9F1F1A;--away:#66727F;
+  --float:0 10px 28px rgba(16,28,43,.16)}
+.pv-stage[data-dir="1"][data-theme="dark"]{
+  --wall:#0C1420;--plate:#141F2E;--ink:#E8EEF6;--muted:#A2B0C1;--line:#243244;
+  --primary:#86B4FF;--on-primary:#0C1420;--link:#86B4FF;--lamp:#F8D572;
+  --band:#060C15;--band-2:#101B2B;--band-ink:#E8EEF6;--band-muted:#9FAEC0;--band-line:#22324A;
+  --in:#63D69A;--cls:#F2B544;--busy:#E8524C;--away:#94A2B1;
+  --float:0 10px 28px rgba(0,0,0,.55)}
+/* ---------- Tokens: Direction 2 "The day line" ---------- */
+.pv-stage[data-dir="2"]{--head:'Reem Kufi';--hw:600}
+.pv-stage[data-dir="2"][data-theme="light"]{
+  --wall:#F8F9FB;--plate:#FFFFFF;--ink:#14181F;--muted:#505A66;--line:#DDE2E8;
+  --primary:#14181F;--on-primary:#FFFFFF;--link:#1F4F8C;--lamp:#FFE08A;
+  --in:#178C55;--cls:#B06C00;--busy:#9F1F1A;--away:#66727F;
+  --float:0 10px 28px rgba(20,24,31,.14)}
+.pv-stage[data-dir="2"][data-theme="dark"]{
+  --wall:#0E1116;--plate:#171B22;--ink:#ECEFF3;--muted:#A5AEB9;--line:#2A303A;
+  --primary:#ECEFF3;--on-primary:#0E1116;--link:#8AB6EE;--lamp:#F6D985;
+  --in:#63D69A;--cls:#F2B544;--busy:#E8524C;--away:#94A2B1;
+  --float:0 10px 28px rgba(0,0,0,.55)}
+/* On the navy band the status colours are always the dark-theme ones. */
+.band{--in:#63D69A;--cls:#F2B544;--busy:#F06A64;--away:#94A2B1;--door-bg:var(--band)}
+
+/* ---------- Device frames ---------- */
+.phone{width:375px;height:800px;border:10px solid #0B0F14;border-radius:44px;overflow:hidden;background:var(--wall);color:var(--ink);display:flex;flex-direction:column;flex:none}
+.scroll{flex:1;overflow-y:auto;scrollbar-width:none}
+.desk{width:1200px;height:720px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--wall);color:var(--ink);display:grid;grid-template-columns:220px 1fr}
+.app{--door-bg:var(--wall);font-size:15px}
+.app h1{font-family:var(--head),'Plex Local','IBM Plex Sans Arabic',sans-serif;font-weight:var(--hw);line-height:1.45}
+.app h2{font-weight:600;line-height:1.5}
+.app svg{display:block;flex:none}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Shared parts ---------- */
+.st-in{color:var(--in)}.st-cls{color:var(--cls)}.st-busy{color:var(--busy)}.st-away,.st-unk{color:var(--away)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px}
+.topbar{display:flex;align-items:center;justify-content:space-between;min-height:48px}
+.iconbtn{width:48px;height:48px;display:grid;place-items:center;border-radius:999px;position:relative}
+.badge{position:absolute;top:6px;inset-inline-end:6px;min-width:18px;height:18px;border-radius:999px;background:var(--busy);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center}
+.search{display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;border-radius:999px;background:var(--plate);border:1px solid var(--line);color:var(--muted);font-size:15px}
+.sec{padding:20px 20px 0}
+.sec > h2{font-size:20px}
+.sec > .sub{font-size:13px;color:var(--muted)}
+.rows{margin-top:8px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);min-height:64px}
+.row:last-child{border-bottom:0}
+.row .who{flex:1;min-width:0}
+.row .who b{display:block;font-size:17px;font-weight:600;line-height:1.5}
+.say{font-size:15px;font-weight:500}
+.say i{font-style:normal;font-weight:400;color:var(--muted)}
+.pinbtn{width:44px;height:44px;display:grid;place-items:center;color:var(--muted)}
+.pinbtn.on{color:var(--link)}
+.pinbtn.on .ic{fill:currentColor}
+.ticket{margin:16px 20px 0;display:grid;grid-template-columns:auto 1fr;background:var(--plate);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ticket .when{padding:14px 16px;text-align:center;border-inline-end:1.5px dashed var(--line);display:flex;flex-direction:column;justify-content:center}
+.ticket .when b{font-family:var(--head),sans-serif;font-size:24px;font-weight:var(--hw);line-height:1.3}
+.ticket .when span{font-size:13px;color:var(--muted)}
+.ticket .what{padding:12px 16px;min-width:0}
+.ticket .what b{font-size:17px;font-weight:600}
+.ticket .what p{font-size:13px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:2px 10px;border-radius:999px;border:1px solid currentColor}
+.pill.ok{color:var(--in)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:15px;font-weight:500;padding:0 16px;min-height:44px;display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--line);background:var(--plate)}
+.btn{font-size:15px;font-weight:600;min-height:48px;padding:0 20px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.ghost{border:1.5px solid var(--line);color:var(--ink)}
+.btn.text{color:var(--link);padding:0 12px}
+.card{background:var(--plate);border:1px solid var(--line);border-radius:14px;padding:16px}
+.req b{font-size:17px;font-weight:600}
+.req p{font-size:15px;color:var(--muted)}
+.req .acts{display:flex;gap:8px;margin-top:12px}
+.tabs{display:flex;background:var(--plate);border-top:1px solid var(--line);padding:6px 4px 14px;flex:none}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:500;color:var(--muted);min-height:52px;justify-content:center;position:relative}
+.tab.on{color:var(--link);font-weight:600}
+.tab .nub{width:56px;height:30px;border-radius:999px;display:grid;place-items:center}
+.tab.on .nub{background:color-mix(in srgb,var(--link) 14%,transparent)}
+.pv-stage[data-dir="2"] .tab.on{color:var(--ink)}
+.pv-stage[data-dir="2"] .tab.on .nub{background:var(--ink);color:var(--wall)}
+.rail{padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+.rail .brand{padding:4px 12px 20px}
+.rail a{display:flex;align-items:center;gap:12px;padding:0 12px;min-height:48px;border-radius:10px;font-weight:500;color:inherit;text-decoration:none}
+
+/* ---------- Direction 1: the corridor ---------- */
+.band{background:var(--band);color:var(--band-ink)}
+.c-hero{padding:8px 20px 44px;border-radius:0 0 28px 28px}
+.c-hero h1{font-size:28px;margin-top:8px}
+.c-hero .answer{font-size:17px;color:var(--band-muted)}
+.corridor{position:relative;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:16px -20px 0;padding:0 16px}
+.corridor::before{content:"";position:absolute;inset-inline:0;top:89px;height:2px;background:var(--band-line);min-width:100%}
+.c-door{flex:none;width:98px;text-align:center;position:relative}
+.c-door svg{margin:0 auto}
+.c-door.lit svg{filter:drop-shadow(0 0 14px color-mix(in srgb,var(--lamp) 55%,transparent))}
+.c-door b{display:block;font-size:13px;font-weight:600;line-height:1.5;margin-top:2px}
+.c-door .say{font-size:12px;line-height:1.5;display:block}
+.c-door .say i{color:var(--band-muted);display:block}
+.c-search{margin:-26px 20px 0;position:relative;box-shadow:var(--float)}
+.c-me{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:end;padding:8px 20px 44px;border-radius:0 0 28px 28px}
+.c-me .topbar{grid-column:1/-1}
+.c-me .txt{padding-bottom:28px}
+.c-me .txt span{font-size:13px;color:var(--band-muted)}
+.c-me .txt h1{font-size:30px}
+.c-me .txt p{font-size:15px;color:var(--band-muted)}
+.c-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:-32px 16px 0;position:relative}
+.c-pick .opt{background:var(--plate);border:1.5px solid var(--line);border-radius:14px;padding:10px 4px 8px;text-align:center;font-size:13px;font-weight:600;color:var(--ink);box-shadow:var(--float);--door-bg:var(--plate);position:relative;min-height:92px}
+.c-pick .opt svg{margin:0 auto 4px}
+.c-pick .opt.on{border-color:var(--primary);border-width:2.5px}
+.c-pick .opt.on::after{content:"";position:absolute;top:6px;inset-inline-end:6px;width:18px;height:18px;border-radius:999px;background:var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4.5 4.5L18 8'/%3E%3C/svg%3E") center/12px no-repeat}
+.desk .rail.band a.on{background:var(--band-2)}
+.desk .rail.band a{color:var(--band-muted)}
+.desk .rail.band a.on{color:var(--band-ink)}
+.c-main{display:flex;flex-direction:column;min-width:0}
+.c-main .c-hero{border-radius:0;padding:24px 40px 40px;display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:end;border-inline-start:1px solid var(--band-line)}
+.c-main .c-hero h1{font-size:34px}
+.c-main .c-hero .txt{padding-bottom:56px}
+.c-main .corridor{margin:0;padding:0;gap:8px}
+.c-main .corridor::before{top:114px}
+.c-main .c-door{width:108px}
+.c-main .c-door b{font-size:15px}
+.c-main .c-door .say{font-size:13px}
+.c-cols{display:grid;grid-template-columns:1.5fr 1fr;gap:40px;padding:0 40px}
+.c-cols .sec{padding:24px 0 0}
+.c-cols .ticket{margin:12px 0 0}
+.c-cols .c-search{margin:-26px 0 0}
+
+/* ---------- Direction 2: the day line ---------- */
+.b-top{padding:8px 20px 0}
+.b-top .date{font-size:13px;color:var(--muted)}
+.b-top h1{font-size:30px;margin:2px 0 14px}
+.board{position:relative;--namecol:0px;margin-top:12px}
+.board::after{content:"";position:absolute;top:22px;bottom:0;width:2px;background:var(--ink);inset-inline-start:calc(var(--namecol) + (100% - var(--namecol)) * .2222);border-radius:2px}
+.b-axis{position:relative;height:28px;margin-inline-start:var(--namecol);font-size:12px;color:var(--muted)}
+.b-axis span{position:absolute;top:0;transform:translateX(50%);white-space:nowrap}
+.b-axis span:first-child{transform:none}
+.b-axis .now{background:var(--ink);color:var(--wall);font-weight:600;padding:0 8px;border-radius:999px;top:-2px;z-index:2}
+.b-row{padding:10px 0 14px;border-bottom:1px solid var(--line)}
+.b-row:last-child{border-bottom:0}
+.b-who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.b-who b{font-size:17px;font-weight:600;flex:1;min-width:0;line-height:1.5}
+.b-who .say{font-size:13px;text-align:end}
+.b-who .say i{display:block}
+.rib{position:relative;height:12px;border-radius:999px;background:var(--line)}
+.rib .seg{position:absolute;top:0;bottom:0;inset-inline-start:var(--s);width:var(--w);border-radius:999px}
+.rib .office{background:var(--in)}
+.rib .office.unsure{background:none;border:2px dashed var(--in)}
+.rib .class{border:1.5px solid var(--cls);background:repeating-linear-gradient(135deg,var(--cls) 0 3px,transparent 3px 6px)}
+.rib .meeting{border:1.5px solid var(--busy);background:radial-gradient(circle,var(--busy) 1.6px,transparent 2px) 0 0/6px 100%}
+.rib::after{content:"";position:absolute;inset-block:-1px;inset-inline-start:0;width:22.22%;background:var(--wall);opacity:.6;border-radius:999px}
+.phone .board::after{display:none}
+.phone .board .rib::before{content:"";position:absolute;inset-inline-start:22.22%;top:-6px;bottom:-6px;width:2px;background:var(--ink);border-radius:2px;z-index:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .rib{width:26px;height:10px;display:inline-block}
+.legend .rib::after{display:none}
+.legend .rib .seg{inset-inline-start:0;width:100%}
+.b-me{display:flex;gap:14px;align-items:center;padding:4px 20px 0}
+.b-me h1{font-size:28px}
+.b-me p{font-size:13px;color:var(--muted)}
+.b-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:16px 16px 0}
+.b-pick .opt{border:1.5px solid var(--line);border-radius:14px;padding:8px 2px 6px;text-align:center;font-size:13px;font-weight:600;background:var(--plate);--door-bg:var(--plate);min-height:84px}
+.b-pick .opt svg{margin:0 auto 2px}
+.b-pick .opt.on{background:var(--ink);color:var(--wall);border-color:var(--ink);--door-bg:var(--ink)}
+.myday .rib{height:36px;border-radius:10px}
+.myday .rib .seg{border-radius:8px}
+.myday .rib::after{border-radius:10px}
+.myday .lbls{position:relative;height:44px;font-size:12px;color:var(--muted);margin-top:6px}
+.myday .lbls span{position:absolute;inset-inline-start:var(--s);line-height:1.5;padding-inline-start:6px}
+.myday .lbls b{display:block;color:var(--ink);font-weight:600}
+.desk .rail.plain{border-inline-end:1px solid var(--line);background:var(--plate)}
+.desk .rail.plain a{color:var(--muted)}
+.desk .rail.plain a.on{background:var(--ink);color:var(--wall)}
+.b-main{padding:28px 40px;display:grid;grid-template-columns:1fr 280px;gap:40px;align-content:start;min-width:0}
+.b-main .b-top{padding:0;grid-column:1/-1;display:flex;align-items:end;justify-content:space-between;gap:24px}
+.b-main .b-top h1{font-size:36px;margin:0}
+.b-main .search{width:300px}
+.b-main .board{--namecol:220px;margin:0}
+.b-main .b-row{display:grid;grid-template-columns:var(--namecol) 1fr;align-items:center;padding:12px 0}
+.b-main .b-who{margin:0;padding-inline-end:20px;flex-wrap:wrap;gap:2px 10px}
+.b-main .b-who .say{flex-basis:100%;text-align:start;padding-inline-start:38px}
+.b-main .b-who .say i{display:inline}
+.b-main .rib{height:16px}
+.b-main .ticket{margin:0 0 16px}
+</style>
+</head>
+<body>
+<header class="pv-head">
+  <div>
+    <h1>موجود: اتجاهان للواجهة الجديدة</h1>
+    <p>نماذج للمقارنة فقط، ببيانات تجريبية من قاعدة البذور عند الاثنين 10:00 ص. بدّل الاتجاه والمظهر من الأزرار.</p>
+  </div>
+  <div class="pv-controls">
+    <div class="pv-switch" role="group" aria-label="الاتجاه">
+      <button data-set="dir" data-v="1" aria-pressed="true">1: الممر</button>
+      <button data-set="dir" data-v="2" aria-pressed="false">2: خط اليوم</button>
+    </div>
+    <div class="pv-switch" role="group" aria-label="المظهر">
+      <button data-set="theme" data-v="light" aria-pressed="true">فاتح</button>
+      <button data-set="theme" data-v="dark" aria-pressed="false">داكن</button>
+    </div>
+  </div>
+</header>
+
+<main class="pv-stage" data-dir="1" data-theme="light" id="stage">
+  <div class="pv-row">
+    <figure><div class="phone app" id="p-home"></div><figcaption class="pv-cap">الطالب: الرئيسية</figcaption></figure>
+    <figure><div class="phone app" id="p-status"></div><figcaption class="pv-cap">الأستاذ: حالتي</figcaption></figure>
+    <aside class="pv-notes" id="notes"></aside>
+  </div>
+  <figure class="pv-deskwrap"><div class="desk app" id="d-home"></div><figcaption class="pv-cap">الطالب على الحاسوب (1200 بكسل)</figcaption></figure>
+</main>
+
+<script>
+/* ---- demo data: fictional seed professors, Monday 10:00 AM ---- */
+const P = [
+  {n:'د. نورة الحربي', st:'in',   label:'في المكتب',  when:'حتى 12:00 م', pin:1,
+   day:[['class','08:00','09:30'],['office','10:00','12:00'],['class','13:00','14:30']]},
+  {n:'أ.د. خالد العتيبي', st:'cls', label:'في محاضرة', when:'يعود 11:00 ص', pin:1,
+   day:[['office','08:30','09:30'],['class','09:30','11:00'],['office','11:00','12:30'],['meeting','14:00','15:00']]},
+  {n:'د. عمر بن سالم', st:'in',   label:'في المكتب',  when:'حتى 11:30 ص', pin:1,
+   day:[['office','10:00','11:30'],['class','12:00','13:30']]},
+  {n:'د. هدى القحطاني', st:'busy', label:'مشغول',     when:'حتى 10:30 ص', pin:1,
+   day:[['meeting','09:30','10:30'],['office','10:30','12:00'],['class','13:00','14:30']]},
+  {n:'د. ريم الدوسري', st:'unk',  label:'في المكتب',  when:'غير مؤكد', pin:0,
+   day:[['office unsure','09:00','11:00'],['class','11:30','13:00']]},
+  {n:'أ. فيصل الزهراني', st:'away', label:'خارج المكتب', when:'يعود 1:00 م', pin:0,
+   day:[['class','08:00','09:30'],['office','13:00','15:00']]},
+];
+const I = {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  chat:'<path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12Z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  bell:'<path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7 2.5 7h-17S6 15 6 9ZM10 20a2 2 0 0 0 4 0"/>',
+  pin:'<path d="M12 16v6M8 3h8l-1 6 3 4.5H6L9 9Z"/>',
+  door:'<path d="M6 21V4h12v17M3 21h18M14.5 12.5v.01"/>',
+  list:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+};
+const ic = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+
+/* ---- the door, drawn tall so it can be the hero as well as a row icon ---- */
+let uid = 0;
+function door(st, w, floor = true) {
+  const id = 'pool' + (uid++), frame = 'x="14" y="6" width="36" height="74" rx="2"';
+  let s = '';
+  if (st === 'in') s = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--lamp)" stop-opacity=".7"/><stop offset="1" stop-color="var(--lamp)" stop-opacity="0"/></linearGradient></defs>
+    <path d="M14 80H50L62 96H2Z" fill="url(#${id})"/><rect ${frame} fill="var(--lamp)"/><path d="M50 6 37 12V75L50 80Z" fill="currentColor"/>`;
+  if (st === 'busy') s = `<rect ${frame} fill="var(--lamp)"/><rect x="20" y="6" width="30" height="74" fill="currentColor"/><rect x="27" y="39" width="16" height="6" rx="3" fill="var(--door-bg)"/>`;
+  if (st === 'cls') s = `<rect ${frame} fill="currentColor"/><path d="M23 36c3-2 6-2 9 0c3-2 6-2 9 0v12c-3-2-6-2-9 0c-3-2-6-2-9 0ZM32 36v12" fill="none" stroke="var(--door-bg)" stroke-width="2.4" stroke-linejoin="round"/>`;
+  if (st === 'away') s = `<rect ${frame} fill="currentColor"/><circle cx="21" cy="45" r="2.8" fill="var(--door-bg)"/>`;
+  const dash = st === 'unk' ? ' stroke-dasharray="5 5.4" stroke-linecap="round"' : '';
+  return `<svg class="st-${st}" width="${w}" height="${w * 1.5}" viewBox="0 0 64 96" aria-hidden="true">${s}
+    <rect ${frame} fill="none" stroke="currentColor" stroke-width="3"${dash}/>
+    ${floor ? '<path d="M5 80H59" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>' : ''}</svg>`;
+}
+const brand = () => `<div class="brand">${door('in', 20)}<span>موجود</span></div>`;
+const say = p => `<span class="say st-${p.st}">${p.label} <i>${p.when}</i></span>`;
+const pin = p => `<span class="pinbtn ${p.pin ? 'on' : ''}">${ic('pin')}</span>`;
+
+/* ---- day ribbon: 8:00 to 17:00, in the reading direction ---- */
+const pct = t => { const [h, m] = t.split(':').map(Number); return ((h * 60 + m - 480) / 540 * 100).toFixed(2); };
+const rib = day => `<div class="rib">${day.map(([k, a, b]) =>
+  `<i class="seg ${k}" style="--s:${pct(a)}%;--w:${(pct(b) - pct(a)).toFixed(2)}%"></i>`).join('')}</div>`;
+const axis = () => `<div class="b-axis"><span style="inset-inline-start:0">8 ص</span><span class="now" style="inset-inline-start:22.22%">الآن 10:00</span><span style="inset-inline-start:44.44%">12 م</span><span style="inset-inline-start:66.67%">2 م</span><span style="inset-inline-start:88.89%">4 م</span></div>`;
+const legend = () => `<div class="legend"><span><i class="rib"><i class="seg office"></i></i>ساعات مكتبية</span><span><i class="rib"><i class="seg class"></i></i>محاضرة</span><span><i class="rib"><i class="seg meeting"></i></i>اجتماع</span></div>`;
+
+const tabs = (names, icons, on = 0) => `<nav class="tabs">${names.map((n, i) =>
+  `<span class="tab ${i === on ? 'on' : ''}"><span class="nub">${ic(icons[i])}</span>${n}</span>`).join('')}</nav>`;
+const sTabs = () => tabs(['الرئيسية', 'بحث', 'مواعيدي', 'الرسائل', 'حسابي'], ['home', 'search', 'cal', 'chat', 'user']);
+const pTabs = () => tabs(['حالتي', 'الطلبات', 'الجدول', 'الرسائل', 'حسابي'], ['door', 'list', 'cal', 'chat', 'user']);
+const rail = cls => `<nav class="rail ${cls}">${brand()}${['الرئيسية', 'بحث', 'مواعيدي', 'الرسائل', 'حسابي'].map((n, i) =>
+  `<a class="${i ? '' : 'on'}">${ic(['home', 'search', 'cal', 'chat', 'user'][i])}${n}</a>`).join('')}</nav>`;
+const ticket = () => `<div class="ticket"><div class="when"><b>10:30 ص</b><span>الأحد، بعد 6 أيام</span></div>
+  <div class="what"><b>د. نورة الحربي</b><p>مبنى A، غرفة 214، 15 دقيقة</p><span class="pill ok">تمت الموافقة</span></div></div>`;
+const search = extra => `<div class="search ${extra || ''}">${ic('search')}<span>ابحث عن أستاذ بالاسم أو القسم</span></div>`;
+const request = () => `<div class="card req"><b>سعد المطيري</b><p>الثلاثاء 10:00 ص، 15 دقيقة، واجب</p>
+  <div class="acts"><span class="btn primary">وافق</span><span class="btn ghost">اعتذر</span><span class="btn text">راسل</span></div></div>`;
+const presets = () => `<div class="chips"><span class="chip">أعود بعد 15 دقيقة</span><span class="chip">أعود بعد 30 دقيقة</span><span class="chip">خارج المكتب بقية اليوم</span></div>`;
+const rows = list => `<div class="rows">${list.map(p => `<div class="row">${door(p.st, 26)}<div class="who"><b>${p.n}</b>${say(p)}</div>${pin(p)}</div>`).join('')}</div>`;
+const pick = (cls, w) => `<div class="${cls}">${[['in', 'في المكتب'], ['cls', 'في محاضرة'], ['busy', 'مشغول'], ['away', 'خارج المكتب']].map(([s, l], i) =>
+  `<span class="opt ${i ? '' : 'on'}">${door(s, w)}${l}</span>`).join('')}</div>`;
+
+/* ---- Direction 1: the corridor ---- */
+const corridor = (list, w) => `<div class="corridor">${list.map(p =>
+  `<div class="c-door ${p.st === 'in' ? 'lit' : ''}">${door(p.st, w, false)}<b>${p.n}</b>${say(p)}</div>`).join('')}</div>`;
+const D1 = {
+  home: () => `<div class="scroll"><header class="band c-hero">
+      <div class="topbar">${brand()}<span class="iconbtn">${ic('bell')}</span></div>
+      <h1>صباح الخير يا سعد</h1><p class="answer">اثنان من أساتذتك في مكتبيهما الآن</p>
+      ${corridor(P.filter(p => p.pin), 72)}</header>
+    ${search('c-search')}${ticket()}
+    <section class="sec"><h2>هندسة البرمجيات الآن</h2>${rows([P[0], P[4], P[1], P[5]])}</section></div>${sTabs()}`,
+  status: () => `<div class="scroll"><header class="band c-me">
+      <div class="topbar">${brand()}<span class="iconbtn">${ic('bell')}<i class="badge">1</i></span></div>
+      ${door('in', 104)}<div class="txt"><span>يراك الطلاب الآن</span><h1>في المكتب</h1><p>حتى 12:00 م، حسب جدولك</p></div></header>
+    ${pick('c-pick', 30)}
+    <section class="sec">${presets()}<span class="btn text" style="margin-top:4px">${ic('plus')}أضف ملاحظة للطلاب</span></section>
+    <section class="sec"><h2>طلب واحد بانتظارك</h2><div style="margin-top:8px">${request()}</div></section></div>${pTabs()}`,
+  desk: () => `${rail('band')}<div class="c-main"><header class="band c-hero">
+      <div class="txt"><h1>صباح الخير يا سعد</h1><p class="answer">اثنان من أساتذتك في مكتبيهما الآن</p></div>
+      ${corridor(P.filter(p => p.pin).concat(P[5]), 92)}</header>
+    <div class="c-cols"><section class="sec"><h2>هندسة البرمجيات الآن</h2>${rows([P[0], P[4], P[1], P[5]])}</section>
+      <div>${search('c-search')}<section class="sec"><h2>موعدك القادم</h2>${ticket()}</section></div></div></div>`,
+  notes: `<h2>الاتجاه 1: الممر</h2>
+    <p>الرئيسية هي ممر القسم. الباب المضاء يعني أن الأستاذ موجود، فتعرف الجواب من الضوء قبل أن تقرأ كلمة.</p>
+    <h3>ما الذي يصير عمليًا أكثر</h3>
+    <ul><li>جملة الحالة تجيب عن السؤال التالي: «حتى 12:00» أو «يعود 11:00»، بدل «آخر تحديث قبل 6 أيام».</li>
+    <li>الأستاذ يرى بابه كما يراه الطلاب، ويغيّر حالته بنقرة واحدة تحته.</li>
+    <li>البحث والموعد القادم فوق الطيّ دائمًا.</li></ul>
+    <h3>ما الذي يبقى</h3>
+    <ul><li>خط IBM Plex، ألوان الحالات المفحوصة، والأبواب المربعة.</li>
+    <li>لا تغيير في الـ API ولا في قاعدة البيانات ولا اعتمادات جديدة.</li></ul>`,
+};
+
+/* ---- Direction 2: the day line ---- */
+const brow = p => `<div class="b-row"><div class="b-who">${door(p.st, 22)}<b>${p.n}</b>${say(p)}</div>${rib(p.day)}</div>`;
+const D2 = {
+  home: () => `<div class="scroll"><header class="b-top">
+      <div class="topbar">${brand()}<span class="iconbtn">${ic('bell')}</span></div>
+      <p class="date">الاثنين 5 أكتوبر</p><h1>اثنان من أساتذتك في مكتبيهما الآن</h1>${search()}</header>
+    <section class="sec"><div class="board">${axis()}${P.map(brow).join('')}</div>${legend()}</section>
+    ${ticket()}<div style="height:20px"></div></div>${sTabs()}`,
+  status: () => `<div class="scroll"><div class="b-top"><div class="topbar">${brand()}<span class="iconbtn">${ic('bell')}<i class="badge">1</i></span></div></div>
+    <header class="b-me">${door('in', 52)}<div><h1>أنت في المكتب</h1><p>حتى 12:00 م، حسب جدولك. هكذا يراك الطلاب.</p></div></header>
+    ${pick('b-pick', 26)}
+    <section class="sec myday"><h2>يومك</h2><div class="board" style="margin-top:4px">${axis()}${rib(P[0].day)}
+      <div class="lbls"><span style="--s:0%"><b>محاضرة</b>8:00 ص</span><span style="--s:22.22%"><b>ساعات مكتبية</b>حتى 12:00 م</span><span style="--s:55.56%"><b>محاضرة</b>1:00 م</span></div></div></section>
+    <section class="sec">${presets()}</section>
+    <section class="sec"><h2>طلب واحد بانتظارك</h2><div style="margin-top:8px">${request()}</div></section></div>${pTabs()}`,
+  desk: () => `${rail('plain')}<div class="b-main"><header class="b-top"><div><p class="date">الاثنين 5 أكتوبر</p><h1>اثنان من أساتذتك في مكتبيهما الآن</h1></div>${search()}</header>
+    <section><div class="board">${axis()}${P.map(brow).join('')}</div>${legend()}</section>
+    <aside><h2 style="font-size:20px;margin-bottom:8px">موعدك القادم</h2>${ticket()}</aside></div>`,
+  notes: `<h2>الاتجاه 2: خط اليوم</h2>
+    <p>حضور كل أستاذ خطّ على يومه، وخط «الآن» يقطعهم جميعًا. ترى من موجود، ومتى سيكون الباقون موجودين، في نظرة واحدة.</p>
+    <h3>ما الذي يصير عمليًا أكثر</h3>
+    <ul><li>لا حاجة لفتح صفحة الأستاذ لمعرفة متى يعود: يومه كله أمامك.</li>
+    <li>اللون للحالة فقط؛ الأزرار والعناوين بالحبر الأسود، فلا شيء ينافس الأخضر.</li>
+    <li>الأستاذ يرى يومه ومكانه منه الآن فوق أزرار الحالة.</li></ul>
+    <h3>يحتاج موافقتك</h3>
+    <ul><li>خط Reem Kufi للعناوين (اعتماد جديد في التطبيق).</li>
+    <li>إضافة فترات اليوم إلى قائمة الأساتذة في الـ API (بلا تغيير في قاعدة البيانات).</li></ul>`,
+};
+
+function render() {
+  const s = document.getElementById('stage'), D = s.dataset.dir === '1' ? D1 : D2;
+  document.getElementById('p-home').innerHTML = D.home();
+  document.getElementById('p-status').innerHTML = D.status();
+  document.getElementById('d-home').innerHTML = D.desk();
+  document.getElementById('notes').innerHTML = D.notes;
+  document.body.classList.toggle('dark', s.dataset.theme === 'dark');
+}
+document.querySelectorAll('.pv-switch button').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('stage').dataset[b.dataset.set] = b.dataset.v;
+  b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  render();
+}));
+/* ?dir=2&theme=dark opens a given combination (used for screenshots). */
+const q = new URLSearchParams(location.search);
+['dir', 'theme'].forEach(k => { if (q.get(k)) { document.getElementById('stage').dataset[k] = q.get(k);
+  document.querySelectorAll(`[data-set="${k}"]`).forEach(x => x.setAttribute('aria-pressed', x.dataset.v === q.get(k))); } });
+render();
+</script>
+</body>
+</html>
