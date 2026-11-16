@@ -1,4 +1,4 @@
-import { columnStyle, layoutFor } from './layout';
+import { bandOnTop, columnStyle, layoutFor } from './layout';
 
 describe('layout by window width (docs/desktop-plan.md)', () => {
   it('is phone below 768, tablet from 768, desktop from 1024', () => {
@@ -17,4 +17,15 @@ describe('layout by window width (docs/desktop-plan.md)', () => {
     expect(columnStyle('desktop', 'narrow')).toMatchObject({ maxWidth: 520 });
     expect(columnStyle('phone', 'narrow')).toBeNull();
   });
+});
+
+describe('bandOnTop', () => {
+  it.each(['/sign-in', '/sign-up', '/home', '/staff/status', '/admin/overview', '/professors/12'])(
+    'is true for %s',
+    (path) => expect(bandOnTop(path)).toBe(true),
+  );
+  it.each(['/', '/search', '/appointments', '/staff/requests', '/admin/professors', '/professors'])(
+    'is false for %s',
+    (path) => expect(bandOnTop(path)).toBe(false),
+  );
 });

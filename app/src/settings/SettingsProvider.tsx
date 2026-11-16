@@ -14,9 +14,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useWindowDimensions } from 'react-native';
 
 import type { NotificationType } from '@/api/types';
 import { preferenceKeys, readPreference, writePreference } from '@/lib/storage';
+import { maxFontScale } from '@/theme/tokens';
 
 export const TEXT_SIZES = { small: 0.9, medium: 1, big: 1.2 } as const;
 export type TextSize = keyof typeof TEXT_SIZES;
@@ -93,4 +95,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
 export function useSettings(): SettingsValue {
   return useContext(SettingsContext);
+}
+
+/**
+ * How much larger than normal the text is drawn: the phone's own text size times the app's
+ * setting, capped at 200% as in components/Text.tsx. Layouts that depend on text fitting
+ * beside something (the ticket, the corridor's captions) read this.
+ */
+export function useTextFactor(): number {
+  const { textScale } = useSettings();
+  const { fontScale } = useWindowDimensions();
+  return Math.min(fontScale * textScale, maxFontScale);
 }

@@ -6,7 +6,7 @@
  * filled pill behind its icon; in the rail, which is the corridor's navy, a raised plate.
  */
 import type { ComponentProps, ComponentType } from 'react';
-import { StyleSheet, View, type ColorValue } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View, type ColorValue } from 'react-native';
 import type { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TFunction } from 'i18next';
@@ -14,7 +14,7 @@ import type { TFunction } from 'i18next';
 import { useLayout } from '@/lib/layout';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { layout, radii, space } from '@/theme/tokens';
+import { layout, radii, space, typeScale } from '@/theme/tokens';
 import { Text } from './Text';
 
 // Room for the icon in its pill and a caption label at up to 130% text size (TAB_LABEL_SCALE).
@@ -84,23 +84,58 @@ export function useTabOptions(): TabOptions {
       paddingBottom: insets.bottom + space.xxs,
     },
     tabBarLabel: ({ children, color, focused }) => (
-      <Text
-        variant="caption"
-        weight={focused ? 'semibold' : 'medium'}
-        appScale={false}
-        maxFontSizeMultiplier={TAB_LABEL_SCALE}
-        // Five tabs on a 360 dp phone leave about 72 dp each: a long label ("Appointments")
-        // shrinks a little instead of running into its neighbour.
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.75}
-        style={{ color }}
-      >
+      <BottomTabLabel color={color} focused={focused}>
         {children}
-      </Text>
+      </BottomTabLabel>
     ),
     tabBarLabelPosition: 'below-icon',
   };
+}
+
+// Every role has five tabs. A browser cannot shrink a label to fit as phones do, so the size
+// is worked out from the label's length. Measured in the browser build: a tab leaves its label
+// its own width less 10, and a letter of the label font is about 0.56 of the font size (0.58
+// here, for the heavier label of the current tab).
+const TAB_COUNT = 5;
+const TAB_PADDING = 10;
+const LETTER_WIDTH = 0.58;
+const MIN_LABEL_SCALE = 0.7;
+
+/**
+ * The label under a tab's icon. Five tabs on a 360 dp phone leave about 72 dp each: a long
+ * label ("Appointments") shrinks a little, to 70% at most, instead of being cut off. (At 320
+ * that label still ends in an ellipsis; smaller text would not be readable.)
+ */
+function BottomTabLabel({
+  children,
+  color,
+  focused,
+}: {
+  children: string;
+  color: ColorValue;
+  focused: boolean;
+}) {
+  const { width } = useWindowDimensions();
+  const size = typeScale.caption.size;
+  const room = width / TAB_COUNT - TAB_PADDING;
+  const fitted = Math.max(
+    size * MIN_LABEL_SCALE,
+    Math.min(size, room / (children.length * LETTER_WIDTH)),
+  );
+  return (
+    <Text
+      variant="caption"
+      weight={focused ? 'semibold' : 'medium'}
+      appScale={false}
+      maxFontSizeMultiplier={TAB_LABEL_SCALE}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={MIN_LABEL_SCALE}
+      style={[{ color }, Platform.OS === 'web' ? { fontSize: fitted } : null]}
+    >
+      {children}
+    </Text>
+  );
 }
 
 type Icon = ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;

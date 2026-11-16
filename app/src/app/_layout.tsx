@@ -4,7 +4,7 @@
  * then provides safe areas, strings, theme, sign-in state, server data and toasts.
  */
 import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -33,6 +33,7 @@ import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 import { layoutDirection } from '@/lib/direction';
+import { bandOnTop } from '@/lib/layout';
 
 // In the browser the navigators keep every visited screen in the page. With screens enabled,
 // a screen that is not shown gets display: none and the hidden attribute, so the Tab key and
@@ -43,6 +44,7 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function AppShell() {
   const { scheme, colors } = useTheme();
+  const pathname = usePathname();
   const { state } = useAuth();
   const { i18n: strings } = useTranslation();
   const direction = layoutDirection(strings.language === 'ar' ? 'ar' : 'en');
@@ -53,7 +55,8 @@ function AppShell() {
   if (restoring) return null;
   return (
     <View style={[styles.fill, direction]}>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {/* Light icons on the dark theme, and over the navy band in either theme. */}
+      <StatusBar style={scheme === 'dark' || bandOnTop(pathname) ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,

@@ -37,3 +37,15 @@ export function columnStyle(size: LayoutSize, kind: 'page' | 'narrow' = 'page'):
 export function useColumn(kind: 'page' | 'narrow' = 'page'): ViewStyle | null {
   return columnStyle(useLayout(), kind);
 }
+
+// Screens that start with the navy band (DESIGN.md Section 2): the entry screens, each role's
+// first screen and the professor profile.
+const BAND_ON_TOP = /^\/(sign-in|sign-up|home|staff\/status|admin\/overview|professors\/\d+)\/?$/;
+
+/**
+ * Whether the screen at this path has the band under the phone's status bar. The band is dark
+ * in both themes, so the status bar needs light icons there even in the light theme.
+ */
+export function bandOnTop(pathname: string): boolean {
+  return BAND_ON_TOP.test(pathname);
+}

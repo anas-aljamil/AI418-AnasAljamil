@@ -1,12 +1,15 @@
 /**
- * Final design QA (docs/plan.md, P6): every tab of every role at 320 px, in Arabic with the light
- * theme and in English with the dark theme. Nothing may stick out of the screen sideways; content
- * inside a horizontal scroller (day strip, quick replies) is allowed to. Same setup as the other
+ * Final design QA (docs/plan.md, P6; redesign R5): every tab of every role at 320 px, in Arabic
+ * with the light theme and in English with the dark theme, then again in both languages with the
+ * app's Big text size, and the sign-in and sign-up screens. Nothing may stick out of the screen
+ * sideways; content inside a horizontal scroller (the corridor, quick replies) is allowed to.
+ * The phone's own largest text size (200%) cannot be set in a browser: docs/phone-checklist.md.
+ * Same setup as the other
  * specs: seeded database, API with DEMO_NOW=2026-10-05T07:00:00Z, browser clock at that moment.
  */
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { navTab } from './nav';
+import { openTab } from './nav';
 
 import { painted } from './paint';
 
@@ -63,16 +66,33 @@ async function overflowing(page: Page): Promise<string[]> {
   });
 }
 
-async function signIn(page: Page, email: string, language: 'ar' | 'en', theme: 'light' | 'dark') {
+/** A 320 px window at the demo moment, in a language and theme, optionally with Big text. */
+async function open(
+  page: Page,
+  language: 'ar' | 'en',
+  theme: 'light' | 'dark',
+  textSize: 'medium' | 'big' = 'medium',
+) {
   await page.setViewportSize({ width: WIDTH, height: 720 });
   await page.clock.install({ time: DEMO_NOW });
   await page.addInitScript(
-    ([lng, th]) => {
+    ([lng, th, size]) => {
       localStorage.setItem('mawjood.language', lng);
       localStorage.setItem('mawjood.theme', th);
+      localStorage.setItem('mawjood.textSize', size);
     },
-    [language, theme],
+    [language, theme, textSize],
   );
+}
+
+async function signIn(
+  page: Page,
+  email: string,
+  language: 'ar' | 'en',
+  theme: 'light' | 'dark',
+  textSize: 'medium' | 'big' = 'medium',
+) {
+  await open(page, language, theme, textSize);
   await page.goto('/sign-in');
   await page.getByLabel(language === 'ar' ? 'البريد الجامعي' : 'University email').fill(email);
   await page.getByLabel(language === 'ar' ? 'كلمة المرور' : 'Password').fill(PASSWORD);
@@ -89,7 +109,7 @@ for (const [language, theme] of [
       await signIn(page, email, language, theme);
       const problems: string[] = [];
       for (const [index, tab] of tabs[language].entries()) {
-        await navTab(page, tab).click();
+        await openTab(page, tab);
         // Let the screen's data arrive before measuring (skeletons are narrower than rows).
         await page.waitForLoadState('networkidle');
         problems.push(...(await overflowing(page)).map((p) => `${tab}: ${p}`));
@@ -101,6 +121,37 @@ for (const [language, theme] of [
       expect(problems).toEqual([]);
     });
   }
+}
+
+for (const language of ['ar', 'en'] as const) {
+  for (const [role, { email, tabs }] of Object.entries(ROLES)) {
+    test(`${role}, ${language}, Big text: every tab fits 320 px`, async ({ page }) => {
+      await signIn(page, email, language, 'light', 'big');
+      const problems: string[] = [];
+      for (const tab of tabs[language]) {
+        await openTab(page, tab);
+        await page.waitForLoadState('networkidle');
+        problems.push(...(await overflowing(page)).map((p) => `${tab}: ${p}`));
+      }
+      expect(problems).toEqual([]);
+    });
+  }
+
+  test(`sign-in and sign-up fit 320 px with Big text (${language})`, async ({ page }) => {
+    await open(page, language, 'light', 'big');
+    const problems: string[] = [];
+    for (const route of ['/sign-in', '/sign-up']) {
+      await page.goto(route);
+      await expect(page.getByRole('heading').first()).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      problems.push(...(await overflowing(page)).map((p) => `${route}: ${p}`));
+    }
+    if (language === 'ar') {
+      await painted(page);
+      await page.screenshot({ path: `${SHOTS}/ar-light-sign-up-big-320.png` });
+    }
+    expect(problems).toEqual([]);
+  });
 }
 
 test('student pushed screens fit 320 px: profile and booking sheet', async ({ page }) => {
@@ -127,7 +178,7 @@ test('professor pushed screens fit 320 px: notifications and a conversation', as
   await page.waitForLoadState('networkidle');
   const problems = (await overflowing(page)).map((p) => `notifications: ${p}`);
   await page.goBack();
-  await navTab(page, 'الرسائل').click();
+  await openTab(page, 'الرسائل');
   await page.getByRole('button', { name: /^سعد المطيري/ }).click();
   await expect(page).toHaveURL(/\/conversations\/\d+$/);
   await page.waitForLoadState('networkidle');
@@ -139,7 +190,7 @@ test('professor pushed screens fit 320 px: notifications and a conversation', as
 
 test('the schedule time picker fits 320 px and reads on the 12-hour clock', async ({ page }) => {
   await signIn(page, ROLES.professor.email, 'en', 'light');
-  await navTab(page, 'Schedule').click();
+  await openTab(page, 'Schedule');
   await expect(
     page.getByRole('button', { name: /^10:00 AM–12:00 PM, Office hours/ }).first(),
   ).toBeVisible();

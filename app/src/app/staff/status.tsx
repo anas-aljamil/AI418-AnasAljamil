@@ -22,6 +22,7 @@ import {
   useSetStatus,
   type StatusInput,
 } from '@/api/queries';
+import { insetEnd } from '@/lib/direction';
 import { useColumn, useLayout } from '@/lib/layout';
 import type { ManualStatus } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
@@ -217,7 +218,12 @@ export default function StatusScreen() {
             <Text variant="label" weight="semibold" color="onBand" style={styles.grow}>
               {t(`status.${tile}`)}
             </Text>
-            {selected ? <Check color={colors.onBand} size={20} strokeWidth={2.5} /> : null}
+            {/* In the tile's top corner, so a long label at a large text size keeps its room. */}
+            {selected ? (
+              <View style={[styles.check, insetEnd(space.xs, language)]}>
+                <Check color={colors.onBand} size={16} strokeWidth={3} />
+              </View>
+            ) : null}
           </Pressable>
         );
       })}
@@ -440,6 +446,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
     paddingHorizontal: space.sm,
   },
+  check: { position: 'absolute', top: space.xs },
   grow: { flex: 1 },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },

@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ProfessorStatus } from '@/api/types';
 import { spokenList } from '@/lib/names';
-import { useSettings } from '@/settings/SettingsProvider';
+import { useTextFactor } from '@/settings/SettingsProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space } from '@/theme/tokens';
 import { statusSentence } from './StatusLabel';
@@ -76,7 +76,7 @@ export function CorridorDoor({
 }: CorridorDoorProps) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
-  const { textScale } = useSettings();
+  const textFactor = useTextFactor();
   const language = i18n.language === 'ar' ? 'ar' : 'en';
   const { door, label, when } = statusSentence(status, now, language, t);
   return (
@@ -89,7 +89,7 @@ export function CorridorDoor({
       style={({ pressed }) => [
         styles.door,
         {
-          width: doorSize + CAPTION_ROOM * textScale,
+          width: doorSize + CAPTION_ROOM * textFactor,
           backgroundColor: pressed ? colors.bandRaised : 'transparent',
         },
       ]}

@@ -24,7 +24,9 @@ In class: door closed, small board/book mark.
 Busy: door ajar, small "do not disturb" mark.
 Away: door closed, light off.
 Not confirmed / Unknown: dashed-outline door.
-The professor profile header is a modern, subtle take on the office nameplate beside a real office door: name, title, department, building and room. No wood or metal textures, no skeuomorphism.
+One door in two sizes (2026-11-15): the small door (22 to 52) in list rows, status tiles and the logo; the tall door (two wide to three high) wherever a person's door is the subject. A lit tall door throws a pool of light on the floor.
+The corridor (2026-11-15, "The corridor" redesign; it replaced the nameplate header): a navy band, dark in both themes, on which tall doors stand on one floor line. A lit door on the dark band is the answer to "who is in?" before a word is read. The band appears only on the entry screens (sign-in, sign-up), on each role's first screen (student Home, professor My status, admin Overview) and on the professor profile, where it holds the tall door, the name, the status as a sentence, rank, department, building and room. No wood or metal textures, no skeuomorphism.
+The status is also a sentence that says what happens next: "In office until 12:00 PM", "Away for the rest of today"; a not-confirmed status says how old it is.
 When a status changes, the door animates (opens, closes, light fades in or out) in 300 to 400 ms, using Reanimated on the UI thread. This is the app's one recognizable motion.
 The logo, app icon (including the Android adaptive icon and its monochrome layer) and web favicon come from the same idea (for example, a door shape with a dot of light). It must stay legible at 16 px.
 3. Avoid templated defaults
@@ -54,7 +56,8 @@ Busy: red
 Away: neutral gray
 Not confirmed: outlined gray
 Check that status states remain distinguishable with deuteranopia and protanopia; the icon and label must carry the meaning on their own.
-Brand primary: a hue that does not compete with the status hues (not green, amber, or red) and is not indigo/violet. Propose it in the design plan with reasoning.
+Brand primary: a hue that does not compete with the status hues (not green, amber, or red) and is not indigo/violet. Chosen 2026-11-15: Door blue, #1B5BD0 on the light theme and #86B4FF on the dark one, with a pale tint of it (#E3ECFB light, #1C2E4A dark) behind the current tab's icon and behind row marks.
+The band (2026-11-15): navy, #0E2441 in the light theme and #060C15 in the dark one, with a raised navy for plates on it, its own text colours and its own status colours (the dark theme's, chosen for a dark ground; the busy red is lighter as text). The desktop side rail is the same navy. Band colours meet the same contrast rules and are checked by the same tests (tokens.test.ts, scripts/check_palette.py), for every colour-vision setting.
 Neutrals: slightly tinted to harmonize with the primary. Not pure gray, not cream.
 Light and dark themes are two separately designed palettes; dark is not an inverted light theme. The app follows the system setting (useColorScheme / Appearance) unless the user picks one in Settings; status bar, navigation bar and splash background follow the active theme.
 Contrast (WCAG 2.2 AA) in both themes: 4.5:1 for body text, 3:1 for large text and UI components.
@@ -63,16 +66,18 @@ Color is never the only carrier of meaning.
 Arabic-first. Use one family that covers Arabic and Latin with matched metrics, or a deliberate, well-matched pair (candidates: Readex Pro; IBM Plex Sans Arabic with IBM Plex Sans). Justify the choice. Do not default to Inter alone, or to the platform system font alone. Fonts are bundled with the app (expo-font with the @expo-google-fonts package of the chosen family) so they work offline; the splash screen stays until fonts load.
 Mobile type scale: 13, 15, 17, 20, 24, 30 (px on web, density-independent points on native). Body text 16 to 17. Headings step up one level on the desktop web layout.
 Line height: about 1.7 for Arabic, about 1.5 for Latin. React Native needs absolute line heights, so the theme computes them per size and per script. Line length at most 70 characters.
-System font scale: text respects the phone's font-size setting up to 200% (maxFontSizeMultiplier = 2); layouts must reflow, not clip. This replaces browser zoom on native.
-Sentence case everywhere. Build hierarchy with size and weight, not color tricks.
+System font scale: text respects the phone's font-size setting up to 200% (maxFontSizeMultiplier = 2); layouts must reflow, not clip. This replaces browser zoom on native. Where text sits beside something, the layout reads the text size in effect (useTextFactor: the phone's size times the app's setting): from 150% the appointment ticket stacks its two parts, and the captions under corridor doors get wider. A sentence that is the answer (a status sentence, a notification) is never cut with an ellipsis. Tab labels and the day ribbon's hour labels grow to 130% at most, like system tab bars.
+Sentence case everywhere. Build hierarchy with size and weight, not color tricks. Weights (2026-11-15): 700 for screen headings and display, 600 for titles and names, 500 for labels, 400 for body.
 Numerals: Western digits (0 to 9) in both languages for times, dates, and room numbers, used consistently. Times are formatted in Asia/Riyadh by our own small formatter (Riyadh is a fixed UTC+3) rather than relying on Intl time-zone support, which differs between Hermes on Android, iOS and browsers.
 4.3 Space, shape, elevation
 Spacing scale on a 4-unit base (dp on native, px on web): 4, 8, 12, 16, 24, 32, 48, 64.
 Radius by hierarchy (Section 3).
+Cards are for self-contained objects only: an appointment (a ticket: the time at the start edge, a dashed fold with a notch, then who and where; components/Ticket.tsx), the professor's note, the admin's tiles. Lists are flat rows with a hairline between them.
 At most 3 elevation levels. Prefer surface-color contrast and hairline borders (StyleSheet.hairlineWidth on native); use shadows only for floating layers (sheets, menus, toasts). Native shadows differ by platform (iOS shadow props, Android elevation); the theme defines each level for both so they look the same.
 4.4 Icons and illustration
 Lucide icons (lucide-react-native, rendered with react-native-svg) with a consistent stroke (about 1.75) for UI.
 Custom SVG doors for status (Section 2).
+Row marks (2026-11-16, components/Avatar.tsx): a person's row starts with their initials in a circle on the brand tint; a notification starts with an icon for what happened, on the tint while new and outlined grey once read. They are decorative: the row's text carries the meaning.
 Empty-state illustrations: simple line drawings in the same stroke style (a corridor, a door, a calendar) using only brand and neutral colors.
 5. Motion
 Motion only answers a user action or shows a state change.
@@ -105,25 +110,34 @@ Each screen defines its purpose, key content, primary action, and loading, empty
 The app opens on sign-in in the device language (expo-localization); a language button in the top corner of sign-in switches to the other language in one tap (revised 2026-11-10, owner decision; there is no separate language screen). Profile and Account keep the language setting.
 Changing language switches layout direction with I18nManager.forceRTL and then reloads the app cleanly (expo-updates reloadAsync) after a one-line explanation, returning the user to the same screen; on the web build the document dir attribute changes without a reload.
 Sign in with a university email. The role comes from the account, not from a user choice.
+Layout (2026-11-16): sign-in and sign-up share one frame: the band with the app's name, a tall lit door, the screen's heading and one line of explanation, then the form. The language button sits at the end of the app bar. On desktop the band fills the start half of the window and the form sits in the middle of the other half. A professor whose new account waits for an administrator sees the frame with a closed door.
 7.2 Student home ("Now")
 
 Purpose: answer "who can I see right now?"
 
-[Good morning, Anas]                                  [bell]
-[ Search professors by name or department ...          ]
-[ Next appointment: Dr. X, today 10:30, Bldg A room 214 ]   (only if one exists, with countdown)
-My professors        (pinned, horizontal row: door, name, status, "updated 3 min ago")
-Available now        (list rows from my departments, available first, then by name)
+Layout (2026-11-15, "The corridor"):
+
+[ band: Mawjood                                         bell ]
+[ band: Good morning, Anas                                   ]
+[ band: Two of your professors are in their offices now      ]
+[ band: tall doors of the pinned professors on one floor line,
+        each with a short name and its status; scrolls sideways ]
+[ Search professors by name or department ...                ]
+[ Next appointment, as a ticket: 10:30 AM, Sunday, in 6 days | Dr. X, Bldg A room 214, Approved ]   (only if one exists)
+Available now        (the student's department: door, name, status sentence; in office first, then by name)
+
+The sentence counts only confirmed "in office" statuses, the doors that are lit. A door opens the professor's profile.
 Greeting changes with the time of day.
-Empty state (nothing pinned): invite the student to search and pin their professors.
+While the pinned professors load, the corridor shows three dim door outlines. Empty state (nothing pinned): the band invites the student to search and pin their professors.
+Desktop: the greeting beside the corridor on the band, the list in the main column, the next appointment beside it.
 7.3 Search and browse
 Instant search across Arabic and English names with Arabic normalization: ignore diacritics; treat أ إ آ ا as equal, ة and ه as equal, ى and ي as equal.
 Filter chips: department, status, has office hours today.
-Results are list rows: door, name, department, status label, last updated. Available professors first.
+Results are list rows: door, name, the status as a sentence, department (revised 2026-11-15; the age shows only for a not-confirmed status, the profile has it for the rest). Available professors first.
 7.4 Professor profile
-Nameplate header (Section 2) with the door, status label, the professor's short note, and last updated time.
-Office location (building, floor, room).
-A "Today" timeline: an agenda of office-hour and class blocks, each with its times, door, name and where it stands now, the time between blocks marked "Not in office", and where now falls.
+The band (Section 2; revised 2026-11-15): back button, the tall door, the name, the status in its colour with "until ..." under it, rank and department, office (building, floor, room).
+Under the band: when the status was last set (or "from the schedule"), the professor's short note, and when messages open again if they are closed.
+"Today": the day ribbon (one bar for the working day: office hours solid, classes striped, meetings dotted, a mark at now, read out as one sentence), then the agenda of blocks, each with its times, door, name and where it stands now, the time between blocks marked "Not in office".
 Sticky bottom bar: Book (primary), Message (secondary), Pin (icon button).
 7.5 Booking (bottom sheet on phones, dialog on desktop web)
 A calendar of this week and next (Sunday to Thursday; revised 2026-11-11, it replaced the day strip): days without a booking time are dimmed, today has a ring.
@@ -134,21 +148,22 @@ Confirmation summary, then the signature moment (Section 5).
 Never lose the user's selection on an error.
 7.6 My appointments
 Upcoming and Past via a segmented control.
-Each appointment: professor, time, location, state pill (Pending, Approved, Declined, Cancelled, Completed).
+Each appointment is a ticket (revised 2026-11-16): the time large at the start edge with its day (Today, Tomorrow, the weekday, or the date further out), then the professor, the end and length, location, topic, note and a state pill (Pending, Approved, Declined, Cancelled, Completed). Buttons sit under both parts.
 Actions: Message, Cancel (with confirmation). Inside the 1-hour cancellation window, Cancel is disabled and explains why.
 7.7 Messages
-Conversation list and thread. Bubbles follow reading direction (correct in RTL and LTR), grouped timestamps, sent and read indicators. Message actions (2026-11-11): Reply, Copy, Edit (your own, within 15 minutes) and Delete (your own, for both sides).
+Conversation list and thread. A conversation's row and the thread's header start with the other person's initials (2026-11-16). Bubbles follow reading direction (correct in RTL and LTR), grouped timestamps, sent and read indicators. Message actions (2026-11-11): Reply, Copy, Edit (your own, within 15 minutes) and Delete (your own, for both sides).
 Professor quick replies: "Come now", "Running 10 minutes late", "Let's reschedule".
 7.8 Professor home ("My status")
 
 This is the most important professor screen and must be usable in one tap by anyone.
 
-Top: a large status control with the four doors; the current one clearly selected.
+Top, on the band (revised 2026-11-16): the professor's own tall door as students see it, the status in its colour with "until ..." under it, where it comes from ("Following your schedule" or "Set by you, updated X") and "This is what students see."; then the status control: four door tiles, the current one outlined with a check in its corner. One tap on a tile changes the status.
 Below: quick presets ("Back in 15 min", "Back in 30 min", "In office until ...", "Away for today") and an optional note of up to 60 characters, shown to the professor as students see it, with when it goes, Edit and Delete (2026-11-11).
-Then: today's schedule timeline and pending requests with Approve and Decline buttons (swipe is only a shortcut).
+Then: today as a ribbon and an agenda, and pending requests as tickets with Approve and Decline buttons (swipe is only a shortcut).
 Desktop web: compact enough to keep open in a browser tab. Reflect the current status in the tab title and favicon (web only; native apps have no equivalent and use no app-icon badge).
 7.9 Notifications and settings
-Notifications grouped by today and earlier, each linking to its source.
+Notifications grouped by today and earlier, each linking to its source; each starts with an icon for what happened, filled while new, outlined once read, and its sentence is shown whole (2026-11-16).
+Admin Overview opens on the band (app bar, heading, who is signed in), like the other roles' first screen (2026-11-16).
 Settings: language, theme (system, light, dark), colour vision (normal, red and green hard to tell apart, blue and yellow hard to tell apart, no colours; a menu, normal by default, 2026-11-11), text size (small, medium, big; multiplies the system font scale, capped at 200% total), notification preferences (in-app only).
 8. Content and voice
 Plain, warm, respectful. Arabic must read as natural Modern Standard Arabic, never machine-translated. Address the user directly.
@@ -284,6 +299,7 @@ Append entries as: date, decision, reason.
 2026-11-16, Sign-in and sign-up (R4) share one frame (features/auth/AuthFrame.tsx): the band with the app's name, a tall lit door and the screen's heading and one-line explanation, then the form. On sign-in the language button sits at the end of the app bar, outlined in the band's text colour. A professor whose account waits for an administrator sees the same frame with a closed door. Desktop: the band fills the start half of the window with a larger door, the form sits in the middle of the other half, Reason: the first screen says what the app is for before a word is read; before, it was a plain form.
 2026-11-16, Row marks (R4, components/Avatar.tsx): a person's row starts with their initials on the brand tint (conversations, the conversation header, the account screen at 56, admin lists); a notification starts with an icon for what happened (message, appointment approved, appointment declined or cancelled, other appointment news), on the tint while it is new and outlined grey once read. Accounts that are not active keep the outlined grey initials. All are decorative; the row's text says the same, Reason: rows of text alone were hard to scan; the mark also shows new against read without colour alone (filled against outlined, plus the New label).
 2026-11-16, Admin Overview opens on the band (app bar, heading, who is signed in); the cards, tiles and lists below are unchanged, Reason: the same first-screen rule as the other two roles.
+2026-11-16, Final QA of the redesign (R5), found and fixed: (1) in the browser the bottom tab labels were cut with an ellipsis ("Reque...") because only phones can shrink text to fit; the browser build now works the size out from the label's length, down to 70% (at 320 px "Appointments" still ends in an ellipsis; smaller would not be readable). (2) My status: the check of the current tile sits in the tile's top corner, so a two-word label keeps its room. (3) At 200% text the ticket broke its time in the middle ("10:3 / 0 AM"): from 150% the ticket stacks its two parts. (4) At 200% the captions under corridor doors were cut: their width now follows the text size in effect, not only the app's setting. (5) A notification's sentence and a row's status sentence are no longer cut with an ellipsis. Sections 2, 4 and 7 now describe the corridor look, Reason: the checklist in Section 12 at 320 px and at the largest text size.
 
 12. Quality checklist (every screen)
  Answers its main question within 3 seconds of looking

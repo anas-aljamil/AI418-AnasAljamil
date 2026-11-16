@@ -125,6 +125,8 @@ export default function NotificationsScreen() {
             <ListRow
               leading={<IconCircle icon={iconFor(item.type)} muted={!fresh} />}
               title={title}
+              // The title is the whole news; cut short it would lose who or when.
+              titleLines={0}
               subtitle={when}
               trailing={fresh ? <Pill label={t('notifications.new')} tone="primary" /> : null}
               accessibilityLabel={spokenList(
