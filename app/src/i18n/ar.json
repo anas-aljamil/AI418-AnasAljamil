@@ -160,7 +160,9 @@
   "when": {
     "today": "اليوم {{time}}",
     "tomorrow": "غدًا {{time}}",
-    "weekday": "{{day}} {{time}}"
+    "weekday": "{{day}} {{time}}",
+    "day_today": "اليوم",
+    "day_tomorrow": "غدًا"
   },
   "countdown": {
     "now": "يبدأ الآن",
@@ -465,7 +467,7 @@
   },
   "status_screen": {
     "title": "حالتي",
-    "following_schedule": "حسب جدولك: {{status}}",
+    "following_schedule": "حسب جدولك",
     "manual": "حدّدتها أنت، {{updated}}",
     "back_to_schedule": "اتبع جدولي",
     "presets": "خيارات سريعة",
@@ -486,7 +488,8 @@
     "note_delete": "احذف الملاحظة",
     "note_placeholder": "مثال: في معمل B-204، تعالوا هناك",
     "note_shown": "يراها الطلاب {{when}}.",
-    "note_removed": "حُذفت الملاحظة"
+    "note_removed": "حُذفت الملاحظة",
+    "seen": "هذا ما يراه الطلاب."
   },
   "requests": {
     "title": "الطلبات",

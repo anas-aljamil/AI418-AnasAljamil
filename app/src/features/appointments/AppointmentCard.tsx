@@ -1,14 +1,17 @@
 /**
- * One appointment as a card (DESIGN.md 7.6; cards are for self-contained objects): who, when,
- * where, topic and note, and a state pill. Students see the professor, professors the student.
- * Actions (cancel, approve, ...) are passed in as children.
+ * One appointment as a ticket (DESIGN.md 7.6 and Section 11): the time large at the start edge
+ * with its day, then who, the length, where, topic and note, and a state pill. Students see
+ * the professor, professors the student. Actions (cancel, approve, ...) are passed in as
+ * children and sit under the ticket's two parts.
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { Appointment } from '@/api/types';
-import { Card, Pill } from '@/components/Surfaces';
+import { Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
+import { Ticket } from '@/components/Ticket';
+import { shortDateText, todayKey, weekdayOf } from '@/lib/dates';
 import { clockText, dateTimeText, riyadhDayDifference, riyadhTime, whenText } from '@/lib/format';
 import { fullName, officeText, professorName } from '@/lib/names';
 import { space, type Language } from '@/theme/tokens';
@@ -37,6 +40,15 @@ export function cancelState(appointment: Appointment, now: Date): 'open' | 'clos
   return now < new Date(appointment.cancel_deadline) ? 'open' : 'closed';
 }
 
+/** The day under a ticket's time: "Today", "Tomorrow", the weekday, or the date further out. */
+function dayLabel(start: Date, now: Date, t: Parameters<typeof whenText>[2]): string {
+  const days = riyadhDayDifference(start, now);
+  if (days === 0) return t('when.day_today');
+  if (days === 1) return t('when.day_tomorrow');
+  const date = todayKey(start);
+  return days > 1 && days < 14 ? t(`weekday.${weekdayOf(date)}`) : shortDateText(date, t);
+}
+
 export function AppointmentCard({ appointment, now, perspective, children }: AppointmentCardProps) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
@@ -45,19 +57,25 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
       ? professorName(appointment.professor, language, t)
       : fullName(appointment.student, language);
   const state = appointment.status;
+  const start = new Date(appointment.starts_at);
   return (
-    <Card>
-      <View style={styles.top}>
-        <Text variant="body" weight="semibold" style={styles.grow}>
-          {who}
-        </Text>
-        <Pill
-          label={t(`appointments.state_${state}`)}
-          tone={state === 'approved' || state === 'completed' ? 'primary' : 'muted'}
-        />
-      </View>
-      <Text>{appointmentWhen(appointment, now, t)}</Text>
-      <Text color="muted">
+    <Ticket
+      stub={
+        <>
+          <Text variant="title" weight="bold">
+            {clockText(riyadhTime(start), t)}
+          </Text>
+          <Text variant="caption" color="muted">
+            {dayLabel(start, now, t)}
+          </Text>
+        </>
+      }
+      footer={children}
+    >
+      <Text variant="body" weight="semibold">
+        {who}
+      </Text>
+      <Text variant="label" color="muted">
         {t('appointments.length_line', {
           end: clockText(riyadhTime(new Date(appointment.ends_at)), t),
           minutes: Math.round(
@@ -65,19 +83,29 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
           ),
         })}
       </Text>
-      <Text color="muted">{officeText(appointment.professor.office, t)}</Text>
+      <Text variant="label" color="muted">
+        {officeText(appointment.professor.office, t)}
+      </Text>
       {appointment.topic ? (
-        <Text color="muted">
+        <Text variant="label" color="muted">
           {t('appointments.topic_line', { topic: t(`booking.topic_${appointment.topic}`) })}
         </Text>
       ) : null}
-      {appointment.note ? <Text color="muted">{appointment.note}</Text> : null}
-      {children}
-    </Card>
+      {appointment.note ? (
+        <Text variant="label" color="muted">
+          {appointment.note}
+        </Text>
+      ) : null}
+      <View style={styles.state}>
+        <Pill
+          label={t(`appointments.state_${state}`)}
+          tone={state === 'approved' || state === 'completed' ? 'primary' : 'muted'}
+        />
+      </View>
+    </Ticket>
   );
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs },
-  grow: { flex: 1 },
+  state: { marginTop: space.xxs },
 });

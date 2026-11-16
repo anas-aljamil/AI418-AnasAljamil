@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { openTab } from './nav';
 import { painted } from './paint';
 
 import { PYTHON } from './python';
@@ -186,7 +187,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   await expect(admin.getByRole('button', { name: 'Activate Ziyad Al-Shammari' })).toBeVisible();
   await expect(admin.getByRole('button', { name: /^Professors: 8/ })).toBeVisible();
   await shoot(admin, 'en-9-admin-overview');
-  await admin.getByRole('tab', { name: 'Campus' }).click();
+  await openTab(admin, 'Campus');
 
   const fill = async (label: string, value: string) =>
     admin.getByLabel(label, { exact: true }).fill(value);
@@ -250,7 +251,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   expect(sql("SELECT COUNT(*) FROM offices WHERE building_code = 'D'")).toBe('0');
 
   // Professors
-  await admin.getByRole('tab', { name: 'Professors' }).click();
+  await openTab(admin, 'Professors');
   await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await fill('University email', 'test.professor@university.example');
   await fill('Password (at least 8 characters)', 'Test-pass-2026');
@@ -281,7 +282,7 @@ test('the admin creates, edits and deletes a row of each type, checked in MySQL'
   );
 
   // Students
-  await admin.getByRole('tab', { name: 'Students' }).click();
+  await openTab(admin, 'Students');
   await admin.getByRole('button', { name: 'Add', exact: true }).click();
   await fill('University email', 'test.student@university.example');
   await fill('Password (at least 8 characters)', 'Test-pass-2026');

@@ -160,7 +160,9 @@
   "when": {
     "today": "Today {{time}}",
     "tomorrow": "Tomorrow {{time}}",
-    "weekday": "{{day}} {{time}}"
+    "weekday": "{{day}} {{time}}",
+    "day_today": "Today",
+    "day_tomorrow": "Tomorrow"
   },
   "countdown": {
     "now": "starting now",
@@ -465,7 +467,7 @@
   },
   "status_screen": {
     "title": "My status",
-    "following_schedule": "Following your schedule: {{status}}",
+    "following_schedule": "Following your schedule",
     "manual": "Set by you, {{updated}}",
     "back_to_schedule": "Follow my schedule",
     "presets": "Quick options",
@@ -486,7 +488,8 @@
     "note_delete": "Delete note",
     "note_placeholder": "For example: In lab B-204, come there",
     "note_shown": "Students see it {{when}}.",
-    "note_removed": "Note deleted"
+    "note_removed": "Note deleted",
+    "seen": "This is what students see."
   },
   "requests": {
     "title": "Requests",

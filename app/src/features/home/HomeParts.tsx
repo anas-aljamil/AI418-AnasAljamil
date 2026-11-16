@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { TallDoor } from '@/components/TallDoor';
 import { Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
+import { Ticket } from '@/components/Ticket';
 import { appointmentDay, clockText, countdownKey, pluralCategory, riyadhTime } from '@/lib/format';
 import { officeText, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -32,15 +33,12 @@ export function inOfficeNow(
   return { key, count };
 }
 
-const NOTCH = 14;
-
 /**
  * The soonest pending or approved appointment as a ticket: the time large at the start edge,
  * a dashed fold, then the professor, the room and whether it is approved.
  */
 export function NextAppointmentCard({ appointment, now }: { appointment: Appointment; now: Date }) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const language = useLanguage();
   const start = new Date(appointment.starts_at);
   const day = appointmentDay(start, now);
@@ -52,45 +50,38 @@ export function NextAppointmentCard({ appointment, now }: { appointment: Appoint
   const state = t(approved ? 'home.appointment_approved' : 'home.appointment_pending');
   const name = professorName(appointment.professor, language, t);
   const office = officeText(appointment.professor.office, t);
-  const notch = { backgroundColor: colors.bg, borderColor: colors.line };
   return (
-    <View
+    <Ticket
       accessible
       accessibilityLabel={`${t('home.next_appointment')}: ${spokenList(
         [name, t('home.when_countdown', { when, countdown: countdownText }), office, state],
         t,
       )}`}
-      style={[styles.ticket, { backgroundColor: colors.surface, borderColor: colors.line }]}
+      stub={
+        <>
+          <Text variant="title" weight="bold">
+            {time}
+          </Text>
+          <Text variant="caption" color="muted">
+            {t(`weekday.${day.weekday}`)}
+          </Text>
+          <Text variant="caption" color="muted">
+            {countdownText}
+          </Text>
+        </>
+      }
     >
-      <View style={styles.ticketWhen}>
-        <Text variant="title" weight="bold">
-          {time}
-        </Text>
-        <Text variant="caption" color="muted">
-          {t(`weekday.${day.weekday}`)}
-        </Text>
-        <Text variant="caption" color="muted">
-          {countdownText}
-        </Text>
-      </View>
-      <View style={styles.fold}>
-        <View style={[styles.notch, styles.notchTop, notch]} />
-        <View style={[styles.foldLine, { borderColor: colors.line }]} />
-        <View style={[styles.notch, styles.notchBottom, notch]} />
-      </View>
-      <View style={styles.ticketWhat}>
-        <Text variant="caption" color="muted">
-          {t('home.next_appointment')}
-        </Text>
-        <Text variant="body" weight="semibold">
-          {name}
-        </Text>
-        <Text variant="label" color="muted">
-          {office}
-        </Text>
-        <Pill label={state} tone={approved ? 'primary' : 'muted'} />
-      </View>
-    </View>
+      <Text variant="caption" color="muted">
+        {t('home.next_appointment')}
+      </Text>
+      <Text variant="body" weight="semibold">
+        {name}
+      </Text>
+      <Text variant="label" color="muted">
+        {office}
+      </Text>
+      <Pill label={state} tone={approved ? 'primary' : 'muted'} />
+    </Ticket>
   );
 }
 
@@ -150,25 +141,6 @@ export function SectionError({ message, onRetry, onBand = false }: SectionErrorP
 }
 
 const styles = StyleSheet.create({
-  ticket: {
-    flexDirection: 'row',
-    borderRadius: radii.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
-  ticketWhen: { padding: space.md, justifyContent: 'center', gap: 2 },
-  ticketWhat: { flex: 1, padding: space.md, gap: space.xxs },
-  fold: { width: NOTCH, alignItems: 'center' },
-  foldLine: { flex: 1, borderStartWidth: 1.5, borderStyle: 'dashed', marginVertical: NOTCH / 2 },
-  notch: {
-    position: 'absolute',
-    width: NOTCH,
-    height: NOTCH,
-    borderRadius: NOTCH / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  notchTop: { top: -NOTCH / 2 },
-  notchBottom: { bottom: -NOTCH / 2 },
   skeleton: { flexDirection: 'row', gap: space.xl, opacity: 0.45 },
   grow: { flex: 1 },
   notice: {
