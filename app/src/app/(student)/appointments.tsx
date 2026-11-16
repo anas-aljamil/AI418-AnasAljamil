@@ -133,6 +133,23 @@ export default function AppointmentsScreen() {
                     {t('appointments.cancel_closed')}
                   </Text>
                 </View>
+              ) : scope === 'past' ? (
+                // The same professor again: their page opens with the booking sheet up.
+                <View style={styles.actions}>
+                  <Button
+                    variant="secondary"
+                    label={t('appointments.book_again')}
+                    accessibilityLabel={t('appointments.book_again_label', {
+                      name: professorName(item.professor, language, t),
+                    })}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/professors/[id]',
+                        params: { id: String(item.professor.user_id), book: '1' },
+                      })
+                    }
+                  />
+                </View>
               ) : null}
             </AppointmentCard>
           );

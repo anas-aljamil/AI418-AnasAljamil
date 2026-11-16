@@ -368,9 +368,9 @@
     "status_filter": "Status",
     "department_filter": "Department",
     "office_hours_today": "Office hours today",
-    "prompt": "Search by name or department, or choose a filter.",
     "no_match": "No professor matches these filters.",
-    "clear": "Clear search and filters"
+    "clear": "Clear search and filters",
+    "all": "All professors, in office first"
   },
   "prof": {
     "period_until": ", until {{date}}",
@@ -396,7 +396,8 @@
     "booking_times": "Booking times",
     "no_booking_times": "{{name}} hasn't set booking times yet, so booking isn't possible.",
     "messages_closed": "Not taking messages until {{time}}",
-    "period_line": "{{day}}, {{start}}–{{end}}"
+    "period_line": "{{day}}, {{start}}–{{end}}",
+    "book_on": "Book on {{when}}"
   },
   "booking": {
     "title": "Book with {{name}}",
@@ -463,7 +464,9 @@
     "move_none": "No earlier time is free now.",
     "moved": "Moved to {{time}}",
     "moving": "Moving",
-    "length_line": "Until {{end}}, {{minutes}} min"
+    "length_line": "Until {{end}}, {{minutes}} min",
+    "book_again": "Book again",
+    "book_again_label": "Book again with {{name}}"
   },
   "status_screen": {
     "title": "My status",
@@ -489,7 +492,9 @@
     "note_placeholder": "For example: In lab B-204, come there",
     "note_shown": "Students see it {{when}}.",
     "note_removed": "Note deleted",
-    "seen": "This is what students see."
+    "seen": "This is what students see.",
+    "stale_note": "Students see “not confirmed”: your status has not been set for a while.",
+    "confirm_in": "I'm in my office"
   },
   "requests": {
     "title": "Requests",
@@ -799,5 +804,30 @@
   "titles": {
     "professor": "Professor",
     "conversation": "Conversation"
+  },
+  "help": {
+    "title": "Help and contact",
+    "about_title": "What is Mawjood?",
+    "about_body": "Mawjood shows whether a professor is in the office right now, so you don't make the trip for nothing. You can also book a visit and send a message.",
+    "faq_title": "Common questions",
+    "q1": "How do I know a professor is in?",
+    "a1": "A lit door and the words “In office”. “Not confirmed” means the timetable says so, but the professor has not set a status for a while.",
+    "q2": "How do I book a visit?",
+    "a2": "Open the professor's page, press Book, then choose a day and a time. The professor approves or declines, and the answer appears in Appointments.",
+    "q3": "Can I cancel?",
+    "a3": "Yes, in Appointments, until one hour before the start.",
+    "q4": "I forgot my password.",
+    "a4": "Ask the Mawjood administrator at your university to set a new one.",
+    "q5": "I am a professor. Must I update my status all day?",
+    "a5": "No. The status follows your timetable. Change it with one tap only when your day is different.",
+    "q6": "Can I use it like an app on my phone?",
+    "a6": "Yes. Open this site in your phone's browser, then choose Add to Home Screen in the browser's menu.",
+    "contact_title": "Contact",
+    "contact_body": "A problem with your account or with Mawjood? Write to the administrator.",
+    "contact_email": "Email {{email}}",
+    "contact_none": "A problem with your account or with Mawjood? Ask your department's office for the Mawjood administrator."
+  },
+  "nav": {
+    "skip": "Skip to content"
   }
 }

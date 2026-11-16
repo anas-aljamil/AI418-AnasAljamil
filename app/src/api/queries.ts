@@ -86,7 +86,11 @@ export function useDepartmentProfessors(departmentId: number, language: Language
  * Arabic-aware search by name or department (normalization happens in the API), with the
  * Search tab's filters. Runs only when there is a query or a filter.
  */
-export function useProfessorSearch(filters: SearchFilters, language: Language) {
+/**
+ * Professors matching a search and filters, in office first. With nothing typed or chosen it
+ * asks for nothing, unless `all` is set: then it lists every professor (the Search screen).
+ */
+export function useProfessorSearch(filters: SearchFilters, language: Language, all = false) {
   const query = filters.query.trim();
   const params = new URLSearchParams({ lang: language, limit: '50' });
   if (query) params.set('q', query);
@@ -101,7 +105,7 @@ export function useProfessorSearch(filters: SearchFilters, language: Language) {
   return useQuery({
     queryKey: queryKeys.search({ ...filters, query }, language),
     queryFn: () => api<Page<ProfessorSummary>>(`/professors?${params}`).then((page) => page.items),
-    enabled: active,
+    enabled: active || all,
     placeholderData: keepPreviousData,
     refetchInterval: POLL_MS,
   });

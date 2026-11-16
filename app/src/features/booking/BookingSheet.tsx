@@ -49,16 +49,22 @@ interface BookingSheetProps {
   professor: ProfessorDetail;
   visible: boolean;
   onClose: () => void;
+  /** Open on this date (a booking time tapped on the profile); otherwise the first day. */
+  initialDay?: string | null;
 }
 
-export function BookingSheet({ professor, visible, onClose }: BookingSheetProps) {
+export function BookingSheet({ professor, visible, onClose, initialDay }: BookingSheetProps) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const name = professorName(professor, language, t);
   const days = useMemo(() => bookingDays(new Date()), []);
   // The calendar's days with a booking time (weekly or dated), from the profile.
   const bookable = new Set(professor.booking_days);
-  const [day, setDay] = useState((days.find((d) => bookable.has(d.date)) ?? days[0])?.date ?? null);
+  const [day, setDay] = useState(
+    initialDay && bookable.has(initialDay)
+      ? initialDay
+      : ((days.find((d) => bookable.has(d.date)) ?? days[0])?.date ?? null),
+  );
   const [slot, setSlot] = useState<Slot | null>(null);
   // The length the student chose; until then the professor's usual length (both fitted).
   const [length, setLength] = useState<number | null>(null);

@@ -138,6 +138,18 @@ export default function StatusScreen() {
       )
     : null;
   const pending = (requests.data ?? []).filter((a) => a.status === 'pending');
+  // Students see "In office (not confirmed)" when the timetable says in office but no status
+  // was set for four hours. One tap confirms it, until the office hours end.
+  const stale = !!current && current.status === 'in_office' && !current.confirmed;
+  const confirmIn = () =>
+    apply(
+      withNote({
+        status: 'in_office',
+        ...(officeEnd && today
+          ? { expires_at: new Date(`${today.date}T${officeEnd}:00+03:00`).toISOString() }
+          : null),
+      }),
+    );
 
   // The browser tab shows the status, so a professor can keep the tab open (DESIGN.md 7.8).
   const tabTitle = described ? `${described.label} | ${t('app.name')}` : null;
@@ -181,6 +193,14 @@ export default function StatusScreen() {
           <Text variant="caption" color="onBandMuted">
             {t('status_screen.seen')}
           </Text>
+          {stale ? (
+            <View style={styles.stale}>
+              <Text variant="caption" color="onBand">
+                {t('status_screen.stale_note')}
+              </Text>
+              <Button variant="onBand" label={t('status_screen.confirm_in')} onPress={confirmIn} />
+            </View>
+          ) : null}
           {current.source === 'override' ? (
             <View style={styles.start}>
               <Button
@@ -462,4 +482,5 @@ const styles = StyleSheet.create({
   },
   noteActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   start: { alignItems: 'flex-start' },
+  stale: { alignItems: 'flex-start', gap: space.xs, marginTop: space.xs },
 });

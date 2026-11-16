@@ -27,10 +27,12 @@ beforeEach(() => {
   });
 });
 
-it('asks for a search or a filter before showing anything', async () => {
+it('lists every professor until something is typed or chosen', async () => {
   await renderWithProviders(<SearchScreen />);
-  expect(screen.getByText('Search by name or department, or choose a filter.')).toBeTruthy();
-  expect(mockApi.mock.calls.some(([path]) => String(path).startsWith('/professors'))).toBe(false);
+  expect(screen.getByText('All professors, in office first')).toBeTruthy();
+  await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/professors?lang=en&limit=50'));
+  // Nothing to clear yet.
+  expect(screen.queryByRole('button', { name: 'Clear search and filters' })).toBeNull();
 });
 
 it('sends the status, office-hours and department filters to the API', async () => {
