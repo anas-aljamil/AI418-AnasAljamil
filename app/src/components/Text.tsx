@@ -51,8 +51,16 @@ export function Text({
   const scale = appScale ? textScale : 1;
   const spec = typeScale[variant];
   const size = (width >= desktopBreakpoint ? spec.desktopSize : spec.size) * scale;
+  // A heading gets a level for screen readers: 1 for the screen's own heading (the two largest
+  // sizes), 2 for a section's. `aria-level` on the call overrides it. React Native's types do
+  // not list aria-level; React Native Web passes it on.
+  const level =
+    rest.role === 'heading' && !('aria-level' in rest)
+      ? ({ 'aria-level': variant === 'heading' || variant === 'display' ? 1 : 2 } as object)
+      : null;
   return (
     <RNText
+      {...level}
       // The app setting and the phone's font size together stay at or under 200%.
       maxFontSizeMultiplier={(maxFontSizeMultiplier ?? maxFontScale) / scale}
       style={[

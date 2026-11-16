@@ -34,6 +34,8 @@ import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 import { layoutDirection } from '@/lib/direction';
 import { bandOnTop } from '@/lib/layout';
+import { markSignedIn, pageTitle, pageTitleKey } from '@/lib/nav';
+import { useVisibleNotifications } from '@/features/notifications/useVisibleNotifications';
 
 // In the browser the navigators keep every visited screen in the page. With screens enabled,
 // a screen that is not shown gets display: none and the hidden attribute, so the Tab key and
@@ -46,12 +48,37 @@ function AppShell() {
   const { scheme, colors } = useTheme();
   const pathname = usePathname();
   const { state } = useAuth();
-  const { i18n: strings } = useTranslation();
+  const { t, i18n: strings } = useTranslation();
   const direction = layoutDirection(strings.language === 'ar' ? 'ar' : 'en');
   const restoring = state.status === 'restoring';
   useEffect(() => {
     if (!restoring) SplashScreen.hideAsync().catch(() => undefined);
   }, [restoring]);
+
+  const signedIn = state.status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) markSignedIn();
+  }, [signedIn]);
+
+  // Browser only. The tab is named after the screen, with the bell's unread count in front
+  // ("(2) Appointments | Mawjood"). My status writes the live status there itself.
+  const { unread } = useVisibleNotifications();
+  const titleKey = pageTitleKey(pathname);
+  const ownTitle = pathname.replace(/\/+$/, '') === '/staff/status';
+  useEffect(() => {
+    if (Platform.OS !== 'web' || ownTitle) return;
+    document.title = pageTitle(titleKey ? t(titleKey) : null, t('app.name'), unread);
+  }, [ownTitle, titleKey, t, unread]);
+
+  // The browser's own bar takes the colour at the top of the screen: the band's navy on the
+  // screens that start with it, the page ground elsewhere.
+  const barColor = bandOnTop(pathname) ? colors.band : colors.bg;
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+      meta.setAttribute('content', barColor);
+    }
+  }, [barColor]);
   if (restoring) return null;
   return (
     <View style={[styles.fill, direction]}>

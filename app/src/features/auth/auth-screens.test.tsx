@@ -10,6 +10,7 @@ const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   router: { replace: (href: string) => mockReplace(href) },
   Redirect: () => null,
+  useLocalSearchParams: () => ({}),
 }));
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageCode: 'ar' }] }));
 jest.mock('@/i18n', () => ({

@@ -54,6 +54,12 @@ How the tokens behave:
 - **Secure cookie:** the browser reaches the link over HTTPS, and the tunnel forwards plain HTTP with `X-Forwarded-Proto: https`. The refresh cookie is then marked `Secure` without setting `COOKIE_SECURE`.
 - **Exposure:** only port 8000 (the API and the page) is published. MySQL stays on this computer. The link exists only while `cloudflared` runs.
 
+## Response headers and sign-in links (added 2026-11-16)
+
+- **Every answer** (pages and API) carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` (no other site may show Mawjood in a frame, which closes clickjacking) and `Referrer-Policy: strict-origin-when-cross-origin`. They are set in `backend/app/main.py` and checked in `tests/test_api_conventions.py`. There is no Content-Security-Policy yet: the Swagger page at `/docs` loads its scripts from a CDN, and the web build uses inline styles, so a policy needs its own pass.
+- **`/sign-in?next=`** brings a visitor back to the screen they opened while signed out. Only a path inside the app is accepted (`safeNext` in `app/src/lib/nav.ts`: it must start with one `/`; `//host`, a backslash, another site and the entry screens are refused), so the link cannot send someone to another site after signing in. Checked in `nav.test.ts` and `e2e/p3c.spec.ts`.
+- **No public list of routes:** Expo Router's sitemap page is turned off (`app.json`).
+
 ## Rate limiting
 - **Login:** 5 attempts per minute for each combination of client address (the visitor's own address on the public link) and email, then 429 `RATE_LIMITED` with a `Retry-After` header.
 - **Sign-up:** 5 accounts per minute for each client address (`SIGNUPS_PER_MINUTE`), then 429 `RATE_LIMITED`.

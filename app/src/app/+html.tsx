@@ -22,6 +22,10 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <title>Mawjood</title>
+        <meta
+          name="description"
+          content="موجود: هل الأستاذ في مكتبه الآن؟ احجز موعدًا أو راسله. Mawjood: see whether a professor is in the office now, book a visit, or send a message."
+        />
 
         {/* Home-screen app: manifest (Android, desktop) and Apple's own tags (iPhone). */}
         <link rel="manifest" href="/manifest.webmanifest" />

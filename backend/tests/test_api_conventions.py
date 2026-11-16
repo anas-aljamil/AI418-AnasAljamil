@@ -170,3 +170,21 @@ def test_a_missing_table_or_column_says_the_database_is_outdated(client):
         assert response.status_code == 503
         error = response.json()["error"]
         assert error["code"] == "SCHEMA_OUTDATED" and "reset_db.py" in error["message"]
+
+
+def test_every_answer_carries_the_security_headers(client):
+    for response in (client.get("/api/v1/health"), client.get("/api/v1/nothing-here")):
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers["x-frame-options"] == "DENY"
+        assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+
+
+def test_large_answers_are_compressed_and_small_ones_are_not(client):
+    departments = client.get("/api/v1/departments", headers={"Accept-Encoding": "gzip"})
+    assert departments.status_code == 200 and len(departments.content) > 1024
+    assert departments.headers["content-encoding"] == "gzip"
+    assert len(departments.json()["items"]) == 12  # the client decoded it
+    health = client.get("/api/v1/health", headers={"Accept-Encoding": "gzip"})
+    assert "content-encoding" not in health.headers
+    plain = client.get("/api/v1/departments", headers={"Accept-Encoding": "identity"})
+    assert "content-encoding" not in plain.headers
