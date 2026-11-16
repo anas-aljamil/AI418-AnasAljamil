@@ -194,7 +194,9 @@ def get_for_participant(db: Session, appointment_id: int, user: User) -> Appoint
     return appointment
 
 
-def transition(db: Session, appointment_id: int, action: str, user: User, now: datetime) -> Appointment:
+def transition(
+    db: Session, appointment_id: int, action: str, user: User, now: datetime, reason: str | None = None
+) -> Appointment:
     appointment = get_for_participant(db, appointment_id, user)
     roles, from_states, new_state = TRANSITIONS[action]
     if user.role not in roles:
@@ -213,6 +215,8 @@ def transition(db: Session, appointment_id: int, action: str, user: User, now: d
         raise AppError(409, "TOO_EARLY", "You can mark the outcome once the appointment has started.")
 
     appointment.status, appointment.updated_at = new_state, now
+    if new_state == "declined":
+        appointment.decline_reason = reason
     if new_state in NOTIFY_STUDENT:
         notify(
             db,

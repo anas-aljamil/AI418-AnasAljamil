@@ -35,6 +35,7 @@ erDiagram
     CONVERSATIONS ||--|{ MESSAGES : contains
     MESSAGES |o--o{ MESSAGES : "is quoted by"
     USERS ||--o{ NOTIFICATIONS : receives
+    USERS |o--o{ CONTACT_MESSAGES : sends
     APPOINTMENTS |o--o{ NOTIFICATIONS : "is about"
     CONVERSATIONS |o--o{ NOTIFICATIONS : "is about"
 
@@ -141,6 +142,7 @@ erDiagram
         varchar status "lifecycle, default pending"
         varchar topic "nullable"
         varchar note "nullable, max 200"
+        varchar decline_reason "nullable, max 200; only when declined"
         datetime created_at
         datetime updated_at
         varchar active_slot "virtual: starts_at if pending/approved"
@@ -176,6 +178,16 @@ erDiagram
         datetime created_at
         datetime read_at "nullable"
     }
+    CONTACT_MESSAGES {
+        int contact_id PK
+        int user_id FK "nullable, SET NULL; the signed-in sender"
+        varchar sender_name "2-100 chars, as given"
+        varchar sender_email "reply address, as given"
+        varchar topic "account | problem | idea | other"
+        varchar body "5-1000 chars"
+        datetime created_at
+        datetime handled_at "nullable, after created_at"
+    }
 ```
 
 ## 2. Relationships: cardinality and participation
@@ -201,6 +213,7 @@ erDiagram
 | Conversation **contains** Message | 1 : 1..N | Message total; Conversation total (the API creates a conversation together with its first message) | `NOT NULL` FK, `ON DELETE CASCADE`; the 1..N minimum is API-enforced and seed-checked |
 | User **receives** Notification | 1 : 0..N | Notification total; User partial | `NOT NULL` FK, `ON DELETE CASCADE` |
 | Notification **is about** Appointment or Conversation | N : 0..1 each, exactly one of the two | Notification total over the pair | `ck_notifications_reference` CHECK |
+| User **sends** ContactMessage | 0..1 : 0..N | Both partial (the form is open without an account; most users never write) | `contact_messages.user_id` nullable, `ON DELETE SET NULL` |
 
 ## 3. Chen-notation description
 
@@ -228,10 +241,11 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | CHAT_CLOSED_HOURS | <ins>closure_id</ins>, day_of_week, on_date, ends_on, start_time, end_time | dates (as for SCHEDULE_BLOCK) |
 | SKIPPED_DATE | <ins>skip_id</ins>, skip_date, created_at | none |
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
-| APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
+| APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, decline_reason, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |
 | MESSAGE | <ins>message_id</ins>, sender_role, body, created_at, edited_at, deleted_at, read_at | edited, deleted (whether those times are set) |
 | NOTIFICATION | <ins>notification_id</ins>, type, created_at, read_at | text (rendered in the reader's language) |
+| CONTACT_MESSAGE | <ins>contact_id</ins>, sender_name, sender_email, topic, body, created_at, handled_at | open (handled_at not set) |
 
 Alternate keys (also unique, but not underlined):
 - COLLEGE: code, name_ar, name_en
@@ -282,6 +296,7 @@ Each line reads: relationship (diamond), the two entities with their cardinality
 | NOTIFIES | USER (1) | NOTIFICATION (N) | partial | **total** | none |
 | ABOUT_APPOINTMENT | APPOINTMENT (1) | NOTIFICATION (N) | partial | partial (only appointment notifications) | none |
 | ABOUT_CONVERSATION | CONVERSATION (1) | NOTIFICATION (N) | partial | partial (only message notifications) | none |
+| SENDS | USER (1) | CONTACT_MESSAGE (N) | partial | partial (a message may come from someone without an account) | none |
 
 Constraints to note beside the diagram:
 - **CONVERSATION** together with STARTS and ANSWERS forms at most one conversation per student-professor pair (`UNIQUE (student_id, professor_id)`). It is drawn as an entity rather than an M:N diamond because MESSAGE and NOTIFICATION relate to it.

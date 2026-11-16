@@ -34,6 +34,7 @@ TABLES = [
     "colleges",
     "departments", "users", "offices", "students", "professors", "schedule_blocks",
     "booking_periods", "chat_closed_hours", "skipped_dates", "status_overrides", "appointments", "pins", "conversations", "messages", "notifications",
+    "contact_messages",
 ]
 MIN_QUERIES, MIN_AGGREGATES = 5, 2
 AGGREGATE = re.compile(r"\b(COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT)\s*\(", re.IGNORECASE)

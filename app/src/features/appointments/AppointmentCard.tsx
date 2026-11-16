@@ -13,7 +13,7 @@ import { Text } from '@/components/Text';
 import { Ticket } from '@/components/Ticket';
 import { shortDateText, todayKey, weekdayOf } from '@/lib/dates';
 import { clockText, dateTimeText, riyadhDayDifference, riyadhTime, whenText } from '@/lib/format';
-import { fullName, officeText, professorName } from '@/lib/names';
+import { fullName, officeText, professorName, scriptOf } from '@/lib/names';
 import { space, type Language } from '@/theme/tokens';
 
 interface AppointmentCardProps {
@@ -95,6 +95,16 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
         <Text variant="label" color="muted">
           {appointment.note}
         </Text>
+      ) : null}
+      {appointment.decline_reason ? (
+        <View>
+          <Text variant="label" weight="semibold">
+            {t('appointments.decline_reason_label')}
+          </Text>
+          <Text variant="label" lang={scriptOf(appointment.decline_reason)}>
+            {appointment.decline_reason}
+          </Text>
+        </View>
       ) : null}
       <View style={styles.state}>
         <Pill

@@ -20,7 +20,7 @@ from app.core.pagination import Page, PageParams, page_params, paginate
 from app.core.security import hash_password
 from app.db import get_db
 from app.deps import current_admin
-from app.models import Appointment, Department, Office, Professor, Student, User
+from app.models import Appointment, ContactMessage, Department, Office, Professor, Student, User
 from app.schemas import (
     AccountPatch,
     AdminProfessorIn,
@@ -29,6 +29,8 @@ from app.schemas import (
     AdminStudentIn,
     AdminStudentOut,
     AdminStudentPatch,
+    ContactOut,
+    ContactPatch,
     DepartmentIn,
     DepartmentOut,
     DepartmentPatch,
@@ -336,3 +338,48 @@ def reports(db: Session = Depends(get_db)) -> ReportsOut:
         ],
         by_hour=[HourLoadOut(hour=int(h), appointments=n) for h, n in by_hour],
     )
+
+
+# --- messages from Help and contact --------------------------------------------
+
+
+@router.get("/contact-messages", response_model=Page[ContactOut], summary="Messages from Help and contact")
+def list_contact_messages(
+    page: PageParams = Depends(page_params),
+    db: Session = Depends(get_db),
+    handled: Annotated[bool | None, Query(description="true: handled only; false: open only")] = None,
+) -> Page[ContactOut]:
+    """Open messages first, then the newest."""
+    query = select(ContactMessage).order_by(
+        ContactMessage.handled_at.is_not(None), ContactMessage.created_at.desc()
+    )
+    if handled is not None:
+        query = query.where(
+            ContactMessage.handled_at.is_not(None) if handled else ContactMessage.handled_at.is_(None)
+        )
+    rows = [ContactOut.model_validate(m) for m in db.scalars(query)]
+    return paginate(rows, page)
+
+
+@router.patch(
+    "/contact-messages/{contact_id}", response_model=ContactOut, summary="Mark handled, or open again"
+)
+def update_contact_message(
+    contact_id: int, body: ContactPatch, db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
+) -> ContactOut:
+    message = db.get(ContactMessage, contact_id)
+    if message is None:
+        raise not_found("Message")
+    message.handled_at = (message.handled_at or clock.now()) if body.handled else None
+    db.commit()
+    return ContactOut.model_validate(message)
+
+
+@router.delete("/contact-messages/{contact_id}", status_code=204, summary="Delete a message")
+def delete_contact_message(contact_id: int, db: Session = Depends(get_db)) -> Response:
+    message = db.get(ContactMessage, contact_id)
+    if message is None:
+        raise not_found("Message")
+    db.delete(message)
+    db.commit()
+    return Response(status_code=204)

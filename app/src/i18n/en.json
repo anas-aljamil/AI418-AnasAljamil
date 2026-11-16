@@ -477,7 +477,8 @@
     "moving": "Moving",
     "length_line": "Until {{end}}, {{minutes}} min",
     "book_again": "Book again",
-    "book_again_label": "Book again with {{name}}"
+    "book_again_label": "Book again with {{name}}",
+    "decline_reason_label": "Reason given"
   },
   "status_screen": {
     "title": "My status",
@@ -519,7 +520,12 @@
     "action_label": "{{action}}: {{name}}, {{when}}",
     "approved_toast": "Approved: {{name}}, {{when}}",
     "declined_toast": "Declined: {{name}}, {{when}}",
-    "updated_toast": "Appointment updated"
+    "updated_toast": "Appointment updated",
+    "decline_title": "Decline the request from {{name}}?",
+    "decline_body": "{{when}}. The student is told at once.",
+    "decline_reason": "Reason (optional)",
+    "decline_reason_helper": "The student sees it on the appointment. Up to 200 characters.",
+    "decline_confirm": "Decline"
   },
   "schedule": {
     "repeat": "Repeats",
@@ -721,7 +727,21 @@
     "reports_done": "completed: {{count}}",
     "reports_upcoming": "pending or approved: {{count}}",
     "reports_no_show": "no-show: {{count}}",
-    "reports_dropped": "declined or cancelled: {{count}}"
+    "reports_dropped": "declined or cancelled: {{count}}",
+    "contact_heading": "Messages from Help and contact",
+    "contact_title_one": "Messages from Help and contact (1 open)",
+    "contact_title_two": "Messages from Help and contact (2 open)",
+    "contact_title_few": "Messages from Help and contact ({{count}} open)",
+    "contact_title_many": "Messages from Help and contact ({{count}} open)",
+    "contact_title_other": "Messages from Help and contact ({{count}} open)",
+    "contact_title_zero": "Messages from Help and contact (none open)",
+    "contact_none": "No open messages.",
+    "contact_no_account": "not signed in",
+    "contact_reply": "Reply by email",
+    "contact_reply_label": "Reply to {{name}} by email",
+    "contact_mark": "Mark as handled",
+    "contact_mark_label": "Mark the message from {{name}} as handled",
+    "contact_handled": "Marked as handled"
   },
   "chat": {
     "reply": "Reply",
@@ -847,9 +867,26 @@
     "q6": "Can I use it like an app on my phone?",
     "a6": "Yes. Open this site in your phone's browser, then choose Add to Home Screen in the browser's menu.",
     "contact_title": "Contact",
-    "contact_body": "A problem with your account or with Mawjood? Write to the administrator.",
+    "contact_body": "Or write from your own mail app:",
     "contact_email": "Email {{email}}",
-    "contact_none": "A problem with your account or with Mawjood? Ask your department's office for the Mawjood administrator."
+    "contact_form_body": "Write to the Mawjood administrator. You get the answer at the email you give.",
+    "name": "Your name",
+    "email": "Your email",
+    "email_helper": "The answer goes here.",
+    "topic": "About",
+    "topic_account": "My account",
+    "topic_problem": "Something does not work",
+    "topic_idea": "An idea",
+    "topic_other": "Something else",
+    "message": "Message",
+    "counter": "{{count}}/{{max}}",
+    "send": "Send",
+    "sent_title": "Sent",
+    "sent_body": "The administrator will answer at {{email}}.",
+    "write_again": "Write another message",
+    "need_name": "Write your name.",
+    "need_email": "Write an email address the answer can go to.",
+    "need_body": "Write at least a few words."
   },
   "nav": {
     "skip": "Skip to content"

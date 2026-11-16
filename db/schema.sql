@@ -27,6 +27,7 @@ SET time_zone = '+00:00';
 
 -- Drop in reverse dependency order so the script can be re-run.
 -- Triggers are dropped together with their tables.
+DROP TABLE IF EXISTS contact_messages;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS conversations;
@@ -377,6 +378,9 @@ CREATE TABLE appointments (
     status            VARCHAR(10)  COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'pending',
     topic             VARCHAR(12)  COLLATE utf8mb4_0900_bin NULL,
     note              VARCHAR(200) NULL,
+    -- Optional, written by the professor when declining; only a declined
+    -- appointment has one (2026-11-16).
+    decline_reason    VARCHAR(200) NULL,
     created_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     updated_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     active_slot       VARCHAR(19)  COLLATE utf8mb4_0900_bin GENERATED ALWAYS AS (
@@ -394,6 +398,8 @@ CREATE TABLE appointments (
                                                         'cancelled', 'completed', 'no_show')),
     CONSTRAINT ck_appointments_topic  CHECK (topic IN ('assignment', 'exam_review', 'advising', 'other')),
     CONSTRAINT ck_appointments_note   CHECK (CHAR_LENGTH(note) >= 1),
+    CONSTRAINT ck_appointments_decline_reason CHECK (
+        decline_reason IS NULL OR (status = 'declined' AND CHAR_LENGTH(decline_reason) >= 1)),
     CONSTRAINT ck_appointments_time_order CHECK (ends_at > starts_at),
     CONSTRAINT ck_appointments_updated_after_created CHECK (updated_at >= created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -502,6 +508,36 @@ CREATE TABLE notifications (
         (type = 'new_message' AND conversation_id IS NOT NULL AND appointment_id IS NULL)
         OR (type <> 'new_message' AND appointment_id IS NOT NULL AND conversation_id IS NULL)),
     CONSTRAINT ck_notifications_read_after_created CHECK (read_at >= created_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------------------------------
+-- contact_messages: what people send through Help and contact (2026-11-16). The
+-- form is open without an account, so the sender gives a name and a reply
+-- address; user_id links the account when one was signed in (SET NULL keeps
+-- the message if the account is deleted). The name and address are the ones
+-- given for this message, not copies of the account (docs/normalization.md).
+-- handled_at: when the administrator dealt with it; NULL = still open.
+-- -----------------------------------------------------------------------------
+CREATE TABLE contact_messages (
+    contact_id    INT           NOT NULL AUTO_INCREMENT,
+    user_id       INT           NULL,
+    sender_name   VARCHAR(100)  NOT NULL,
+    sender_email  VARCHAR(254)  NOT NULL,
+    topic         VARCHAR(10)   COLLATE utf8mb4_0900_bin NOT NULL DEFAULT 'other',
+    body          VARCHAR(1000) NOT NULL,
+    created_at    DATETIME      NOT NULL DEFAULT (UTC_TIMESTAMP()),
+    handled_at    DATETIME      NULL,
+    PRIMARY KEY (contact_id),
+    KEY ix_contact_messages_open (handled_at, created_at),
+    KEY ix_contact_messages_user (user_id),
+    CONSTRAINT fk_contact_messages_user FOREIGN KEY (user_id)
+        REFERENCES users (user_id) ON DELETE SET NULL ON UPDATE RESTRICT,
+    CONSTRAINT ck_contact_messages_topic CHECK (topic IN ('account', 'problem', 'idea', 'other')),
+    CONSTRAINT ck_contact_messages_name  CHECK (CHAR_LENGTH(sender_name) >= 2),
+    CONSTRAINT ck_contact_messages_email CHECK (
+        REGEXP_LIKE(sender_email, '^[a-z0-9._%+-]+@[a-z0-9-]+([.][a-z0-9-]+)+$', 'c')),
+    CONSTRAINT ck_contact_messages_body  CHECK (CHAR_LENGTH(body) >= 5),
+    CONSTRAINT ck_contact_messages_handled_after_sent CHECK (handled_at >= created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------

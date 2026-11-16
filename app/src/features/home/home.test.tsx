@@ -64,6 +64,7 @@ const appointment: Appointment = {
   cancel_deadline: new Date(Date.now() + 2 * 86_400_000 - 3_600_000).toISOString(),
   topic: null,
   note: null,
+  decline_reason: null,
   student: { user_id: 9, full_name_ar: 'سعد المطيري', full_name_en: 'Saad Al-Mutairi' },
   professor: {
     user_id: 1,

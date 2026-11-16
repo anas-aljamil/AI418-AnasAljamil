@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.middleware.gzip import GZipMiddleware
 
-from app.api.v1 import admin, appointments, auth, conversations, me, notifications, professors
+from app.api.v1 import admin, appointments, auth, contact, conversations, me, notifications, professors
 from app.config import get_settings
 from app.core import schema_check
 from app.core.errors import AppError, install_error_handlers
@@ -80,7 +80,7 @@ def create_app() -> FastAPI:
             )
         return {"status": "ok"}
 
-    for module in (auth, professors, me, appointments, conversations, notifications, admin):
+    for module in (auth, professors, me, appointments, conversations, notifications, admin, contact):
         api.include_router(module.router)
     app.include_router(api)
     mount_web_build(app, get_settings().web_dir)  # pages for paths no route matched

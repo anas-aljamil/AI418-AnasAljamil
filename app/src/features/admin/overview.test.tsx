@@ -86,6 +86,20 @@ beforeEach(() => {
   mockApi.mockImplementation(async (path: string, method = 'GET') => {
     if (method === 'PATCH') return {};
     if (path === '/admin/reports') return reports;
+    if (path.startsWith('/admin/contact-messages')) {
+      return page([
+        {
+          contact_id: 2,
+          user_id: null,
+          sender_name: 'Rakan Al-Juhani',
+          sender_email: 'r.aljuhani@university.example',
+          topic: 'account',
+          body: 'I cannot sign in: it says my account is not active.',
+          created_at: '2026-10-03T07:20:00Z',
+          handled_at: null,
+        },
+      ]);
+    }
     if (path.startsWith('/admin/professors')) return page(professors);
     if (path.startsWith('/admin/students')) return page(students);
     if (path.startsWith('/admin/departments')) return page([se]);
@@ -166,4 +180,17 @@ it('reports appointments per professor and per hour, in words as well', async ()
   ).toBeTruthy();
   expect(screen.getByLabelText('10 AM, 3 appointments')).toBeTruthy();
   expect(screen.getByLabelText('1 PM, 1 appointment')).toBeTruthy();
+});
+
+it('lists open messages from Help and contact and marks one handled', async () => {
+  await renderWithProviders(<AdminOverview />);
+  expect(await screen.findByText('Messages from Help and contact (1 open)')).toBeTruthy();
+  expect(screen.getByText('I cannot sign in: it says my account is not active.')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reply to Rakan Al-Juhani by email' })).toBeTruthy();
+  await fireEvent.press(
+    screen.getByRole('button', { name: 'Mark the message from Rakan Al-Juhani as handled' }),
+  );
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/admin/contact-messages/2', 'PATCH', { handled: true }),
+  );
 });

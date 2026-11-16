@@ -224,6 +224,7 @@ class Appointment(Base):
     status: Mapped[str] = mapped_column(String(10), server_default="pending")
     topic: Mapped[str | None] = mapped_column(String(12))
     note: Mapped[str | None] = mapped_column(String(200))
+    decline_reason: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
     # Virtual generated column behind the double-booking unique index.
@@ -277,3 +278,17 @@ class Notification(Base):
     conversation_id: Mapped[int | None] = mapped_column(ForeignKey("conversations.conversation_id"))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     read_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class ContactMessage(Base):
+    """A message sent from Help and contact; user_id is set when the sender was signed in."""
+
+    __tablename__ = "contact_messages"
+    contact_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.user_id"))
+    sender_name: Mapped[str] = mapped_column(String(100))
+    sender_email: Mapped[str] = mapped_column(String(254))
+    topic: Mapped[str] = mapped_column(String(10), server_default="other")
+    body: Mapped[str] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime)

@@ -7,11 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.clock import Clock, get_clock
+from app.core.errors import AppError
 from app.core.pagination import Page, PageParams, page_params, paginate
 from app.db import get_db
 from app.deps import current_student, get_current_user
 from app.models import Appointment, Professor, Student, User
 from app.schemas import (
+    ActionIn,
     AppointmentOut,
     AppointmentProfessorOut,
     BookingIn,
@@ -37,6 +39,7 @@ def appointment_out(a: Appointment) -> AppointmentOut:
         cancel_deadline=a.starts_at - booking.CANCEL_NOTICE,
         topic=a.topic,
         note=a.note,
+        decline_reason=a.decline_reason,
         created_at=a.created_at,
         updated_at=a.updated_at,
         student=PersonOut(
@@ -152,8 +155,12 @@ def move_appointment(
 def change_appointment(
     appointment_id: int,
     action: Literal["approve", "decline", "cancel", "complete", "no-show"],
+    body: ActionIn | None = None,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     clock: Clock = Depends(get_clock),
 ) -> AppointmentOut:
-    return appointment_out(booking.transition(db, appointment_id, action, user, clock.now()))
+    reason = body.reason if body else None
+    if reason and action != "decline":
+        raise AppError(422, "VALIDATION_ERROR", "Only declining takes a reason.")
+    return appointment_out(booking.transition(db, appointment_id, action, user, clock.now(), reason))

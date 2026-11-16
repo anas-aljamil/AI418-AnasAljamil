@@ -872,6 +872,15 @@ GROUP BY riyadh_date
 HAVING COUNT(*) > 1;
 
 
+-- A9. Declined requests and the reason the professor gave, when there is one
+-- (IS NOT NULL). App: the student's Appointments, the declined ticket.
+SELECT a.appointment_id, p.full_name_en AS professor, s.full_name_en AS student, a.decline_reason
+FROM appointments AS a
+INNER JOIN users AS p ON p.user_id = a.professor_id
+INNER JOIN users AS s ON s.user_id = a.student_id
+WHERE a.status = 'declined' AND a.decline_reason IS NOT NULL
+ORDER BY a.starts_at;
+
 -- =============================================================================
 -- 14. pins
 -- =============================================================================
@@ -1125,7 +1134,66 @@ WHERE n.user_id NOT IN (COALESCE(a.student_id, c.student_id), COALESCE(a.profess
 
 
 -- =============================================================================
--- 18. across tables
+-- 18. contact_messages
+-- =============================================================================
+
+-- CM1. Open messages, oldest first, and whether the sender has an account here
+-- (LEFT JOIN: people without one are listed too). App: admin Overview, Messages.
+SELECT cm.contact_id, cm.sender_name, cm.sender_email, cm.topic, cm.created_at,
+       u.role AS account_role
+FROM contact_messages AS cm
+LEFT JOIN users AS u ON u.user_id = cm.user_id
+WHERE cm.handled_at IS NULL
+ORDER BY cm.created_at;
+
+-- CM2. Aggregate: messages per topic, and how many are still open.
+SELECT topic, COUNT(*) AS received, COUNT(*) - COUNT(handled_at) AS still_open
+FROM contact_messages
+GROUP BY topic
+ORDER BY received DESC, topic;
+
+-- CM3. Aggregate: topics the administrator takes more than a day to handle, on
+-- average (handled messages only).
+SELECT topic, COUNT(*) AS handled, ROUND(AVG(TIMESTAMPDIFF(HOUR, created_at, handled_at))) AS average_hours
+FROM contact_messages
+WHERE handled_at IS NOT NULL
+GROUP BY topic
+HAVING AVG(TIMESTAMPDIFF(HOUR, created_at, handled_at)) > 24
+ORDER BY average_hours DESC;
+
+-- CM4. Messages about signing in or activation, whatever their topic (LIKE).
+SELECT contact_id, sender_name, topic, body
+FROM contact_messages
+WHERE body LIKE '%sign in%' OR body LIKE '%activ%'
+ORDER BY created_at;
+
+-- CM5. Account and problem reports received between 2 and 4 October.
+SELECT contact_id, topic, sender_name, created_at
+FROM contact_messages
+WHERE topic IN ('account', 'problem')
+  AND created_at BETWEEN '2026-10-02 00:00:00' AND '2026-10-04 23:59:59'
+ORDER BY created_at;
+
+-- CM6. Every address a reply may go to, once each: the address given on a
+-- message, and the account address of signed-in senders (UNION removes the
+-- duplicates; DISTINCT inside each part keeps it short).
+SELECT DISTINCT sender_email AS address, 'given on a message' AS source
+FROM contact_messages
+UNION
+SELECT DISTINCT u.email, 'account of a signed-in sender'
+FROM contact_messages AS cm
+INNER JOIN users AS u ON u.user_id = cm.user_id
+ORDER BY address;
+
+-- CM7. Aggregate: who wrote more than once, by account or by address.
+SELECT sender_email, COUNT(*) AS messages, MIN(created_at) AS first_message
+FROM contact_messages
+GROUP BY sender_email
+HAVING COUNT(*) > 1
+ORDER BY messages DESC;
+
+-- =============================================================================
+-- 19. across tables
 -- =============================================================================
 
 -- X1. Saad's activity in one timeline: appointments booked, messages sent and
@@ -1166,7 +1234,7 @@ ORDER BY student_id, professor_id;
 
 
 -- =============================================================================
--- 19. double-booking trigger demo
+-- 20. double-booking trigger demo
 -- =============================================================================
 
 -- T1. Remove a demo procedure left over from an interrupted run, if any.

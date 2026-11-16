@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # Self sign-up accepts only addresses at this domain (there is no email verification).
     signup_email_domain: str = "upm.edu.sa"
     messages_per_minute: int = 20
+    # The Help and contact form, per client address (it is open without an account).
+    contact_messages_per_minute: int = 3
 
     # Freeze the API clock for screenshots and demos, e.g. 2026-10-05T07:00:00Z. Empty = real time.
     demo_now: datetime | None = None

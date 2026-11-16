@@ -365,10 +365,18 @@ class AppointmentOut(BaseModel):
     cancel_deadline: UtcDatetime  # cancellation closes 1 hour before the start
     topic: str | None
     note: str | None
+    # Only on a declined appointment, and only when the professor wrote one.
+    decline_reason: str | None
     created_at: UtcDatetime
     updated_at: UtcDatetime
     student: PersonOut
     professor: AppointmentProfessorOut
+
+
+class ActionIn(BaseModel):
+    """Optional body of an appointment action: only decline takes a reason."""
+
+    reason: OptionalText200
 
 
 class BookingIn(BaseModel):
@@ -652,3 +660,40 @@ class ReportsOut(BaseModel):
     by_professor: list[ProfessorLoadOut]
     # Appointments that were kept or are still planned (not declined or cancelled), by start hour.
     by_hour: list[HourLoadOut]
+
+
+# --- contact -----------------------------------------------------------------
+
+ContactTopic = Literal["account", "problem", "idea", "other"]
+
+
+class ContactIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    email: Email
+    topic: ContactTopic = "other"
+    body: str = Field(min_length=5, max_length=1000)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def lower(cls, value: object) -> object:
+        return _strip_lower(value)
+
+    @field_validator("name", "body", mode="before")
+    @classmethod
+    def strip(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class ContactOut(Out):
+    contact_id: int
+    user_id: int | None
+    sender_name: str
+    sender_email: str
+    topic: ContactTopic
+    body: str
+    created_at: UtcDatetime
+    handled_at: UtcDatetime | None
+
+
+class ContactPatch(BaseModel):
+    handled: bool
