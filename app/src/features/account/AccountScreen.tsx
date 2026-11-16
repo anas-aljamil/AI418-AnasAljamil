@@ -171,6 +171,7 @@ export function AccountScreen() {
         </View>
       ) : null}
 
+      <Button variant="quiet" label={t('help.title')} onPress={() => router.push('/help')} />
       <Button variant="secondary" label={t('profile.sign_out')} onPress={leave} />
       {__DEV__ ? (
         <Button

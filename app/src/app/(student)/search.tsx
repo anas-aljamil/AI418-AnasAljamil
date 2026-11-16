@@ -1,6 +1,7 @@
 /**
  * Search and browse (DESIGN.md 7.3): Arabic-aware search by name or department, with filter
- * chips for status and office hours today and a department menu grouped by college. Results
+ * chips for status and office hours today and a department menu grouped by college. Until
+ * something is typed or chosen it lists every professor. Results
  * are flat rows, in office first; a row opens the professor's profile (one tap) and has its
  * own pin button. On desktop the profile opens in a pane beside the results (?id=).
  */
@@ -56,6 +57,7 @@ export default function SearchScreen() {
   const results = useProfessorSearch(
     { query: searchText, statuses, departmentIds, officeHoursToday },
     language,
+    true,
   );
 
   const clear = () => {
@@ -115,24 +117,28 @@ export default function SearchScreen() {
         <View style={styles.clear}>
           <Button variant="quiet" label={t('search.clear')} onPress={clear} />
         </View>
-      ) : null}
+      ) : (
+        // Before anything is typed or chosen the list is everyone, so the screen is never empty.
+        <Text variant="caption" color="muted">
+          {t('search.all')}
+        </Text>
+      )}
     </View>
   );
 
-  const empty = !active ? (
-    <Text color="muted">{t('search.prompt')}</Text>
-  ) : results.error && !results.data ? (
-    <SectionError message={t(errorKey(results.error))} onRetry={() => results.refetch()} />
-  ) : results.data === undefined || (results.isPlaceholderData && results.isFetching) ? (
-    <View>
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
-  ) : (
-    <Text color="muted">
-      {query.trim() ? t('home.no_results', { query: query.trim() }) : t('search.no_match')}
-    </Text>
-  );
+  const empty =
+    results.error && !results.data ? (
+      <SectionError message={t(errorKey(results.error))} onRetry={() => results.refetch()} />
+    ) : results.data === undefined || (results.isPlaceholderData && results.isFetching) ? (
+      <View>
+        <SkeletonRow />
+        <SkeletonRow />
+      </View>
+    ) : (
+      <Text color="muted">
+        {query.trim() ? t('home.no_results', { query: query.trim() }) : t('search.no_match')}
+      </Text>
+    );
 
   const list = (
     <FlatList
@@ -142,7 +148,7 @@ export default function SearchScreen() {
         desktop ? null : column,
         { paddingTop: insets.top + space.lg },
       ]}
-      data={active ? (results.data ?? []) : []}
+      data={results.data ?? []}
       keyExtractor={(professor) => String(professor.professor_id)}
       renderItem={({ item }) => (
         <ProfessorRow

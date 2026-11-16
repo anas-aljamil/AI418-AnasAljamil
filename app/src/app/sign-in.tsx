@@ -122,6 +122,7 @@ export default function SignInScreen() {
           block
         />
         <Button variant="quiet" label={t('signup.link')} onPress={() => router.push('/sign-up')} />
+        <Button variant="quiet" label={t('help.title')} onPress={() => router.push('/help')} />
       </View>
     </AuthFrame>
   );

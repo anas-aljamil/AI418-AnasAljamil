@@ -11,7 +11,7 @@
  * docs/desktop-plan.md) there is no back button, because the list stays beside it.
  */
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import Pin from 'lucide-react-native/icons/pin';
 
 import { useColumn, useLayout } from '@/lib/layout';
 import { useOpenConversation, useProfessor } from '@/api/queries';
+import type { BookingPeriod } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Band } from '@/components/Corridor';
@@ -35,20 +36,37 @@ import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
-import { dateText, shortDateText } from '@/lib/dates';
+import { dateText, shortDateText, weekdayOf } from '@/lib/dates';
 import { clockText, laterText } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
-import { space, touchTarget, type Language } from '@/theme/tokens';
+import { radii, space, touchTarget, type Language } from '@/theme/tokens';
 
 interface ProfessorDetailProps {
   professorId: number;
   /** Shown in a pane beside a list (desktop Search): no back button, no column of its own. */
   pane?: boolean;
+  /** Start with the booking sheet open ("Book again"). */
+  openBooking?: boolean;
 }
 
-export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailProps) {
+/** The first date in the booking calendar on which a booking time happens, if any. */
+function firstDate(period: BookingPeriod, bookingDays: string[]): string | null {
+  if (period.on_date) return bookingDays.includes(period.on_date) ? period.on_date : null;
+  return (
+    bookingDays.find(
+      (date) =>
+        weekdayOf(date) === period.day_of_week && (!period.ends_on || date <= period.ends_on),
+    ) ?? null
+  );
+}
+
+export function ProfessorDetail({
+  professorId,
+  pane = false,
+  openBooking = false,
+}: ProfessorDetailProps) {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
@@ -61,7 +79,13 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
   const professor = useProfessor(professorId);
   const togglePin = usePinWithToast();
   const toast = useToast();
-  const [booking, setBooking] = useState(false);
+  const [booking, setBooking] = useState(openBooking);
+  // A booking time tapped below opens the sheet on that time's first date.
+  const [bookingDay, setBookingDay] = useState<string | null>(null);
+  const startBooking = (date: string | null) => {
+    setBookingDay(date);
+    setBooking(true);
+  };
 
   const openChat = useOpenConversation();
   const message = () => {
@@ -109,7 +133,7 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
         <View style={inline ? undefined : styles.grow}>
           <Button
             label={t('prof.book')}
-            onPress={() => setBooking(true)}
+            onPress={() => startBooking(null)}
             disabled={!bookable}
             block={!inline}
           />
@@ -134,7 +158,14 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
             />
           }
         />
-        <BookingSheet professor={data} visible={booking} onClose={() => setBooking(false)} />
+        <BookingSheet
+          // A new key starts the sheet again on the chosen day.
+          key={bookingDay ?? 'first'}
+          professor={data}
+          visible={booking && bookable}
+          onClose={() => setBooking(false)}
+          initialDay={bookingDay}
+        />
       </>
     ) : null;
 
@@ -232,20 +263,44 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
                   // its date, from today on (2026-11-11).
                   data.booking_periods
                     .filter((period) => !period.on_date || period.on_date >= data.today.date)
-                    .map((period) => (
-                      <Text key={period.period_id}>
-                        {t('prof.period_line', {
+                    .map((period) => {
+                      const line =
+                        t('prof.period_line', {
                           day: period.on_date
                             ? dateText(period.on_date, t)
                             : t(`weekday.${period.day_of_week}`),
                           start: clockText(period.start_time, t),
                           end: clockText(period.end_time, t),
                         }) +
-                          (period.ends_on
-                            ? t('prof.period_until', { date: shortDateText(period.ends_on, t) })
-                            : '')}
-                      </Text>
-                    ))
+                        (period.ends_on
+                          ? t('prof.period_until', { date: shortDateText(period.ends_on, t) })
+                          : '');
+                      // A student taps a time to book in it; the sheet opens on its first date
+                      // in the booking calendar. A time with no date there stays plain text.
+                      const date = isStudent ? firstDate(period, data.booking_days) : null;
+                      return date ? (
+                        <Pressable
+                          key={period.period_id}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('prof.book_on', { when: line })}
+                          onPress={() => startBooking(date)}
+                          style={({ pressed }) => [
+                            styles.period,
+                            {
+                              borderColor: colors.line,
+                              backgroundColor: pressed ? colors.line : colors.surface,
+                            },
+                          ]}
+                        >
+                          <Text style={styles.grow}>{line}</Text>
+                          <Text variant="label" color="primary">
+                            {t('prof.book')}
+                          </Text>
+                        </Pressable>
+                      ) : (
+                        <Text key={period.period_id}>{line}</Text>
+                      );
+                    })
                 ) : (
                   <Text color="muted">{t('prof.no_booking_times', { name })}</Text>
                 )}
@@ -289,6 +344,16 @@ export function ProfessorDetail({ professorId, pane = false }: ProfessorDetailPr
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   scroll: { paddingBottom: space.xl },
+  period: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: touchTarget,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
+    borderRadius: radii.input,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   band: { paddingHorizontal: space.md, paddingBottom: space.md },
   bandPane: { paddingTop: space.lg, paddingHorizontal: space.lg },
   bandInner: { gap: space.xs },

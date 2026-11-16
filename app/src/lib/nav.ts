@@ -54,6 +54,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/notifications$/, 'notifications.title'],
   [/^\/professors\/\d+$/, 'titles.professor'],
   [/^\/conversations\/\d+$/, 'titles.conversation'],
+  [/^\/help$/, 'help.title'],
   [/^\/styleguide$/, 'styleguide.title'],
 ];
 

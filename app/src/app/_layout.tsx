@@ -31,6 +31,7 @@ import { persistOptions, queryClient } from '@/api/queryClient';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
+import { SkipLink } from '@/components/SkipLink';
 import { ToastProvider } from '@/components/Toast';
 import { layoutDirection } from '@/lib/direction';
 import { bandOnTop } from '@/lib/layout';
@@ -84,6 +85,7 @@ function AppShell() {
     <View style={[styles.fill, direction]}>
       {/* Light icons on the dark theme, and over the navy band in either theme. */}
       <StatusBar style={scheme === 'dark' || bandOnTop(pathname) ? 'light' : 'dark'} />
+      <SkipLink />
       <Stack
         screenOptions={{
           headerShown: false,

@@ -11,7 +11,7 @@
  * Phones and tablets: one column. Desktop: the band across the top beside the rail, the list
  * in the main column and the next appointment beside it.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type TextInputInstance } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +35,7 @@ import { SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { useToast } from '@/components/Toast';
 import {
   ConnectionNotice,
   CorridorSkeleton,
@@ -86,6 +87,11 @@ export default function HomeScreen() {
   const next = useNextAppointment();
   const search = useProfessorSearch({ query: searchText }, language);
   const announcement = useStatusAnnouncement(pins.data);
+  // The same sentence a screen reader hears, shown to everyone: "Dr. Noura is now In office".
+  const toast = useToast();
+  useEffect(() => {
+    if (announcement) toast(announcement);
+  }, [announcement, toast]);
 
   const togglePin = usePinWithToast();
   const openProfessor = (professor: ProfessorSummary) =>
