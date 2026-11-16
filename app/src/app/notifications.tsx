@@ -8,12 +8,17 @@ import { SectionList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CalendarCheck from 'lucide-react-native/icons/calendar-check';
+import CalendarClock from 'lucide-react-native/icons/calendar-clock';
+import CalendarX from 'lucide-react-native/icons/calendar-x';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 
 import { useColumn } from '@/lib/layout';
 import { useMarkNotificationsRead } from '@/api/queries';
 import type { AppNotification } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
+import { IconCircle, type IconComponent } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { IconButton, ListRow, Pill } from '@/components/Surfaces';
@@ -27,6 +32,14 @@ import { useNow } from '@/lib/hooks';
 import { participantName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
+
+/** What happened, as a picture: a message, an appointment that went ahead, one that did not. */
+function iconFor(type: AppNotification['type']): IconComponent {
+  if (type === 'new_message') return MessageCircle;
+  if (type === 'appointment_approved') return CalendarCheck;
+  if (type === 'appointment_declined' || type === 'appointment_cancelled') return CalendarX;
+  return CalendarClock;
+}
 
 export default function NotificationsScreen() {
   const { t, i18n } = useTranslation();
@@ -110,6 +123,7 @@ export default function NotificationsScreen() {
           const fresh = !item.read_at;
           return (
             <ListRow
+              leading={<IconCircle icon={iconFor(item.type)} muted={!fresh} />}
               title={title}
               subtitle={when}
               trailing={fresh ? <Pill label={t('notifications.new')} tone="primary" /> : null}

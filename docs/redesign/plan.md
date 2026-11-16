@@ -1,9 +1,10 @@
 # Mawjood: redesign plan (two directions)
 
 > **Status: the owner chose the recommended mix (Section 6) on 2026-11-15.** Phases R1
-> (foundations), R2 (student Home, Search, profile, booking sheet) and R3 (professor My status,
-> Requests, Schedule; every appointment as a ticket) are built; R3 waits for review. Chat,
-> notifications, settings, admin and sign-in screens are not rebuilt yet (R4). Owner request
+> (foundations), R2 (student Home, Search, profile, booking sheet), R3 (professor My status,
+> Requests, Schedule; every appointment as a ticket) and R4 (sign-in and sign-up, Messages,
+> Notifications, Account, admin) are built; R4 waits for review. R5 (final QA at 320 px and
+> 200% text, DESIGN.md Sections 2, 4 and 7) is left. Owner request
 > (2026-11-14): rebuild the interface so it is more beautiful, more modern, more practical,
 > and innovative. This follows the process in [DESIGN.md](../DESIGN.md) Section 10, step 1.
 >

@@ -12,6 +12,7 @@ import { useColumn, useLayout } from '@/lib/layout';
 import { useConversations } from '@/api/queries';
 import type { Conversation } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
+import { Initials } from '@/components/Avatar';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ListRow, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
@@ -21,7 +22,7 @@ import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { shortWhen } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
-import { participantName, spokenList } from '@/lib/names';
+import { fullName, participantName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 
@@ -52,6 +53,7 @@ export function ConversationsScreen() {
       : null;
     return (
       <ListRow
+        leading={<Initials name={fullName(conversation.other, language)} />}
         title={name}
         subtitle={preview}
         trailing={
