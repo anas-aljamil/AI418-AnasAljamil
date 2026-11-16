@@ -275,9 +275,17 @@ it('leaves out one date of a saved weekly item and brings it back', async () => 
   );
   await fireEvent.press(screen.getByRole('button', { name: 'Leave out a date' }));
   const inTwoWeeks = addDays(nextWeek, 7);
+  // The calendar opens on today's month and shows one month at a time; the date may be on the
+  // next page, and the neighbour checked below must be on the same page as the date.
+  if (inTwoWeeks.slice(0, 7) !== today.slice(0, 7)) {
+    await fireEvent.press(screen.getByRole('button', { name: 'Next month' }));
+  }
+  const dayAfter = addDays(inTwoWeeks, 1);
+  const neighbour =
+    dayAfter.slice(0, 7) === inTwoWeeks.slice(0, 7) ? dayAfter : addDays(inTwoWeeks, -1);
   // Only the item's own weekday can be left out.
   expect(
-    screen.getByRole('radio', { name: dateText(addDays(inTwoWeeks, 1), t) + ', unavailable' }),
+    screen.getByRole('radio', { name: dateText(neighbour, t) + ', unavailable' }),
   ).toBeDisabled();
   await fireEvent.press(screen.getByRole('radio', { name: dateText(inTwoWeeks, t) }));
   await waitFor(() =>

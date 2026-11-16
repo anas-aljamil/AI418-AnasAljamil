@@ -9,7 +9,8 @@
     "busy": "Busy",
     "away": "Away",
     "unknown": "Not confirmed",
-    "door": "Status: {{status}}"
+    "door": "Status: {{status}}",
+    "sentence": "{{status}} {{when}}"
   },
   "time": {
     "just_now": "updated just now",
@@ -92,7 +93,12 @@
     "empty_title": "No professors pinned yet",
     "empty_body": "Search for your professors and pin them to see their status here.",
     "empty_action": "Search professors",
-    "department_and_office": "Computer Science, Building A, room 214"
+    "department_and_office": "Computer Science, Building A, room 214",
+    "corridor_1": "Dr. Noura",
+    "corridor_2": "Prof. Khalid",
+    "corridor_3": "Dr. Omar",
+    "corridor_4": "Dr. Huda",
+    "corridor_5": "Dr. Reem"
   },
   "styleguide": {
     "title": "Styleguide",
@@ -124,7 +130,16 @@
     "variant_body": "Body 17",
     "variant_title": "Title 20",
     "variant_heading": "Heading 24",
-    "variant_display": "Display 30"
+    "variant_display": "Display 30",
+    "corridor": "The corridor",
+    "corridor_hint": "A lit door means the professor is in. The row scrolls sideways.",
+    "tall_doors": "Tall doors",
+    "sentences": "Status sentences",
+    "ribbon": "Day ribbon",
+    "ribbon_hint": "Today as one line: office hours solid, classes striped, meetings dotted.",
+    "tabs": "Tab bar",
+    "tabs_hint": "The current tab has a filled pill behind its icon, and a heavier label.",
+    "my_door": "Students see you now"
   },
   "honorific": {
     "dr": "Dr.",
@@ -145,7 +160,9 @@
   "when": {
     "today": "Today {{time}}",
     "tomorrow": "Tomorrow {{time}}",
-    "weekday": "{{day}} {{time}}"
+    "weekday": "{{day}} {{time}}",
+    "day_today": "Today",
+    "day_tomorrow": "Tomorrow"
   },
   "countdown": {
     "now": "starting now",
@@ -251,7 +268,6 @@
     "next_appointment": "Next appointment",
     "appointment_pending": "Waiting for approval",
     "appointment_approved": "Approved",
-    "my_professors": "My professors",
     "available_now": "Available now",
     "department_caption": "{{department}}, in office first",
     "nobody_in": "Nobody in your department is in their office right now.",
@@ -269,7 +285,13 @@
     "try_again": "Try again",
     "status_changed": "{{name}} is now {{status}}",
     "when_countdown": "{{when}}, {{countdown}}",
-    "department_empty": "Your department has no professors in Mawjood yet. Use Search to find professors in other departments."
+    "department_empty": "Your department has no professors in Mawjood yet. Use Search to find professors in other departments.",
+    "in_now_none": "None of your professors is in the office now",
+    "in_now_one": "One of your professors is in the office now",
+    "in_now_two": "Two of your professors are in their offices now",
+    "in_now_few": "{{count}} of your professors are in their offices now",
+    "in_now_many": "{{count}} of your professors are in their offices now",
+    "in_now_other": "{{count}} of your professors are in their offices now"
   },
   "tabs": {
     "home": "Home",
@@ -445,7 +467,7 @@
   },
   "status_screen": {
     "title": "My status",
-    "following_schedule": "Following your schedule: {{status}}",
+    "following_schedule": "Following your schedule",
     "manual": "Set by you, {{updated}}",
     "back_to_schedule": "Follow my schedule",
     "presets": "Quick options",
@@ -466,7 +488,8 @@
     "note_delete": "Delete note",
     "note_placeholder": "For example: In lab B-204, come there",
     "note_shown": "Students see it {{when}}.",
-    "note_removed": "Note deleted"
+    "note_removed": "Note deleted",
+    "seen": "This is what students see."
   },
   "requests": {
     "title": "Requests",

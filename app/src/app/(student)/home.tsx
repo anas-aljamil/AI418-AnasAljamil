@@ -1,20 +1,18 @@
 /**
- * Student home, "Now" (DESIGN.md 7.2): answers "who can I see right now?".
+ * Student home, "Now" (DESIGN.md 7.2 and Section 11, "The corridor"): answers "who can I see
+ * right now?" before a word is read.
  *
- * Greeting, search, the next appointment, pinned professors (status visible with no taps),
- * then the student's department, in office first. Everything polls every 20 s. While offline
- * or when the server cannot be reached, the last known data stays on screen with a notice and
- * its time; a section with nothing to show says what happened and offers a retry.
+ * The corridor band: greeting, how many of the student's professors are in, and a tall door per
+ * pinned professor (a lit door means in the office). Then search, the next appointment as a
+ * ticket, and the student's department, in office first. Everything polls every 20 s. While
+ * offline or when the server cannot be reached, the last known data stays on screen with a
+ * notice and its time; a section with nothing to show says what happened and offers a retry.
+ *
+ * Phones and tablets: one column. Desktop: the band across the top beside the rail, the list
+ * in the main column and the next appointment beside it.
  */
 import { useRef, useState } from 'react';
-import {
-  FlatList,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-  type TextInputInstance,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, View, type TextInputInstance } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,17 +27,19 @@ import {
 } from '@/api/queries';
 import type { ProfessorSummary } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
-import { Button } from '@/components/Button';
 import { AppBar } from '@/components/AppBar';
+import { Button } from '@/components/Button';
+import { Band, Corridor, CorridorDoor } from '@/components/Corridor';
 import { NotificationBell } from '@/components/NotificationBell';
-import { EmptyState, SkeletonRow } from '@/components/Placeholders';
+import { SkeletonRow } from '@/components/Placeholders';
 import { ProfessorRow } from '@/components/ProfessorRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import {
   ConnectionNotice,
+  CorridorSkeleton,
+  inOfficeNow,
   NextAppointmentCard,
-  PinnedCard,
   SectionError,
 } from '@/features/home/HomeParts';
 import { useStatusAnnouncement } from '@/features/home/useStatusAnnouncement';
@@ -47,7 +47,7 @@ import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
 import { greetingKey } from '@/lib/format';
 import { useDebounced, useNow, useOnline } from '@/lib/hooks';
-import { departmentName, firstName } from '@/lib/names';
+import { departmentName, firstName, professorShortName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { layout, space, type Language } from '@/theme/tokens';
 
@@ -71,6 +71,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const column = useColumn();
   const desktop = useLayout() === 'desktop';
+  const doorSize = desktop ? 92 : 72;
   const user = useUser();
   const now = useNow();
   const online = useOnline();
@@ -105,78 +106,119 @@ export default function HomeScreen() {
     !departmentEmpty &&
     !departmentList.data.some((p) => p.status.status === 'in_office');
   const rows = searching ? (search.data ?? []) : (departmentList.data ?? []);
+  const answer = pins.data?.length ? inOfficeNow(pins.data, language) : null;
 
-  // "My professors": a horizontal row of nameplates on phones, a list beside the main column
-  // on desktop (docs/desktop-plan.md, Section 3).
-  const myProfessors = (
-    <View style={styles.section}>
-      <Text variant="title" role="heading">
-        {t('home.my_professors')}
+  const greeting = (
+    <View style={desktop ? styles.greeting : undefined}>
+      <Text variant="heading" role="heading" color="onBand">
+        {t(greetingKey(now), { name: firstName(user, language) })}
       </Text>
-      {pinsState === 'loading' ? (
-        <SkeletonRow />
-      ) : pinsState === 'error' ? (
-        <SectionError message={errorText(pins.error)} onRetry={() => pins.refetch()} />
-      ) : pins.data?.length ? (
-        desktop ? (
-          <View>
-            {pins.data.map((professor) => (
-              <ProfessorRow
-                key={professor.professor_id}
-                professor={professor}
-                now={now}
-                onPress={openProfessor}
-                onTogglePin={togglePin}
-              />
-            ))}
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pinnedRow}
-          >
-            {pins.data.map((professor) => (
-              <PinnedCard
-                key={professor.professor_id}
-                professor={professor}
-                now={now}
-                onPress={openProfessor}
-              />
-            ))}
-          </ScrollView>
-        )
-      ) : (
-        <EmptyState
-          title={t('home.empty_pins_title')}
-          body={t('home.empty_pins_body')}
-          actionLabel={t('home.empty_pins_action')}
-          onAction={() => searchRef.current?.focus()}
-        />
-      )}
+      {answer ? <Text color="onBandMuted">{t(answer.key, { count: answer.count })}</Text> : null}
     </View>
   );
 
-  const header = (
-    <View style={styles.header}>
-      <AppBar>
-        <NotificationBell />
-      </AppBar>
-      <Text variant="heading" role="heading">
-        {t(greetingKey(now), { name: firstName(user, language) })}
-      </Text>
-      <TextField
-        ref={searchRef}
-        label={t('home.search_label')}
-        placeholder={t('home.search_placeholder')}
-        value={query}
-        onChangeText={setQuery}
-        returnKeyType="search"
-        autoCorrect={false}
-        autoCapitalize="none"
-      />
-      {showNotice ? <ConnectionNotice offline={!online} since={new Date(lastUpdated)} /> : null}
+  // The student's pinned professors as doors; while they load, three outlines; with none
+  // pinned, an invitation to search.
+  const doors =
+    pinsState === 'loading' ? (
+      <CorridorSkeleton doorSize={doorSize} />
+    ) : pinsState === 'error' ? (
+      <SectionError onBand message={errorText(pins.error)} onRetry={() => pins.refetch()} />
+    ) : pins.data?.length ? (
+      <Corridor doorSize={doorSize} bleed={space.md}>
+        {pins.data.map((professor) => (
+          <CorridorDoor
+            key={professor.professor_id}
+            name={professorShortName(professor, language, t)}
+            status={professor.status}
+            now={now}
+            doorSize={doorSize}
+            onPress={() => openProfessor(professor)}
+          />
+        ))}
+      </Corridor>
+    ) : (
+      <View style={styles.emptyPins}>
+        <Text variant="title" color="onBand">
+          {t('home.empty_pins_title')}
+        </Text>
+        <Text color="onBandMuted">{t('home.empty_pins_body')}</Text>
+        <Button
+          variant="onBand"
+          label={t('home.empty_pins_action')}
+          onPress={() => searchRef.current?.focus()}
+        />
+      </View>
+    );
 
+  const band = (
+    <Band style={[styles.band, { paddingTop: insets.top + space.sm }]}>
+      <View style={[styles.bandInner, desktop ? null : column]}>
+        <AppBar onBand>
+          <NotificationBell onBand />
+        </AppBar>
+        {desktop ? (
+          <View style={styles.bandRow}>
+            {greeting}
+            <View style={styles.grow}>{doors}</View>
+          </View>
+        ) : (
+          <>
+            {greeting}
+            {doors}
+          </>
+        )}
+      </View>
+    </Band>
+  );
+
+  const searchField = (
+    <TextField
+      ref={searchRef}
+      label={t('home.search_label')}
+      placeholder={t('home.search_placeholder')}
+      value={query}
+      onChangeText={setQuery}
+      returnKeyType="search"
+      autoCorrect={false}
+      autoCapitalize="none"
+    />
+  );
+
+  const ticket =
+    !searching && next.data ? <NextAppointmentCard appointment={next.data} now={now} /> : null;
+
+  const loadingRows =
+    (searching && search.data === undefined) || (!searching && departmentState === 'loading');
+  const list = (
+    <View>
+      {rows.map((professor) => (
+        <ProfessorRow
+          key={professor.professor_id}
+          professor={professor}
+          now={now}
+          onPress={openProfessor}
+          onTogglePin={togglePin}
+          showDepartment={searching}
+        />
+      ))}
+      {rows.length > 0 ? null : loadingRows ? (
+        <>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </>
+      ) : searching && !search.isFetching ? (
+        <Text color="muted">{t('home.no_results', { query: query.trim() })}</Text>
+      ) : null}
+    </View>
+  );
+
+  const main = (
+    <View style={styles.main}>
+      {searchField}
+      {showNotice ? <ConnectionNotice offline={!online} since={new Date(lastUpdated)} /> : null}
+      {desktop ? null : ticket}
       {searching ? (
         <View style={styles.sectionHead}>
           <Text variant="title" role="heading" style={styles.grow}>
@@ -186,23 +228,17 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
-          {next.data ? <NextAppointmentCard appointment={next.data} now={now} /> : null}
-
-          {desktop ? null : myProfessors}
-
-          <View style={styles.sectionHead}>
-            <View style={styles.grow}>
-              <Text variant="title" role="heading">
-                {t('home.available_now')}
+          <View>
+            <Text variant="title" role="heading">
+              {t('home.available_now')}
+            </Text>
+            {department ? (
+              <Text variant="caption" color="muted">
+                {t('home.department_caption', {
+                  department: departmentName(department, language),
+                })}
               </Text>
-              {department ? (
-                <Text variant="caption" color="muted">
-                  {t('home.department_caption', {
-                    department: departmentName(department, language),
-                  })}
-                </Text>
-              ) : null}
-            </View>
+            ) : null}
           </View>
           {departmentState === 'error' ? (
             <SectionError
@@ -214,6 +250,7 @@ export default function HomeScreen() {
           {departmentEmpty ? <Text color="muted">{t('home.department_empty')}</Text> : null}
         </>
       )}
+      {list}
 
       {/* Status changes of pinned professors, read politely by screen readers on the web build. */}
       {Platform.OS === 'web' ? (
@@ -224,62 +261,45 @@ export default function HomeScreen() {
     </View>
   );
 
-  const loadingRows =
-    (searching && search.data === undefined) || (!searching && departmentState === 'loading');
-  const empty = loadingRows ? (
-    <View>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-    </View>
-  ) : searching && !search.isFetching ? (
-    <Text color="muted">{t('home.no_results', { query: query.trim() })}</Text>
-  ) : undefined;
-
-  const main = (
-    <FlatList
+  return (
+    <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[
-        styles.page,
-        desktop ? styles.desktopMain : column,
-        { paddingTop: insets.top + space.lg },
-      ]}
-      data={rows}
-      keyExtractor={(professor) => String(professor.professor_id)}
-      renderItem={({ item }) => (
-        <ProfessorRow professor={item} now={now} onPress={openProfessor} onTogglePin={togglePin} />
-      )}
-      ListHeaderComponent={header}
-      ListEmptyComponent={empty}
+      contentContainerStyle={styles.page}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       automaticallyAdjustKeyboardInsets
-    />
-  );
-  if (!desktop) return main;
-  return (
-    <View style={[styles.columns, { backgroundColor: colors.bg }]}>
-      <View style={styles.grow}>{main}</View>
-      <ScrollView
-        style={[styles.aside, { borderColor: colors.line }]}
-        contentContainerStyle={styles.asideContent}
-      >
-        {myProfessors}
-      </ScrollView>
-    </View>
+    >
+      {band}
+      {desktop ? (
+        <View style={styles.columns}>
+          <View style={styles.desktopMain}>{main}</View>
+          {ticket ? <View style={styles.aside}>{ticket}</View> : null}
+        </View>
+      ) : (
+        <View style={[styles.body, column]}>{main}</View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { paddingHorizontal: space.md, paddingBottom: space.xl },
-  header: { gap: space.md, paddingBottom: space.xs },
-  section: { gap: space.sm },
+  page: { paddingBottom: space.xl },
+  band: { paddingHorizontal: space.md, paddingBottom: space.md },
+  bandInner: { gap: space.sm },
+  bandRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xl },
+  greeting: { width: 360, paddingTop: space.md },
+  emptyPins: { gap: space.xs, alignItems: 'flex-start', paddingVertical: space.sm },
+  body: { paddingHorizontal: space.md, paddingTop: space.md },
+  main: { gap: space.md },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   grow: { flex: 1 },
-  pinnedRow: { gap: space.sm },
-  columns: { flex: 1, flexDirection: 'row' },
-  desktopMain: { width: '100%', maxWidth: layout.column, alignSelf: 'center' },
-  aside: { width: layout.listPane, flexGrow: 0, borderStartWidth: StyleSheet.hairlineWidth },
-  asideContent: { padding: space.lg },
+  columns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.xl,
+    padding: space.lg,
+  },
+  desktopMain: { flex: 1, maxWidth: layout.column },
+  aside: { width: layout.listPane },
   visuallyHidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 });

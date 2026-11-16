@@ -26,7 +26,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Calendar } from '@/components/Calendar';
 import { Chip } from '@/components/Chip';
-import { Door } from '@/components/Door';
+import { TallDoor } from '@/components/TallDoor';
 import { MenuPicker, type MenuOption } from '@/components/MenuPicker';
 import { SkeletonRow } from '@/components/Placeholders';
 import { StepButton } from '@/components/StepButton';
@@ -352,7 +352,7 @@ function BookedMoment({ text, onDone }: { text: string; onDone: () => void }) {
   return (
     <View style={styles.moment}>
       <View style={styles.doorWithCheck}>
-        <Door status={open ? 'in_office' : 'away'} size={88} />
+        <TallDoor status={open ? 'in_office' : 'away'} size={80} />
         {open ? (
           <View
             style={[
@@ -382,7 +382,8 @@ const styles = StyleSheet.create({
   doorWithCheck: { alignItems: 'center', justifyContent: 'center' },
   check: {
     position: 'absolute',
-    bottom: -4,
+    // Level with the door's floor line, above the pool of light.
+    bottom: 12,
     width: 32,
     height: 32,
     borderRadius: 16,

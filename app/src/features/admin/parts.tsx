@@ -1,50 +1,16 @@
 /**
- * Small pieces of the admin area: the initials circle for people, the icon square for
- * departments and offices, the overview's number tiles, the on/off switch row, and form
- * section headings.
+ * Small pieces of the admin area: the icon square for departments and offices, the
+ * overview's number tiles, the on/off switch row, and form section headings. (The initials
+ * circle for people is components/Avatar.tsx.)
  */
-import type { ComponentType } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
+import type { IconComponent } from '@/components/Avatar';
 import { Text } from '@/components/Text';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, touchTarget } from '@/theme/tokens';
 
 const AVATAR = 40;
-
-/** A lucide icon component (imported one by one, as lint requires). */
-export type IconComponent = ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
-
-/** "Noura Al-Harbi" -> "NH", "نورة الحربي" -> "نح": the article before a family name is skipped. */
-export function initialsOf(name: string): string {
-  const words = name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word.replace(/^(al-|ال)/i, ''))
-    .filter(Boolean);
-  const first = words[0]?.[0] ?? '';
-  const last = words.length > 1 ? (words[words.length - 1]?.[0] ?? '') : '';
-  return `${first}${last}`.toUpperCase();
-}
-
-/** Decorative: the row's own text names the person. */
-export function Initials({ name, muted }: { name: string; muted?: boolean }) {
-  const { colors } = useTheme();
-  return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[
-        styles.avatar,
-        { borderColor: muted ? colors.line : colors.primary, backgroundColor: colors.surface },
-      ]}
-    >
-      <Text variant="label" weight="semibold" color={muted ? 'muted' : 'primary'}>
-        {initialsOf(name)}
-      </Text>
-    </View>
-  );
-}
 
 export function IconSquare({ icon: Icon }: { icon: IconComponent }) {
   const { colors } = useTheme();
@@ -157,14 +123,6 @@ export function FormSection({ title, children }: { title: string; children: Reac
 }
 
 const styles = StyleSheet.create({
-  avatar: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   square: {
     width: AVATAR,
     height: AVATAR,

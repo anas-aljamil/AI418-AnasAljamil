@@ -9,11 +9,12 @@ import {
   lineHeightRatio,
   maxFontScale,
   typeScale,
+  type FontWeight,
   type Language,
   type TextVariant,
 } from '@/theme/tokens';
 
-type ColorToken = 'text' | 'muted' | 'primary' | 'onPrimary' | 'danger';
+type ColorToken = 'text' | 'muted' | 'primary' | 'onPrimary' | 'danger' | 'onBand' | 'onBandMuted';
 
 export interface TextProps extends RNTextProps {
   variant?: TextVariant;
@@ -21,7 +22,7 @@ export interface TextProps extends RNTextProps {
   /** Script of the content when it differs from the UI language (e.g. an Arabic name in English UI). */
   lang?: Language;
   /** Override the variant's weight (e.g. list-row names: body size, semibold). */
-  weight?: 'regular' | 'medium' | 'semibold';
+  weight?: FontWeight;
   /** Follow the app's text-size setting (off for the tab bar, which has its own cap). */
   appScale?: boolean;
 }

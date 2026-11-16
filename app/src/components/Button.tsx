@@ -10,7 +10,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { durations, pressScale, radii, space, touchTarget } from '@/theme/tokens';
 import { Text } from './Text';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'onBand';
 
 interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   /** The visible label; say exactly what happens ("Book 10:30", "Send"). */
@@ -35,9 +35,17 @@ export function Button({
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
+  // On the corridor band the button is outlined in the band's text colour.
   const filled = variant === 'primary';
-  const tint = variant === 'danger' ? colors.danger : colors.primary;
-  const textColor = filled ? 'onPrimary' : variant === 'danger' ? 'danger' : 'primary';
+  const tint =
+    variant === 'danger' ? colors.danger : variant === 'onBand' ? colors.onBand : colors.primary;
+  const textColor = filled
+    ? 'onPrimary'
+    : variant === 'danger'
+      ? 'danger'
+      : variant === 'onBand'
+        ? 'onBand'
+        : 'primary';
 
   const press = (to: number) => {
     if (!reduceMotion) scale.set(withTiming(to, { duration: durations.press }));
@@ -62,7 +70,7 @@ export function Button({
               opacity: disabled ? 0.45 : 1,
             },
             focused && {
-              outlineColor: colors.primary,
+              outlineColor: variant === 'onBand' ? colors.onBand : colors.primary,
               outlineWidth: 2,
               outlineStyle: 'solid',
               outlineOffset: 2,

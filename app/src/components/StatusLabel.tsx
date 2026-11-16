@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { textAlignFor } from '@/lib/direction';
-import { relativeUpdateKey } from '@/lib/format';
+import type { ProfessorStatus } from '@/api/types';
+import { relativeUpdateKey, untilText } from '@/lib/format';
 import { spokenList } from '@/lib/names';
 import { space, type Language, type StatusKey } from '@/theme/tokens';
 import { Door } from './Door';
@@ -39,6 +40,45 @@ export function describeStatus(
     label: unconfirmed ? t('status.in_office_unconfirmed') : t(`status.${status}`),
     updated: relative ? t(relative.key, { count: relative.count }) : t('time.from_schedule'),
   };
+}
+
+/**
+ * The status as a sentence that says what happens next (DESIGN.md Section 11): "In office
+ * until 12:00 PM", "Away for the rest of today". `when` is the part after the label: the time
+ * the status is expected to change, or for a not-confirmed status how old it is ("updated 5
+ * hours ago"), since that is what a student needs to judge it. Null when the API gives no time.
+ */
+export function statusSentence(
+  status: ProfessorStatus,
+  now: Date,
+  language: Language,
+  t: TFunction,
+): { door: StatusKey; label: string; when: string | null; sentence: string } {
+  const updatedAt = status.updated_at ? new Date(status.updated_at) : null;
+  const { door, label, updated } = describeStatus(
+    status.status,
+    status.confirmed,
+    updatedAt,
+    now,
+    language,
+    t,
+  );
+  const until = status.until ? new Date(status.until) : null;
+  const when =
+    door === 'unknown'
+      ? status.status === 'in_office'
+        ? updated
+        : null
+      : until && until > now
+        ? untilText(until, t)
+        : null;
+  // "In office until 12:00 PM" reads as one phrase; an age is a second fact, after a comma.
+  const sentence = !when
+    ? label
+    : door === 'unknown'
+      ? spokenList([label, when], t)
+      : t('status.sentence', { status: label, when });
+  return { door, label, when, sentence };
 }
 
 /** Status is always icon + label + colour, with a relative "updated X ago" (CLAUDE.md Section 4). */

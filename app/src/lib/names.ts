@@ -22,6 +22,15 @@ export function professorName(
   return `${t(`honorific.${professor.honorific}`)} ${fullName(professor, language)}`;
 }
 
+/** "Dr. Noura" / "د. نورة": the name under a door in the corridor. */
+export function professorShortName(
+  professor: Named & { honorific: Honorific },
+  language: Language,
+  t: TFunction,
+): string {
+  return `${t(`honorific.${professor.honorific}`)} ${firstName(professor, language)}`;
+}
+
 export function firstName(person: Named, language: Language): string {
   return fullName(person, language).split(' ')[0] ?? '';
 }

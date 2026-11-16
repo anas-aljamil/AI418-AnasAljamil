@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColumn } from '@/lib/layout';
 import { useAuth, useUser } from '@/auth/AuthProvider';
+import { Initials } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
@@ -49,21 +50,24 @@ export function AccountScreen() {
         {t(user.role === 'student' ? 'tabs.profile' : 'tabs.account')}
       </Text>
 
-      <View style={styles.identity}>
-        <Text variant="title">{fullName(user, language)}</Text>
-        <Text color="muted">{t(`role.${user.role}`)}</Text>
-        {user.professor ? (
-          <Text color="muted">{departmentName(user.professor.department, language)}</Text>
-        ) : null}
-        {user.student ? (
-          <Text color="muted">
-            {t('profile.student_line', {
-              department: departmentName(user.student.department, language),
-              year: user.student.study_year,
-            })}
-          </Text>
-        ) : null}
-        <Text color="muted">{user.email}</Text>
+      <View style={styles.person}>
+        <Initials name={fullName(user, language)} size={56} />
+        <View style={styles.identity}>
+          <Text variant="title">{fullName(user, language)}</Text>
+          <Text color="muted">{t(`role.${user.role}`)}</Text>
+          {user.professor ? (
+            <Text color="muted">{departmentName(user.professor.department, language)}</Text>
+          ) : null}
+          {user.student ? (
+            <Text color="muted">
+              {t('profile.student_line', {
+                department: departmentName(user.student.department, language),
+                year: user.student.study_year,
+              })}
+            </Text>
+          ) : null}
+          <Text color="muted">{user.email}</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -181,7 +185,8 @@ export function AccountScreen() {
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: space.lg },
-  identity: { gap: space.xxs },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  identity: { flex: 1, gap: space.xxs },
   section: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   preview: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },

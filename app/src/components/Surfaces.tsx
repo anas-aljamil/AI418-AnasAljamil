@@ -18,6 +18,10 @@ export function Card({ style, ...rest }: ViewProps) {
 interface ListRowProps {
   leading?: React.ReactNode;
   title: string;
+  /** Lines the title may take before it ends in an ellipsis: 2, or 0 for a whole sentence. */
+  titleLines?: number;
+  /** A line under the title in the text colour (a professor's status sentence). */
+  detail?: string;
   subtitle?: string;
   trailing?: React.ReactNode;
   /** A separate control after the row (e.g. a pin button); screen readers reach it on its own. */
@@ -36,6 +40,8 @@ interface ListRowProps {
 export function ListRow({
   leading,
   title,
+  titleLines = 2,
+  detail,
   subtitle,
   trailing,
   after,
@@ -72,9 +78,13 @@ export function ListRow({
       >
         {leading}
         <View style={styles.main}>
-          <Text variant="body" weight="semibold" numberOfLines={2}>
+          <Text variant="body" weight="semibold" numberOfLines={titleLines || undefined}>
             {title}
           </Text>
+          {detail ? (
+            // Never cut short: it is the answer the row exists for.
+            <Text variant="label">{detail}</Text>
+          ) : null}
           {subtitle ? (
             <Text variant="caption" color="muted" numberOfLines={2}>
               {subtitle}

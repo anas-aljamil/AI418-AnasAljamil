@@ -31,8 +31,14 @@ import { durations, type StatusKey } from '@/theme/tokens';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-/** Leaf position: 0 closed, 1 ajar, 2 open. */
-const LEAF: Record<StatusKey, number> = { away: 0, in_class: 0, unknown: 0, busy: 1, in_office: 2 };
+/** Leaf position: 0 closed, 1 ajar, 2 open (shared with TallDoor.tsx). */
+export const LEAF: Record<StatusKey, number> = {
+  away: 0,
+  in_class: 0,
+  unknown: 0,
+  busy: 1,
+  in_office: 2,
+};
 const DOORWAY = 'M6 21V5a.8.8 0 0 1 .8-.8h10.4a.8.8 0 0 1 .8.8V21Z';
 const BOOK =
   'M8.8 10.8c1-.6 2.2-.6 3.2 0c1-.6 2.2-.6 3.2 0v4c-1-.6-2.2-.6-3.2 0c-1-.6-2.2-.6-3.2 0Z';
@@ -40,17 +46,20 @@ const BOOK =
 interface DoorProps {
   status: StatusKey;
   size?: number;
+  /** On the corridor band: band status colours, marks cut in the band colour. */
+  onBand?: boolean;
   /** When set, the door is announced on its own; leave unset when a text label sits beside it. */
   accessibilityLabel?: string;
 }
 
-export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
+export function Door({ status, size = 24, onBand = false, accessibilityLabel }: DoorProps) {
   const { colors, colorVision } = useTheme();
   // With a colour-vision setting the marks are bolder, so the shape carries more of the meaning.
   const bold = colorVision !== 'normal';
   const { i18n } = useTranslation();
   const reduceMotion = useReducedMotion();
-  const color = colors.status[status];
+  const color = onBand ? colors.bandStatus[status] : colors.status[status];
+  const ground = onBand ? colors.band : colors.surface;
 
   const leaf = useSharedValue(LEAF[status]);
   const lit = useSharedValue(LEAF[status] > 0 ? 1 : 0);
@@ -122,7 +131,7 @@ export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
           <Path
             d={BOOK}
             fill="none"
-            stroke={colors.surface}
+            stroke={ground}
             strokeWidth={bold ? 1.7 : 1.2}
             strokeLinejoin="round"
           />
@@ -134,7 +143,7 @@ export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
             width={bold ? 6 : 5.4}
             height={bold ? 2.8 : 2}
             rx={bold ? 1.4 : 1}
-            fill={colors.surface}
+            fill={ground}
           />
         )}
         {status === 'away' && (
@@ -144,7 +153,7 @@ export function Door({ status, size = 24, accessibilityLabel }: DoorProps) {
                 ? 'M16.4 13a1.4 1.4 0 1 1-2.8 0a1.4 1.4 0 0 1 2.8 0Z'
                 : 'M16 13a1 1 0 1 1-2 0a1 1 0 0 1 2 0Z'
             }
-            fill={colors.surface}
+            fill={ground}
           />
         )}
         <Path d="M3.5 21h17" stroke={color} strokeWidth={1.75} strokeLinecap="round" />

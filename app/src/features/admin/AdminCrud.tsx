@@ -35,7 +35,8 @@ import { errorKey } from '@/lib/errors';
 import { spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
-import { FormSection, IconSquare, Initials, SwitchRow, type IconComponent } from './parts';
+import { Initials, type IconComponent } from '@/components/Avatar';
+import { FormSection, IconSquare, SwitchRow } from './parts';
 
 export type FormValues = Record<string, string>;
 export type FormSectionKey = 'details' | 'account' | 'academic' | 'status';

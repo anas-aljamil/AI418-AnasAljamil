@@ -1,7 +1,8 @@
 /**
  * The app's name beside its door logo, at the top of each role's first screen (student Home,
  * professor My status, admin Overview), so the app is recognisable at a glance (owner request
- * 2026-11-11). Anything passed in (the notification bell) sits at the end edge.
+ * 2026-11-11). Anything passed in (the notification bell) sits at the end edge. On the corridor
+ * band it takes the band's colours.
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -10,13 +11,18 @@ import { space, touchTarget } from '@/theme/tokens';
 import { Door } from './Door';
 import { Text } from './Text';
 
-export function AppBar({ children }: { children?: React.ReactNode }) {
+interface AppBarProps {
+  onBand?: boolean;
+  children?: React.ReactNode;
+}
+
+export function AppBar({ onBand = false, children }: AppBarProps) {
   const { t } = useTranslation();
   return (
     <View style={styles.bar}>
       <View style={styles.brand}>
-        <Door status="in_office" size={28} />
-        <Text weight="semibold" color="primary">
+        <Door status="in_office" size={28} onBand={onBand} />
+        <Text weight="semibold" color={onBand ? 'onBand' : 'primary'}>
           {t('app.name')}
         </Text>
       </View>

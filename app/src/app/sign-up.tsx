@@ -6,12 +6,10 @@
  * to its field, and the summary above the button is announced to screen readers.
  */
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useColumn } from '@/lib/layout';
 import { ApiError } from '@/api/client';
 import { useDepartments } from '@/api/queries';
 import type { Honorific, Rank, SignUpBody } from '@/api/types';
@@ -19,10 +17,10 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { DepartmentPicker } from '@/components/DepartmentPicker';
-import { Door } from '@/components/Door';
 import { Segmented } from '@/components/Segmented';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { AuthFrame } from '@/features/auth/AuthFrame';
 import { errorKey } from '@/lib/errors';
 import {
   isUniversityEmail,
@@ -30,7 +28,6 @@ import {
   UNIVERSITY_DOMAIN,
   universityNumberOf,
 } from '@/lib/validation';
-import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 
 type Role = 'student' | 'professor';
@@ -50,9 +47,6 @@ const FIELD_OF_ERROR: Record<string, Field> = {
 export default function SignUpScreen() {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  const column = useColumn('narrow');
   const { state, signUp } = useAuth();
   const departments = useDepartments();
 
@@ -131,183 +125,153 @@ export default function SignUpScreen() {
 
   const backToSignIn = () => (router.canGoBack() ? router.back() : router.replace('/sign-in'));
 
-  const page = [
-    styles.page,
-    column,
-    { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.lg },
-  ];
-
   if (pendingEmail) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={page}>
-        <Door status="away" size={56} />
-        <View style={styles.intro}>
-          <Text variant="display" role="heading">
-            {t('signup.pending_title')}
-          </Text>
-          <Text>{t('signup.pending_body', { email: pendingEmail })}</Text>
-        </View>
+      // The door is closed: the account exists but waits for an administrator.
+      <AuthFrame title={t('signup.pending_title')} door="away">
+        <Text>{t('signup.pending_body', { email: pendingEmail })}</Text>
         <Button label={t('signup.back_to_sign_in')} onPress={backToSignIn} />
-      </ScrollView>
+      </AuthFrame>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.fill, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={page}>
-        <View style={styles.brand}>
-          <Door status="in_office" size={40} />
-          <Text variant="title" color="primary">
-            {t('app.name')}
-          </Text>
+    <AuthFrame title={t('signup.title')} subtitle={t('signup.subtitle')}>
+      <View style={styles.form}>
+        <View style={styles.group}>
+          <Text variant="label">{t('signup.role')}</Text>
+          <Segmented
+            options={[
+              { value: 'student' as const, label: t('signup.student') },
+              { value: 'professor' as const, label: t('signup.professor') },
+            ]}
+            value={role}
+            onChange={setRole}
+          />
         </View>
 
-        <View style={styles.intro}>
-          <Text variant="display" role="heading">
-            {t('signup.title')}
-          </Text>
-          <Text color="muted">{t('signup.subtitle')}</Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.group}>
-            <Text variant="label">{t('signup.role')}</Text>
-            <Segmented
-              options={[
-                { value: 'student' as const, label: t('signup.student') },
-                { value: 'professor' as const, label: t('signup.professor') },
-              ]}
-              value={role}
-              onChange={setRole}
-            />
-          </View>
-
-          <TextField
-            label={t('admin.name_ar')}
-            value={nameAr}
-            onChangeText={setNameAr}
-            autoComplete="name"
-            error={errors.full_name_ar}
-          />
-          <TextField
-            label={t('admin.name_en')}
-            value={nameEn}
-            onChangeText={setNameEn}
-            autoComplete="name"
-            error={errors.full_name_en}
-          />
-          <TextField
-            label={t('signin.email')}
-            helper={
-              role === 'student'
-                ? number
-                  ? t('signup.number_found', { number })
-                  : t('signup.email_helper_student', { domain: UNIVERSITY_DOMAIN })
-                : t('signup.email_helper_professor', { domain: UNIVERSITY_DOMAIN })
-            }
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            inputMode="email"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="username"
-            error={errors.email}
-          />
-          <TextField
-            label={t('admin.password')}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="new-password"
-            textContentType="newPassword"
-            error={errors.password}
-          />
-          <View style={styles.reveal}>
-            <Button
-              variant="quiet"
-              label={showPassword ? t('signin.hide_password') : t('signin.show_password')}
-              onPress={() => setShowPassword((shown) => !shown)}
-            />
-          </View>
-
-          <DepartmentPicker
-            label={t('signup.department')}
-            departments={departments.data ?? []}
-            value={departmentId}
-            onChange={setDepartmentId}
-            error={errors.department}
-            loading={departments.isPending}
-            loadError={departments.error ? t(errorKey(departments.error)) : undefined}
-            onRetry={() => departments.refetch()}
-          />
-
-          {role === 'student' ? (
-            <>
-              <ChoiceGroup label={t('signup.study_year')}>
-                {YEARS.map((year) => (
-                  <Chip
-                    key={year}
-                    label={String(year)}
-                    accessibilityLabel={t('signup.year', { year })}
-                    selected={studyYear === year}
-                    onPress={() => setStudyYear(year)}
-                  />
-                ))}
-              </ChoiceGroup>
-            </>
-          ) : (
-            <>
-              <ChoiceGroup label={t('admin.honorific')}>
-                {HONORIFICS.map((h) => (
-                  <Chip
-                    key={h}
-                    label={t(`honorific.${h}`)}
-                    selected={honorific === h}
-                    onPress={() => setHonorific(h)}
-                  />
-                ))}
-              </ChoiceGroup>
-              <ChoiceGroup label={t('admin.rank')}>
-                {RANKS.map((r) => (
-                  <Chip
-                    key={r}
-                    label={t(`rank.${r}`)}
-                    selected={rank === r}
-                    onPress={() => setRank(r)}
-                  />
-                ))}
-              </ChoiceGroup>
-            </>
-          )}
-
-          <View accessibilityLiveRegion="polite" role={summary ? 'alert' : undefined}>
-            {summary ? <Text color="danger">{summary}</Text> : null}
-          </View>
-
+        <TextField
+          label={t('admin.name_ar')}
+          value={nameAr}
+          onChangeText={setNameAr}
+          autoComplete="name"
+          error={errors.full_name_ar}
+        />
+        <TextField
+          label={t('admin.name_en')}
+          value={nameEn}
+          onChangeText={setNameEn}
+          autoComplete="name"
+          error={errors.full_name_en}
+        />
+        <TextField
+          label={t('signin.email')}
+          helper={
+            role === 'student'
+              ? number
+                ? t('signup.number_found', { number })
+                : t('signup.email_helper_student', { domain: UNIVERSITY_DOMAIN })
+              : t('signup.email_helper_professor', { domain: UNIVERSITY_DOMAIN })
+          }
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          inputMode="email"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="username"
+          error={errors.email}
+        />
+        <TextField
+          label={t('admin.password')}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="new-password"
+          textContentType="newPassword"
+          error={errors.password}
+        />
+        <View style={styles.reveal}>
           <Button
-            label={
-              busy
-                ? t('signup.submitting')
-                : t(role === 'student' ? 'signup.submit_student' : 'signup.submit_professor')
-            }
-            onPress={submit}
-            disabled={busy}
-            block
+            variant="quiet"
+            label={showPassword ? t('signin.hide_password') : t('signin.show_password')}
+            onPress={() => setShowPassword((shown) => !shown)}
           />
         </View>
 
-        <View style={styles.footer}>
-          <Button variant="quiet" label={t('signup.have_account')} onPress={backToSignIn} />
+        <DepartmentPicker
+          label={t('signup.department')}
+          departments={departments.data ?? []}
+          value={departmentId}
+          onChange={setDepartmentId}
+          error={errors.department}
+          loading={departments.isPending}
+          loadError={departments.error ? t(errorKey(departments.error)) : undefined}
+          onRetry={() => departments.refetch()}
+        />
+
+        {role === 'student' ? (
+          <>
+            <ChoiceGroup label={t('signup.study_year')}>
+              {YEARS.map((year) => (
+                <Chip
+                  key={year}
+                  label={String(year)}
+                  accessibilityLabel={t('signup.year', { year })}
+                  selected={studyYear === year}
+                  onPress={() => setStudyYear(year)}
+                />
+              ))}
+            </ChoiceGroup>
+          </>
+        ) : (
+          <>
+            <ChoiceGroup label={t('admin.honorific')}>
+              {HONORIFICS.map((h) => (
+                <Chip
+                  key={h}
+                  label={t(`honorific.${h}`)}
+                  selected={honorific === h}
+                  onPress={() => setHonorific(h)}
+                />
+              ))}
+            </ChoiceGroup>
+            <ChoiceGroup label={t('admin.rank')}>
+              {RANKS.map((r) => (
+                <Chip
+                  key={r}
+                  label={t(`rank.${r}`)}
+                  selected={rank === r}
+                  onPress={() => setRank(r)}
+                />
+              ))}
+            </ChoiceGroup>
+          </>
+        )}
+
+        <View accessibilityLiveRegion="polite" role={summary ? 'alert' : undefined}>
+          {summary ? <Text color="danger">{summary}</Text> : null}
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        <Button
+          label={
+            busy
+              ? t('signup.submitting')
+              : t(role === 'student' ? 'signup.submit_student' : 'signup.submit_professor')
+          }
+          onPress={submit}
+          disabled={busy}
+          block
+        />
+      </View>
+
+      <View style={styles.footer}>
+        <Button variant="quiet" label={t('signup.have_account')} onPress={backToSignIn} />
+      </View>
+    </AuthFrame>
   );
 }
 
@@ -333,10 +297,6 @@ function ChoiceGroup({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  page: { flexGrow: 1, paddingHorizontal: space.md, gap: space.xl },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  intro: { gap: space.xs },
   form: { gap: space.md },
   group: { gap: space.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },

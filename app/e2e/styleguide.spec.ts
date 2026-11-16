@@ -77,13 +77,13 @@ test('tapping a status animates the demo door to that status', async ({ page }) 
   await open(page, 'en', 'light', 390);
   const door = page.getByRole('img', { name: 'Status: In office' });
   await expect(door).toBeVisible();
-  await page.getByRole('button', { name: 'Busy' }).first().click();
+  await page.getByRole('button', { name: 'Busy', exact: true }).first().click();
   await expect(page.getByRole('img', { name: 'Status: Busy' })).toBeVisible();
   // The leaf really changes: busy red (#9F1F1A) and nearly closed after the animation.
   const leaf = page.getByRole('img', { name: 'Status: Busy' }).locator('path').nth(2);
   await expect(leaf).toHaveAttribute('fill', /9F1F1A|159, 31, 26/i);
   await expect(leaf).toHaveAttribute('d', /L16\.4 4\.2V21L6 21Z/);
-  await expect(page.getByRole('button', { name: 'Busy' }).first()).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Busy', exact: true }).first()).toHaveAttribute(
     'aria-selected',
     'true',
   );

@@ -119,6 +119,19 @@ Use two phones (or one phone and the web build): `s.almutairi@university.example
 | 61 | Admin overview and activation | Sign up as a professor; sign in as admin; on Overview tap Activate; tap each number tile | The request is listed under "Waiting for activation" with the student account that is switched off; Activate shows "... can sign in now" and the row leaves; tiles open Professors, Students and Campus (Departments or Offices); TalkBack/VoiceOver read each tile as one sentence | needs a real phone | needs a real phone |
 | 62 | Admin lists and forms | Campus (switch to Offices and back), Professors (filter Not active, open a professor, Edit details), Students (Add); in Arabic and English | Departments under college headings with counts; quick view shows the live status door; the form has Account, Academic and Status parts, the office menu, the Active switch and Delete at the bottom; nothing is cut off at 200% text | needs a real phone | needs a real phone |
 
+## Redesign "The corridor" (2026-11-16)
+
+| # | Check | Steps | Expected | Android | iOS |
+|---|---|---|---|---|---|
+| 63 | Status bar over the band | Light theme. Open sign-in, student Home, a professor profile, My status, admin Overview; then Search or Appointments | Over the navy band the clock and battery icons are light and readable; on the other screens they are dark again | needs a real phone | needs a real phone |
+| 64 | The corridor | As a student with three or more pinned professors, open Home; swipe the row of doors; tap a door | Tall doors stand on one floor line; a professor in the office has a lit door with light on the floor; the row scrolls sideways; a door opens the profile | needs a real phone | needs a real phone |
+| 65 | Tall door motion | As Dr. Noura on My status, tap In office, then Away; also with Reduce Motion on | The tall door opens and closes in about a third of a second; with Reduce Motion it changes at once | needs a real phone | needs a real phone |
+| 66 | Tickets at the largest text | Set the phone's largest text size; open Home (next appointment), Appointments and, as a professor, Requests | The time is on top of each ticket, whole, with the rest under a dashed line; nothing is cut or overlaps | needs a real phone | needs a real phone |
+| 67 | Corridor and rows at the largest text | Largest text size; student Home and Search, in Arabic and English | Names and statuses under the doors are whole; each row shows its whole status sentence | needs a real phone | needs a real phone |
+| 68 | My status at the largest text | Largest text size; as a professor open My status in Arabic | The four tiles show their whole labels; the current one has an outline and a check in its corner; one tap still changes the status | needs a real phone | needs a real phone |
+| 69 | Sign-in frame | Sign out; look at sign-in and Create an account; rotate nothing; open the keyboard on the password field | The band with the lit door is on top; the field being typed in stays above the keyboard; the language button works | needs a real phone | needs a real phone |
+| 70 | Screen readers on the new parts | TalkBack and VoiceOver: student Home, a profile, My status, Requests | A corridor door reads the name and status as one item; the day ribbon reads as one sentence; a ticket reads time, day, name and state in order; the status tiles read as radio buttons | needs a real phone | needs a real phone |
+
 ## Later phases (added when the feature exists)
 
 - **P6:** a final pass of everything above. Record each result in the Android and iOS columns ("pass", or what went wrong). Until then every row stays "needs a real phone". The automated evidence for each area is listed in [test-plan.md](test-plan.md).

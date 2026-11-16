@@ -19,7 +19,7 @@ import { Text } from '@/components/Text';
 import { departmentName, fullName, officeFull, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, type Language } from '@/theme/tokens';
-import { Initials } from './parts';
+import { Initials } from '@/components/Avatar';
 import { useActivate } from './useActivate';
 
 interface ProfessorSummaryProps {

@@ -45,6 +45,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
+import { Initials } from '@/components/Avatar';
 import { SkeletonRow } from '@/components/Placeholders';
 import { IconButton } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
@@ -54,7 +55,7 @@ import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { clockText, laterText, riyadhDayDifference, riyadhTime, shortWhen } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
-import { participantName, spokenList } from '@/lib/names';
+import { fullName, participantName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, type Language } from '@/theme/tokens';
 
@@ -368,6 +369,7 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
             }
           />
         )}
+        {conversation ? <Initials name={fullName(conversation.other, language)} /> : null}
         <View style={styles.grow}>
           <Text variant="title" role="heading" numberOfLines={1}>
             {name}

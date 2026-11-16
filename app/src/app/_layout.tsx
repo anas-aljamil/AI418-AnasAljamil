@@ -4,7 +4,7 @@
  * then provides safe areas, strings, theme, sign-in state, server data and toasts.
  */
 import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -12,11 +12,13 @@ import {
   IBMPlexSansArabic_400Regular,
   IBMPlexSansArabic_500Medium,
   IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold,
 } from '@expo-google-fonts/ibm-plex-sans-arabic';
 import {
   IBMPlexSans_400Regular,
   IBMPlexSans_500Medium,
   IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
 } from '@expo-google-fonts/ibm-plex-sans';
 import { Platform, StyleSheet, View } from 'react-native';
 import { enableScreens } from 'react-native-screens';
@@ -31,6 +33,7 @@ import { SettingsProvider } from '@/settings/SettingsProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { ToastProvider } from '@/components/Toast';
 import { layoutDirection } from '@/lib/direction';
+import { bandOnTop } from '@/lib/layout';
 
 // In the browser the navigators keep every visited screen in the page. With screens enabled,
 // a screen that is not shown gets display: none and the hidden attribute, so the Tab key and
@@ -41,6 +44,7 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function AppShell() {
   const { scheme, colors } = useTheme();
+  const pathname = usePathname();
   const { state } = useAuth();
   const { i18n: strings } = useTranslation();
   const direction = layoutDirection(strings.language === 'ar' ? 'ar' : 'en');
@@ -51,7 +55,8 @@ function AppShell() {
   if (restoring) return null;
   return (
     <View style={[styles.fill, direction]}>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {/* Light icons on the dark theme, and over the navy band in either theme. */}
+      <StatusBar style={scheme === 'dark' || bandOnTop(pathname) ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -67,9 +72,11 @@ export default function RootLayout() {
     IBMPlexSansArabic_400Regular,
     IBMPlexSansArabic_500Medium,
     IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
     IBMPlexSans_400Regular,
     IBMPlexSans_500Medium,
     IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
   });
   const [languageReady, setLanguageReady] = useState(false);
 
