@@ -30,6 +30,9 @@ const KNOWN = [
   'EMAIL_DOMAIN',
   'STUDENT_EMAIL',
   'INVALID_REFERENCE',
+  'WRONG_PASSWORD',
+  'PASSWORD_UNCHANGED',
+  'DEMO_ACCOUNT',
 ];
 
 /** The i18n key that says what happened and how to fix it (DESIGN.md Section 8). */

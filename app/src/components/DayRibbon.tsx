@@ -33,15 +33,37 @@ const SWATCH = 28;
 
 interface DayRibbonProps {
   blocks: Block[];
-  /** Riyadh time now, "HH:MM". */
-  now: string;
+  /** Riyadh time now, "HH:MM"; null for a day that is not today (no mark). */
+  now: string | null;
   /** On the corridor band: band colours. */
   onBand?: boolean;
   /** The names of the kinds shown, under the ribbon. */
   legend?: boolean;
+  /** The hour labels under the bar (off for all but the last ribbon of a week). */
+  axis?: boolean;
+  /** What a screen reader calls the day: "Today" by default, a weekday in a week. */
+  dayName?: string;
+  /** The minutes of the day the bar covers; a week passes one range so its days line up. */
+  range?: [number, number];
 }
 
-export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRibbonProps) {
+/** Whole hours around some blocks, never narrower than the working day (08:00 to 16:00). */
+export function ribbonRange(blocks: Block[]): [number, number] {
+  return [
+    Math.min(DAY_START, ...blocks.map((b) => Math.floor(minutesOfDay(b.start_time) / 60) * 60)),
+    Math.max(DAY_END, ...blocks.map((b) => Math.ceil(minutesOfDay(b.end_time) / 60) * 60)),
+  ];
+}
+
+export function DayRibbon({
+  blocks,
+  now,
+  onBand = false,
+  legend = true,
+  axis = true,
+  dayName,
+  range,
+}: DayRibbonProps) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const language = i18n.language === 'ar' ? 'ar' : 'en';
@@ -52,18 +74,13 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
   const sorted = [...blocks].sort(
     (a, b) => minutesOfDay(a.start_time) - minutesOfDay(b.start_time),
   );
-  // Whole hours around the blocks, never narrower than the working day.
-  const from = Math.min(
-    DAY_START,
-    ...sorted.map((b) => Math.floor(minutesOfDay(b.start_time) / 60) * 60),
-  );
-  const to = Math.max(DAY_END, ...sorted.map((b) => Math.ceil(minutesOfDay(b.end_time) / 60) * 60));
+  const [from, to] = range ?? ribbonRange(sorted);
   const span = to - from;
   const percent = (minutes: number): `${number}%` => `${((minutes - from) / span) * 100}%`;
   const width = (minutes: number): `${number}%` => `${(minutes / span) * 100}%`;
 
-  const nowMinutes = minutesOfDay(now);
-  const nowShown = nowMinutes >= from && nowMinutes <= to;
+  const nowMinutes = now === null ? null : minutesOfDay(now);
+  const nowShown = nowMinutes !== null && nowMinutes >= from && nowMinutes <= to;
   const hours: number[] = [];
   for (let at = from; at < to; at += 120) hours.push(at);
   const kinds = BLOCK_KINDS.filter((kind) => sorted.some((block) => block.kind === kind));
@@ -72,7 +89,7 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
 
   const spoken = spokenList(
     [
-      t('prof.today'),
+      dayName ?? t('prof.today'),
       ...sorted.map((block) =>
         spokenList(
           [
@@ -85,8 +102,9 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
           t,
         ),
       ),
-      sorted.length === 0 ? t('prof.no_blocks') : null,
-      t('prof.now', { time: clockText(now, t) }),
+      // A day of a week says it is free in its own name (WeekRibbons); only today needs this.
+      sorted.length === 0 && !dayName ? t('prof.no_blocks') : null,
+      now === null ? null : t('prof.now', { time: clockText(now, t) }),
     ],
     t,
   );
@@ -118,7 +136,7 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
             </View>
           ))}
         </View>
-        {nowShown ? (
+        {nowShown && nowMinutes !== null ? (
           <View
             style={[
               styles.now,
@@ -128,7 +146,11 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
           />
         ) : null}
       </View>
-      <View style={styles.axis} importantForAccessibility="no-hide-descendants" aria-hidden>
+      <View
+        style={[styles.axis, axis ? null : styles.gone]}
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden
+      >
         {hours.map((at) => (
           <View key={at} style={{ width: width(Math.min(120, to - at)) }}>
             <Text
@@ -143,20 +165,29 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
           </View>
         ))}
       </View>
-      {legend && kinds.length > 0 ? (
-        <View style={styles.legend}>
-          {kinds.map((kind) => (
-            <View key={kind} style={styles.legendItem}>
-              <View style={styles.swatch}>
-                <Fill kind={kind} color={statusColors[BLOCK_STATUS[kind]]} width={SWATCH} />
-              </View>
-              <Text variant="caption" color={muted}>
-                {t(blockKindKey(kind))}
-              </Text>
-            </View>
-          ))}
+      {legend ? <RibbonLegend kinds={kinds} onBand={onBand} /> : null}
+    </View>
+  );
+}
+
+/** What solid, striped and dotted mean; one legend serves a whole week of ribbons. */
+export function RibbonLegend({ kinds, onBand = false }: { kinds: BlockKind[]; onBand?: boolean }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const statusColors = onBand ? colors.bandStatus : colors.status;
+  if (kinds.length === 0) return null;
+  return (
+    <View style={styles.legend}>
+      {kinds.map((kind) => (
+        <View key={kind} style={styles.legendItem}>
+          <View style={styles.swatch}>
+            <Fill kind={kind} color={statusColors[BLOCK_STATUS[kind]]} width={SWATCH} />
+          </View>
+          <Text variant="caption" color={onBand ? 'onBandMuted' : 'muted'}>
+            {t(blockKindKey(kind))}
+          </Text>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }
@@ -180,6 +211,7 @@ function Fill({ kind, color, width }: { kind: BlockKind; color: string; width: n
 }
 
 const styles = StyleSheet.create({
+  gone: { display: 'none' },
   ribbon: { gap: space.xxs },
   plot: { paddingVertical: NOW_OVERHANG },
   track: { height: TRACK, borderRadius: SEGMENT_RADIUS, overflow: 'hidden' },

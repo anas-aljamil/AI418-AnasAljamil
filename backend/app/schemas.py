@@ -181,6 +181,18 @@ class MeOut(BaseModel):
     professor: ProfessorProfileOut | None = None
 
 
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(max_length=128)
+    new_password: Password
+
+
+class StudentSelfIn(BaseModel):
+    """What a student may change about their own record."""
+
+    study_year: int | None = Field(default=None, ge=1, le=6)
+    department_id: int | None = Field(default=None, ge=1)
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"  # noqa: S105 (OAuth token type, not a secret)
@@ -222,8 +234,16 @@ class TodayOut(BaseModel):
     blocks: list[BlockOut]
 
 
+class DayOut(BaseModel):
+    date: date
+    day_of_week: int
+    blocks: list[BlockOut]
+
+
 class ProfessorDetailOut(ProfessorSummaryOut):
     today: TodayOut
+    # Sunday to Thursday of the week in progress; on Friday and Saturday, of the week to come.
+    week: list[DayOut]
     # The times students can book in; empty means the professor cannot be booked.
     booking_periods: list[PeriodOut]
     # The days of the booking window (this week and next) that have a booking time.
@@ -602,3 +622,33 @@ class ReadIn(BaseModel):
     """Mark these notifications read; leave out to mark all of them."""
 
     ids: list[int] | None = Field(default=None, max_length=100)
+
+
+# --- admin reports -----------------------------------------------------------
+
+
+class ProfessorLoadOut(BaseModel):
+    """One professor's appointments by state (only professors with at least one)."""
+
+    professor_id: int
+    honorific: str
+    full_name_ar: str
+    full_name_en: str
+    total: int
+    pending: int
+    approved: int
+    completed: int
+    no_show: int
+    declined: int
+    cancelled: int
+
+
+class HourLoadOut(BaseModel):
+    hour: int = Field(ge=0, le=23, description="Riyadh hour of the day the appointments start in")
+    appointments: int
+
+
+class ReportsOut(BaseModel):
+    by_professor: list[ProfessorLoadOut]
+    # Appointments that were kept or are still planned (not declined or cancelled), by start hour.
+    by_hour: list[HourLoadOut]

@@ -3,6 +3,7 @@
  * in-app notifications to show, and sign-out (student Profile tab, professor and admin
  * Account tabs).
  */
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +19,7 @@ import { MenuPicker } from '@/components/MenuPicker';
 import { Text } from '@/components/Text';
 import { switchLanguage } from '@/i18n';
 import { departmentName, fullName } from '@/lib/names';
+import { PasswordSheet, StudySheet } from './AccountSheets';
 import { TEXT_SIZES, useSettings, type TextSize } from '@/settings/SettingsProvider';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { COLOR_VISIONS, space, type ColorVision, type Language } from '@/theme/tokens';
@@ -34,6 +36,7 @@ export function AccountScreen() {
   const user = useUser();
   const { textSize, setTextSize, notifications, setNotifications } = useSettings();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
+  const [sheet, setSheet] = useState<'password' | 'study' | null>(null);
 
   const leave = async () => {
     await signOut();
@@ -68,6 +71,22 @@ export function AccountScreen() {
           ) : null}
           <Text color="muted">{user.email}</Text>
         </View>
+      </View>
+
+      {/* What a person may change about their own account. */}
+      <View style={styles.chips}>
+        {user.student ? (
+          <Button
+            variant="secondary"
+            label={t('account.study_edit')}
+            onPress={() => setSheet('study')}
+          />
+        ) : null}
+        <Button
+          variant="secondary"
+          label={t('account.change_password')}
+          onPress={() => setSheet('password')}
+        />
       </View>
 
       <View style={styles.section}>
@@ -178,6 +197,16 @@ export function AccountScreen() {
           variant="quiet"
           label={t('profile.styleguide')}
           onPress={() => router.push('/styleguide')}
+        />
+      ) : null}
+      <PasswordSheet visible={sheet === 'password'} onClose={() => setSheet(null)} />
+      {user.student ? (
+        <StudySheet
+          // Opened again, it starts from the saved values.
+          key={`${user.student.study_year}-${user.student.department.department_id}`}
+          visible={sheet === 'study'}
+          onClose={() => setSheet(null)}
+          user={user}
         />
       ) : null}
     </ScrollView>

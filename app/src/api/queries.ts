@@ -6,6 +6,7 @@ import { api } from './client';
 import { POLL_MS } from './queryClient';
 import type {
   AdminProfessor,
+  AdminReports,
   AdminStudent,
   AppNotification,
   Appointment,
@@ -391,6 +392,14 @@ export function useAdminList<R extends AdminResource>(resource: R) {
     queryKey: queryKeys.admin(resource),
     queryFn: () =>
       api<Page<AdminRows[R]>>(`/admin/${resource}?limit=100`).then((page) => page.items),
+  });
+}
+
+/** The overview's reports: appointments per professor and per hour of the day. */
+export function useAdminReports() {
+  return useQuery({
+    queryKey: ['admin', 'reports'] as const,
+    queryFn: () => api<AdminReports>('/admin/reports'),
   });
 }
 

@@ -30,6 +30,7 @@ import { departmentName, fullName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 import { StatTile } from './parts';
+import { Reports } from './Reports';
 import { useActivate } from './useActivate';
 
 type Waiting =
@@ -211,6 +212,13 @@ export function AdminOverview() {
               />
             ))}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text variant="title" role="heading">
+            {t('admin.reports')}
+          </Text>
+          <Reports />
         </View>
 
         <View style={styles.section}>

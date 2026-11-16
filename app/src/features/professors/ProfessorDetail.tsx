@@ -35,6 +35,7 @@ import { useToast } from '@/components/Toast';
 import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
+import { WeekRibbons } from '@/features/professors/WeekRibbons';
 import { errorKey } from '@/lib/errors';
 import { dateText, shortDateText, weekdayOf } from '@/lib/dates';
 import { clockText, laterText } from '@/lib/format';
@@ -252,6 +253,21 @@ export function ProfessorDetail({
                   <DayRibbon blocks={data.today.blocks} now={data.today.now_local_time} />
                 ) : null}
                 <TodayTimeline blocks={data.today.blocks} now={data.today.now_local_time} />
+              </View>
+
+              <View style={styles.section}>
+                <Text variant="title" role="heading">
+                  {t(
+                    data.week[0] && data.week[0].date > data.today.date
+                      ? 'prof.next_week'
+                      : 'prof.week',
+                  )}
+                </Text>
+                <WeekRibbons
+                  week={data.week}
+                  today={data.today.date}
+                  now={data.today.now_local_time}
+                />
               </View>
 
               <View style={styles.section}>

@@ -160,6 +160,8 @@ export interface ChatClosure extends Repeats {
 export interface ProfessorDetail extends ProfessorSummary {
   academic_rank: Rank;
   today: { date: string; day_of_week: number; now_local_time: string; blocks: Block[] };
+  /** Sunday to Thursday of this week; of next week once it is Friday or Saturday. */
+  week: { date: string; day_of_week: number; blocks: Block[] }[];
   /** When students can book; empty means the professor cannot be booked. */
   booking_periods: BookingPeriod[];
   /** The dates of this week and next with a booking time (the booking calendar). */
@@ -275,4 +277,22 @@ export interface AppNotification {
 export interface Unread {
   notifications: number;
   messages: number;
+}
+
+/** GET /admin/reports: appointments per professor (most first) and per Riyadh start hour. */
+export interface AdminReports {
+  by_professor: {
+    professor_id: number;
+    honorific: Honorific;
+    full_name_ar: string;
+    full_name_en: string;
+    total: number;
+    pending: number;
+    approved: number;
+    completed: number;
+    no_show: number;
+    declined: number;
+    cancelled: number;
+  }[];
+  by_hour: { hour: number; appointments: number }[];
 }

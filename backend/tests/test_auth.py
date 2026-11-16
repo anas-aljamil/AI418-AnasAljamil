@@ -148,3 +148,46 @@ def test_refresh_cookie_is_secure_when_the_browser_used_https(client):
         headers={"X-Forwarded-Proto": "https"},
     )
     assert "secure" in response.headers["set-cookie"].lower()
+
+
+def test_changing_the_password_needs_the_current_one(client, auth):
+    headers = auth(SAAD)
+    url = "/api/v1/auth/password"
+    wrong = client.post(
+        url, json={"current_password": "not-it", "new_password": "New-pass-2026"}, headers=headers
+    )
+    assert (wrong.status_code, wrong.json()["error"]["code"]) == (400, "WRONG_PASSWORD")
+    same = client.post(
+        url, json={"current_password": DEMO_PASSWORD, "new_password": DEMO_PASSWORD}, headers=headers
+    )
+    assert (same.status_code, same.json()["error"]["code"]) == (400, "PASSWORD_UNCHANGED")
+    short = client.post(
+        url, json={"current_password": DEMO_PASSWORD, "new_password": "short"}, headers=headers
+    )
+    assert short.status_code == 422
+    assert (
+        client.post(url, json={"current_password": DEMO_PASSWORD, "new_password": "x" * 8}).status_code == 401
+    )
+
+    done = client.post(
+        url, json={"current_password": DEMO_PASSWORD, "new_password": "New-pass-2026"}, headers=headers
+    )
+    assert done.status_code == 204
+    old = client.post("/api/v1/auth/login", json={"email": EMAILS[SAAD], "password": DEMO_PASSWORD})
+    assert old.status_code == 401
+    new = client.post("/api/v1/auth/login", json={"email": EMAILS[SAAD], "password": "New-pass-2026"})
+    assert new.status_code == 200
+
+
+def test_through_the_public_link_a_demo_account_keeps_its_password(client, auth):
+    tunnel = {"CF-Connecting-IP": "203.0.113.7", **auth(SAAD)}
+    body = {"current_password": DEMO_PASSWORD, "new_password": "New-pass-2026"}
+    blocked = client.post("/api/v1/auth/password", json=body, headers=tunnel)
+    assert (blocked.status_code, blocked.json()["error"]["code"]) == (403, "DEMO_ACCOUNT")
+    # A wrong current password is still just wrong: the block reveals nothing without it.
+    wrong = client.post("/api/v1/auth/password", json={**body, "current_password": "x" * 8}, headers=tunnel)
+    assert wrong.json()["error"]["code"] == "WRONG_PASSWORD"
+    assert (
+        client.post("/api/v1/auth/login", json={"email": EMAILS[SAAD], "password": DEMO_PASSWORD}).status_code
+        == 200
+    )

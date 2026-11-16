@@ -10,7 +10,7 @@ and blocks sign-in. Deleting a department that still has people returns 409
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.arabic import matches
@@ -20,7 +20,7 @@ from app.core.pagination import Page, PageParams, page_params, paginate
 from app.core.security import hash_password
 from app.db import get_db
 from app.deps import current_admin
-from app.models import Department, Office, Professor, Student, User
+from app.models import Appointment, Department, Office, Professor, Student, User
 from app.schemas import (
     AccountPatch,
     AdminProfessorIn,
@@ -32,9 +32,12 @@ from app.schemas import (
     DepartmentIn,
     DepartmentOut,
     DepartmentPatch,
+    HourLoadOut,
     OfficeIn,
     OfficeOut,
     OfficePatch,
+    ProfessorLoadOut,
+    ReportsOut,
 )
 from app.services import accounts
 
@@ -289,3 +292,47 @@ def delete_student(student_id: int, db: Session = Depends(get_db)) -> Response:
     db.delete(db.get(User, student_id))
     db.commit()
     return Response(status_code=204)
+
+
+# --- reports -----------------------------------------------------------------
+
+STATES = ("pending", "approved", "completed", "no_show", "declined", "cancelled")
+RIYADH_OFFSET = "03:00:00"  # Riyadh is UTC+3 all year; timestamps are stored in UTC
+
+
+@router.get(
+    "/reports", response_model=ReportsOut, summary="Appointments per professor and per hour of the day"
+)
+def reports(db: Session = Depends(get_db)) -> ReportsOut:
+    """Two aggregates for the overview: how many appointments each professor has in each
+    state, most first, and at which Riyadh hours appointments start."""
+    counts = [func.sum(case((Appointment.status == state, 1), else_=0)).label(state) for state in STATES]
+    total = func.count(Appointment.appointment_id).label("total")
+    by_professor = db.execute(
+        select(User.user_id, Professor.honorific, User.full_name_ar, User.full_name_en, total, *counts)
+        .join(Professor, Professor.professor_id == User.user_id)
+        .join(Appointment, Appointment.professor_id == Professor.professor_id)
+        .group_by(User.user_id, Professor.honorific, User.full_name_ar, User.full_name_en)
+        .order_by(total.desc(), User.full_name_en)
+    ).all()
+    hour = func.hour(func.addtime(Appointment.starts_at, RIYADH_OFFSET)).label("hour")
+    by_hour = db.execute(
+        select(hour, func.count(Appointment.appointment_id))
+        .where(Appointment.status.not_in(("declined", "cancelled")))
+        .group_by(hour)
+        .order_by(hour)
+    ).all()
+    return ReportsOut(
+        by_professor=[
+            ProfessorLoadOut(
+                professor_id=row.user_id,
+                honorific=row.honorific,
+                full_name_ar=row.full_name_ar,
+                full_name_en=row.full_name_en,
+                total=row.total,
+                **{state: int(getattr(row, state)) for state in STATES},
+            )
+            for row in by_professor
+        ],
+        by_hour=[HourLoadOut(hour=int(h), appointments=n) for h, n in by_hour],
+    )

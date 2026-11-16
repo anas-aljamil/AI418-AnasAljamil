@@ -40,6 +40,8 @@ interface AuthValue {
   /** 'signedIn' for students; 'pending' when a professor's account waits for an admin. */
   signUp: (body: SignUpBody) => Promise<'signedIn' | 'pending'>;
   signOut: () => Promise<void>;
+  /** After the signed-in person changed their own record (a student's year or department). */
+  updateUser: (user: Me) => void;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -117,8 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [forget]);
 
   const value = useMemo(
-    () => ({ state, signIn, signUp, signOut }),
-    [state, signIn, signUp, signOut],
+    () => ({ state, signIn, signUp, signOut, updateUser: signedIn }),
+    [state, signIn, signUp, signOut, signedIn],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
