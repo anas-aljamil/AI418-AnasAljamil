@@ -156,3 +156,44 @@ test('a professor account lands on their status screen', async ({ page }) => {
   await expect(page).toHaveURL(/\/staff\/status$/);
   await expect(page.getByRole('heading', { name: 'حالتي' })).toBeVisible();
 });
+
+test('a link opened while signed out leads to sign-in and then to its screen', async ({ page }) => {
+  await start(page);
+  await page.addInitScript(() => localStorage.setItem('mawjood.language', 'en'));
+  // These three screens sit outside the role tabs; they used to be blank pages here.
+  for (const route of ['/conversations/1', '/notifications', '/professors/2']) {
+    await page.goto(route);
+    await expect(page).toHaveURL(
+      (url) => url.pathname + url.search === `/sign-in?next=${encodeURIComponent(route)}`,
+    );
+  }
+  await expect(page).toHaveTitle('Sign in | Mawjood');
+  await signIn(page, 'en');
+  await expect(page).toHaveURL(/\/professors\/2$/);
+  await expect(page.getByRole('heading', { name: 'Prof. Khalid Al-Otaibi' })).toBeVisible();
+  // Each screen names the browser tab.
+  await expect(page).toHaveTitle(/^(\(\d\) )?Professor \| Mawjood$/);
+  await page.goto('/search');
+  await expect(page).toHaveTitle(/^(\(\d\) )?Search \| Mawjood$/);
+});
+
+test('sign-in does not follow a link to another site', async ({ page }) => {
+  await start(page);
+  await page.addInitScript(() => localStorage.setItem('mawjood.language', 'en'));
+  await page.goto('/sign-in?next=' + encodeURIComponent('//example.com/home'));
+  await signIn(page, 'en');
+  await expect(page).toHaveURL(/\/home$/);
+});
+
+test('an address the app does not have shows its own page, in the language', async ({ page }) => {
+  await start(page);
+  await page.addInitScript(() => localStorage.setItem('mawjood.language', 'ar'));
+  const response = await page.goto('/no-such-page');
+  expect(response?.status()).toBe(404);
+  await expect(page.getByText('هذه الصفحة غير موجودة')).toBeVisible();
+  await expect(page).toHaveTitle('هذه الصفحة غير موجودة | موجود');
+  await page.getByRole('button', { name: 'إلى تسجيل الدخول' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  // No public list of every route.
+  expect((await page.goto('/_sitemap'))?.status()).toBe(404);
+});

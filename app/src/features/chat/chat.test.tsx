@@ -13,9 +13,14 @@ jest.mock('@/api/client', () => ({ ...jest.requireActual('@/api/client'), api: j
 jest.mock('expo-router', () => ({
   router: { back: jest.fn(), canGoBack: () => true, push: jest.fn(), replace: jest.fn() },
   useLocalSearchParams: () => ({ id: '1' }),
+  usePathname: () => '/conversations/1',
+  Redirect: () => null,
 }));
 let mockUser = { user_id: 9, role: 'student' } as Me;
-jest.mock('@/auth/AuthProvider', () => ({ useUser: () => mockUser }));
+jest.mock('@/auth/AuthProvider', () => ({
+  useUser: () => mockUser,
+  useAuth: () => ({ state: { status: 'signedIn', user: mockUser } }),
+}));
 const mockApi = api as jest.MockedFunction<typeof api>;
 
 const conversation: Conversation = {

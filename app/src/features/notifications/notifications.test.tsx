@@ -17,6 +17,8 @@ jest.mock('expo-router', () => ({
     navigate: jest.fn(),
     replace: jest.fn(),
   },
+  usePathname: () => '/notifications',
+  Redirect: () => null,
 }));
 const mockUser = { user_id: 9, role: 'student' } as Me;
 jest.mock('@/auth/AuthProvider', () => ({

@@ -789,5 +789,15 @@
     "all": "All departments",
     "loading": "Loading the departments…",
     "none": "No departments yet. An administrator adds them."
+  },
+  "not_found": {
+    "title": "This page doesn't exist",
+    "body": "The link may be mistyped or out of date.",
+    "home": "Go to my home screen",
+    "sign_in": "Go to sign-in"
+  },
+  "titles": {
+    "professor": "Professor",
+    "conversation": "Conversation"
   }
 }

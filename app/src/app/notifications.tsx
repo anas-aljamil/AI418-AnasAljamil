@@ -18,6 +18,7 @@ import { useColumn } from '@/lib/layout';
 import { useMarkNotificationsRead } from '@/api/queries';
 import type { AppNotification } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
+import { RequireSignIn } from '@/auth/RequireSignIn';
 import { IconCircle, type IconComponent } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
@@ -42,6 +43,14 @@ function iconFor(type: AppNotification['type']): IconComponent {
 }
 
 export default function NotificationsScreen() {
+  return (
+    <RequireSignIn>
+      <Notifications />
+    </RequireSignIn>
+  );
+}
+
+function Notifications() {
   const { t, i18n } = useTranslation();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();

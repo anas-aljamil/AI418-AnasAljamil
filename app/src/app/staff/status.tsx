@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Check from 'lucide-react-native/icons/check';
@@ -141,14 +141,12 @@ export default function StatusScreen() {
 
   // The browser tab shows the status, so a professor can keep the tab open (DESIGN.md 7.8).
   const tabTitle = described ? `${described.label} | ${t('app.name')}` : null;
+  // Other screens are named by the root layout; coming back here writes the status again.
+  const pathname = usePathname();
   useEffect(() => {
-    if (Platform.OS !== 'web' || !tabTitle) return;
-    const before = document.title;
+    if (Platform.OS !== 'web' || !tabTitle || pathname !== '/staff/status') return;
     document.title = tabTitle;
-    return () => {
-      document.title = before;
-    };
-  }, [tabTitle]);
+  }, [tabTitle, pathname]);
 
   const hero =
     current && described && sentence ? (
@@ -160,7 +158,13 @@ export default function StatusScreen() {
           accessibilityLabel={t('status.door', { status: sentence.label })}
         />
         <View style={styles.heroText}>
-          <Text variant="caption" role="heading" color="onBandMuted">
+          {/* Small, but it is the screen's heading: level 1 for screen readers. */}
+          <Text
+            variant="caption"
+            role="heading"
+            color="onBandMuted"
+            {...({ 'aria-level': 1 } as object)}
+          >
             {t('status_screen.title')}
           </Text>
           <View accessibilityLiveRegion="polite">

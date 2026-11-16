@@ -7,7 +7,7 @@
  */
 import { useRef, useState } from 'react';
 import { StyleSheet, View, type TextInputInstance } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Languages from 'lucide-react-native/icons/languages';
 
@@ -18,6 +18,7 @@ import { TextField } from '@/components/TextField';
 import { AuthFrame } from '@/features/auth/AuthFrame';
 import { currentLanguage, switchLanguage } from '@/i18n';
 import { errorKey } from '@/lib/errors';
+import { safeNext } from '@/lib/nav';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
@@ -25,6 +26,7 @@ export default function SignInScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { state, signIn } = useAuth();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +34,9 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const passwordRef = useRef<TextInputInstance>(null);
 
-  if (state.status === 'signedIn') return <Redirect href="/" />;
+  // A visitor who opened a link while signed out goes on to it; otherwise to the role's home.
+  const destination = (safeNext(next) ?? '/') as Href;
+  if (state.status === 'signedIn') return <Redirect href={destination} />;
 
   const submit = async () => {
     if (busy) return;
@@ -44,7 +48,7 @@ export default function SignInScreen() {
     setError(null);
     try {
       await signIn(email, password);
-      router.replace('/');
+      router.replace(destination);
     } catch (caught) {
       setError(t(errorKey(caught)));
       setBusy(false);
