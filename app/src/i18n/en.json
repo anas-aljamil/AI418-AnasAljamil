@@ -266,7 +266,6 @@
     "next_appointment": "Next appointment",
     "appointment_pending": "Waiting for approval",
     "appointment_approved": "Approved",
-    "my_professors": "My professors",
     "available_now": "Available now",
     "department_caption": "{{department}}, in office first",
     "nobody_in": "Nobody in your department is in their office right now.",
@@ -284,7 +283,13 @@
     "try_again": "Try again",
     "status_changed": "{{name}} is now {{status}}",
     "when_countdown": "{{when}}, {{countdown}}",
-    "department_empty": "Your department has no professors in Mawjood yet. Use Search to find professors in other departments."
+    "department_empty": "Your department has no professors in Mawjood yet. Use Search to find professors in other departments.",
+    "in_now_none": "None of your professors is in the office now",
+    "in_now_one": "One of your professors is in the office now",
+    "in_now_two": "Two of your professors are in their offices now",
+    "in_now_few": "{{count}} of your professors are in their offices now",
+    "in_now_many": "{{count}} of your professors are in their offices now",
+    "in_now_other": "{{count}} of your professors are in their offices now"
   },
   "tabs": {
     "home": "Home",

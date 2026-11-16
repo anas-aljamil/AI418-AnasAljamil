@@ -1,4 +1,7 @@
-/** The bell in the Home and My status headers (DESIGN.md 7.2) with the unread count. */
+/**
+ * The bell in the Home and My status headers (DESIGN.md 7.2) with the unread count. On the
+ * corridor band it takes the band's colours.
+ */
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +14,7 @@ import { radii } from '@/theme/tokens';
 import { IconButton } from './Surfaces';
 import { Text } from './Text';
 
-export function NotificationBell() {
+export function NotificationBell({ onBand = false }: { onBand?: boolean }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language === 'ar' ? 'ar' : 'en';
   const { colors } = useTheme();
@@ -22,10 +25,14 @@ export function NotificationBell() {
       onPress={() => router.push('/notifications')}
       icon={
         <View>
-          <Bell color={colors.text} size={24} strokeWidth={1.75} />
+          <Bell color={onBand ? colors.onBand : colors.text} size={24} strokeWidth={1.75} />
           {unread ? (
             <View
-              style={[styles.badge, insetEnd(-8, language), { backgroundColor: colors.danger }]}
+              style={[
+                styles.badge,
+                insetEnd(-8, language),
+                { backgroundColor: onBand ? colors.bandStatusText.busy : colors.danger },
+              ]}
             >
               <Text
                 variant="caption"
@@ -33,7 +40,7 @@ export function NotificationBell() {
                 weight="semibold"
                 appScale={false}
                 maxFontSizeMultiplier={1}
-                style={styles.badgeText}
+                style={[styles.badgeText, onBand && { color: colors.band }]}
               >
                 {unread > 9 ? '9+' : String(unread)}
               </Text>

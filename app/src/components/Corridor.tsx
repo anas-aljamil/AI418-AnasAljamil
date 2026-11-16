@@ -31,13 +31,20 @@ const CAPTION_ROOM = 36;
 interface CorridorProps {
   /** Door width: 72 on phones, 92 on desktop. */
   doorSize?: number;
+  /** The band's side padding: the row then scrolls to the band's edges, not to the padding. */
+  bleed?: number;
   children: React.ReactNode;
 }
 
-export function Corridor({ doorSize = 72, children }: CorridorProps) {
+export function Corridor({ doorSize = 72, bleed = 0, children }: CorridorProps) {
   const { colors } = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ marginHorizontal: -bleed }}
+      contentContainerStyle={{ paddingHorizontal: bleed }}
+    >
       <View style={styles.row}>
         <View
           style={[

@@ -5,6 +5,7 @@
  * glance; the agenda (TodayTimeline) under it says the same in words, and screen readers get
  * the ribbon as one sentence.
  */
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -27,8 +28,8 @@ const DOT = 6;
 // Hour labels are a guide beside the agenda's full times, so like tab labels they grow only a
 // little with the text size and never run into each other.
 const AXIS_SCALE = 1.3;
-// Enough pieces for the widest segment; the segment clips what does not fit.
-const PIECES = Array.from({ length: 80 }, (_, i) => i);
+const OUTLINE = 2;
+const SWATCH = 28;
 
 interface DayRibbonProps {
   blocks: Block[];
@@ -66,6 +67,8 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
   const hours: number[] = [];
   for (let at = from; at < to; at += 120) hours.push(at);
   const kinds = BLOCK_KINDS.filter((kind) => sorted.some((block) => block.kind === kind));
+  // Stripes and dots are drawn one by one, so each stretch needs its width in pixels.
+  const [trackWidth, setTrackWidth] = useState(0);
 
   const spoken = spokenList(
     [
@@ -91,7 +94,10 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
   return (
     <View style={styles.ribbon}>
       <View accessible accessibilityRole="image" accessibilityLabel={spoken} style={styles.plot}>
-        <View style={[styles.track, { backgroundColor: onBand ? colors.bandRaised : colors.line }]}>
+        <View
+          onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+          style={[styles.track, { backgroundColor: onBand ? colors.bandRaised : colors.line }]}
+        >
           {sorted.map((block) => (
             <View
               key={block.block_id}
@@ -101,7 +107,14 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
                 { width: width(minutesOfDay(block.end_time) - minutesOfDay(block.start_time)) },
               ]}
             >
-              <Fill kind={block.kind} color={statusColors[BLOCK_STATUS[block.kind]]} />
+              <Fill
+                kind={block.kind}
+                color={statusColors[BLOCK_STATUS[block.kind]]}
+                width={
+                  (trackWidth * (minutesOfDay(block.end_time) - minutesOfDay(block.start_time))) /
+                  span
+                }
+              />
             </View>
           ))}
         </View>
@@ -135,7 +148,7 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
           {kinds.map((kind) => (
             <View key={kind} style={styles.legendItem}>
               <View style={styles.swatch}>
-                <Fill kind={kind} color={statusColors[BLOCK_STATUS[kind]]} />
+                <Fill kind={kind} color={statusColors[BLOCK_STATUS[kind]]} width={SWATCH} />
               </View>
               <Text variant="caption" color={muted}>
                 {t(blockKindKey(kind))}
@@ -148,13 +161,18 @@ export function DayRibbon({ blocks, now, onBand = false, legend = true }: DayRib
   );
 }
 
-/** How a kind fills its stretch: solid, striped or dotted, inside an outline in its colour. */
-function Fill({ kind, color }: { kind: BlockKind; color: string }) {
+/**
+ * How a kind fills its stretch: solid, striped or dotted, inside an outline in its colour.
+ * Only as many stripes or dots as fit are drawn, so nothing reaches past the stretch.
+ */
+function Fill({ kind, color, width }: { kind: BlockKind; color: string; width: number }) {
   if (kind === 'office_hours') return <View style={[styles.fill, { backgroundColor: color }]} />;
   const piece = kind === 'class' ? styles.stripe : styles.dot;
+  const room = width - 2 * (OUTLINE + STRIPE) + STRIPE;
+  const count = Math.max(0, Math.floor(room / ((kind === 'class' ? STRIPE : DOT) + STRIPE)));
   return (
     <View style={[styles.fill, styles.pieces, { borderColor: color }]}>
-      {PIECES.map((i) => (
+      {Array.from({ length: count }, (_, i) => (
         <View key={i} style={[piece, { backgroundColor: color }]} />
       ))}
     </View>
@@ -172,8 +190,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: STRIPE,
     paddingHorizontal: STRIPE,
+    justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: OUTLINE,
   },
   stripe: { width: STRIPE, alignSelf: 'stretch' },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2 },
@@ -181,5 +200,5 @@ const styles = StyleSheet.create({
   axis: { flexDirection: 'row' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.md, rowGap: space.xxs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  swatch: { width: 28, height: 14 },
+  swatch: { width: SWATCH, height: 14 },
 });

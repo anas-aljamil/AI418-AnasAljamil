@@ -1,6 +1,7 @@
 /**
- * Student home (DESIGN.md 7.2) with the API mocked: pinned statuses visible without a tap,
- * the next appointment, the department list, and the empty, error and search states.
+ * Student home (DESIGN.md 7.2) with the API mocked: pinned professors as doors in the corridor,
+ * visible without a tap, the next appointment, the department list, and the empty, error and
+ * search states.
  */
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
@@ -95,16 +96,15 @@ beforeEach(() => mockApi.mockReset());
 it('shows pinned statuses, the next appointment and the department with no taps', async () => {
   serve(standard);
   await renderWithProviders(<HomeScreen />);
-  expect(
-    await screen.findByLabelText('Dr. Noura Al-Harbi, In office, updated 3 min ago'),
-  ).toBeTruthy();
+  // The corridor: one door per pinned professor, and the answer in words above it.
+  expect(await screen.findByRole('button', { name: 'Dr. Noura, In office' })).toBeTruthy();
+  expect(screen.getByText('One of your professors is in the office now')).toBeTruthy();
   expect(screen.getByText(/Good (morning|afternoon|evening), Saad/)).toBeTruthy();
   expect(await screen.findByText('Waiting for approval')).toBeTruthy();
   expect(screen.getByText('Building A, room 214')).toBeTruthy();
   expect(
-    await screen.findByLabelText(
-      'Dr. Khalid Al-Otaibi, Software Engineering, Away, updated 3 min ago',
-    ),
+    // Every row here is the student's department, so the row does not repeat it.
+    await screen.findByLabelText('Dr. Khalid Al-Otaibi, Away'),
   ).toBeTruthy();
 });
 
@@ -143,9 +143,7 @@ it('says what went wrong when a section cannot load, and retries', async () => {
   ).toBeTruthy();
   pinsFail = false;
   await fireEvent.press(screen.getAllByRole('button', { name: 'Try again' })[0]!);
-  expect(
-    await screen.findByLabelText('Dr. Noura Al-Harbi, In office, updated 3 min ago'),
-  ).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Dr. Noura, In office' })).toBeTruthy();
 });
 
 it('searches as you type and pins from the results', async () => {

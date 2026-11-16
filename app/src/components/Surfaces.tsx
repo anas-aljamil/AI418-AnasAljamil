@@ -18,6 +18,8 @@ export function Card({ style, ...rest }: ViewProps) {
 interface ListRowProps {
   leading?: React.ReactNode;
   title: string;
+  /** A line under the title in the text colour (a professor's status sentence). */
+  detail?: string;
   subtitle?: string;
   trailing?: React.ReactNode;
   /** A separate control after the row (e.g. a pin button); screen readers reach it on its own. */
@@ -36,6 +38,7 @@ interface ListRowProps {
 export function ListRow({
   leading,
   title,
+  detail,
   subtitle,
   trailing,
   after,
@@ -75,6 +78,11 @@ export function ListRow({
           <Text variant="body" weight="semibold" numberOfLines={2}>
             {title}
           </Text>
+          {detail ? (
+            <Text variant="label" numberOfLines={2}>
+              {detail}
+            </Text>
+          ) : null}
           {subtitle ? (
             <Text variant="caption" color="muted" numberOfLines={2}>
               {subtitle}

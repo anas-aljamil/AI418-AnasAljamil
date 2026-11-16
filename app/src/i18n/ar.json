@@ -266,7 +266,6 @@
     "next_appointment": "موعدك القادم",
     "appointment_pending": "بانتظار الموافقة",
     "appointment_approved": "تمت الموافقة",
-    "my_professors": "أساتذتي",
     "available_now": "المتاحون الآن",
     "department_caption": "{{department}}، الموجودون في مكاتبهم أولًا",
     "nobody_in": "لا أحد من أساتذة قسمك في مكتبه الآن.",
@@ -284,7 +283,13 @@
     "try_again": "حاول مرة أخرى",
     "status_changed": "{{name}}: {{status}} الآن",
     "when_countdown": "{{when}}، {{countdown}}",
-    "department_empty": "لا يوجد أساتذة من قسمك في موجود بعد. استخدم البحث للعثور على أساتذة الأقسام الأخرى."
+    "department_empty": "لا يوجد أساتذة من قسمك في موجود بعد. استخدم البحث للعثور على أساتذة الأقسام الأخرى.",
+    "in_now_none": "لا أحد من أساتذتك في مكتبه الآن",
+    "in_now_one": "أحد أساتذتك في مكتبه الآن",
+    "in_now_two": "اثنان من أساتذتك في مكتبيهما الآن",
+    "in_now_few": "{{count}} من أساتذتك في مكاتبهم الآن",
+    "in_now_many": "{{count}} من أساتذتك في مكاتبهم الآن",
+    "in_now_other": "{{count}} من أساتذتك في مكاتبهم الآن"
   },
   "tabs": {
     "home": "الرئيسية",

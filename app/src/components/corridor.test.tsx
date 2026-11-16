@@ -57,7 +57,7 @@ describe('statusSentence', () => {
       }),
     ).toMatchObject({
       door: 'unknown',
-      sentence: 'In office (not confirmed) updated 5 hours ago',
+      sentence: 'In office (not confirmed), updated 5 hours ago',
     });
     expect(sentence({ status: 'unknown', confirmed: false })).toMatchObject({
       door: 'unknown',

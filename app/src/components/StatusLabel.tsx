@@ -72,12 +72,13 @@ export function statusSentence(
       : until && until > now
         ? untilText(until, t)
         : null;
-  return {
-    door,
-    label,
-    when,
-    sentence: when ? t('status.sentence', { status: label, when }) : label,
-  };
+  // "In office until 12:00 PM" reads as one phrase; an age is a second fact, after a comma.
+  const sentence = !when
+    ? label
+    : door === 'unknown'
+      ? spokenList([label, when], t)
+      : t('status.sentence', { status: label, when });
+  return { door, label, when, sentence };
 }
 
 /** Status is always icon + label + colour, with a relative "updated X ago" (CLAUDE.md Section 4). */

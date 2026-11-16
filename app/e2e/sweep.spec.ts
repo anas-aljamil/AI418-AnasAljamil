@@ -6,7 +6,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
-import { navTab } from './nav';
+import { openTab } from './nav';
 
 const DEMO_NOW = new Date('2026-10-05T07:00:00Z');
 
@@ -65,7 +65,7 @@ async function signIn(page: Page, email: string, language: 'ar' | 'en') {
 
 async function visitTabs(page: Page, tabs: readonly string[]) {
   for (const tab of tabs) {
-    await navTab(page, tab).click();
+    await openTab(page, tab);
     await page.waitForLoadState('networkidle');
   }
 }
@@ -76,26 +76,31 @@ for (const language of ['en', 'ar'] as const) {
     await signIn(page, ACCOUNTS.student, language);
     await visitTabs(page, TABS.student[language]);
     // A professor's profile, the booking sheet, notifications and a conversation.
-    await navTab(page, TABS.student[language][0]).click();
+    await openTab(page, TABS.student[language][0]);
     await page
       .getByRole('button', {
         name: language === 'ar' ? /^د\. نورة الحربي/ : /^Dr\. Noura Al-Harbi/,
       })
       .first()
       .click();
+    // Wait for each move: going back before the page has moved would leave the app.
+    await page.waitForURL(/\/professors\/\d+/);
     await page.waitForLoadState('networkidle');
     await page
       .getByRole('button', { name: language === 'ar' ? 'احجز' : 'Book', exact: true })
       .click();
     await page.waitForLoadState('networkidle');
     await page.goBack();
+    await page.waitForURL(/\/home$/);
     await page
       .getByRole('button', { name: language === 'ar' ? /^الإشعارات/ : /^Notifications/ })
       .first()
       .click();
+    await page.waitForURL(/\/notifications$/);
     await page.waitForLoadState('networkidle');
     await page.goBack();
-    await navTab(page, TABS.student[language][3]).click();
+    await page.waitForURL(/\/home$/);
+    await openTab(page, TABS.student[language][3]);
     await page
       .getByRole('button', {
         name: language === 'ar' ? /^د\. نورة الحربي/ : /^Dr\. Noura Al-Harbi/,
@@ -110,7 +115,7 @@ for (const language of ['en', 'ar'] as const) {
     const problems = watch(page);
     await signIn(page, ACCOUNTS.professor, language);
     await visitTabs(page, TABS.professor[language]);
-    await navTab(page, TABS.professor[language][0]).click();
+    await openTab(page, TABS.professor[language][0]);
     await page
       .getByRole('button', { name: language === 'ar' ? /^الإشعارات/ : /^Notifications/ })
       .first()
@@ -125,7 +130,7 @@ for (const language of ['en', 'ar'] as const) {
     await visitTabs(page, TABS.admin[language]);
     // Every form opens (Campus, Professors, Students), and a professor's quick view.
     for (const tab of TABS.admin[language].slice(1, 4)) {
-      await navTab(page, tab).click();
+      await openTab(page, tab);
       await page
         .getByRole('button', { name: language === 'ar' ? 'إضافة' : 'Add', exact: true })
         .click();
@@ -135,7 +140,7 @@ for (const language of ['en', 'ar'] as const) {
         .last()
         .click();
     }
-    await navTab(page, TABS.admin[language][2]).click();
+    await openTab(page, TABS.admin[language][2]);
     await page
       .getByRole('button', { name: language === 'ar' ? /^نورة الحربي/ : /^Noura Al-Harbi/ })
       .first()
