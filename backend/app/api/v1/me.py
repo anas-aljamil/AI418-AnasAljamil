@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.v1.auth import me_out
 from app.core.clock import Clock, get_clock, to_naive_utc
 from app.core.errors import AppError, not_found
 from app.core.pagination import Page, PageParams, page_params, paginate
@@ -20,6 +21,7 @@ from app.models import (
     ScheduleBlock,
     SkippedDate,
     StatusOverride,
+    Student,
     User,
 )
 from app.schemas import (
@@ -27,14 +29,16 @@ from app.schemas import (
     BlockOut,
     ClosureIn,
     ClosureOut,
+    MeOut,
     PeriodIn,
     PeriodOut,
     ProfessorSummaryOut,
     SkipIn,
     StatusIn,
     StatusOut,
+    StudentSelfIn,
 )
-from app.services import directory
+from app.services import accounts, directory
 from app.services.occurrence import Draft, intervals, occurs_on
 from app.services.schedule import RULES, ensure_free
 from app.services.status import effective_status, override_end
@@ -426,3 +430,23 @@ def unpin(
         db.delete(existing)
         db.commit()
     return Response(status_code=204)
+
+
+@router.patch("/student", response_model=MeOut, summary="Change my study year or department")
+def update_my_student(
+    body: StudentSelfIn,
+    user: User = Depends(current_student),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MeOut:
+    """A student keeps their own year and department current (a new year, a transfer); the
+    name, email and university number stay with the administrator."""
+    changes = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    accounts.ensure_exists(db, changes.get("department_id"))
+    student = db.get(Student, user.user_id)
+    for field, value in changes.items():
+        setattr(student, field, value)
+    if changes:
+        user.updated_at = clock.now()
+    db.commit()
+    return me_out(db, user)

@@ -1,6 +1,6 @@
 """Loading professors with their live status for lists and profiles."""
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -9,6 +9,7 @@ from app.core.clock import riyadh_day_of_week, to_riyadh
 from app.models import Pin, Professor, StatusOverride, User
 from app.schemas import (
     BlockOut,
+    DayOut,
     DepartmentOut,
     OfficeOut,
     PeriodOut,
@@ -106,6 +107,26 @@ def summary(
     )
 
 
+WORKING_DAYS = 5  # Sunday to Thursday
+
+
+def blocks_on(professor: Professor, day: date) -> list[BlockOut]:
+    """The professor's schedule blocks that happen on a date, earliest first."""
+    return sorted(
+        (BlockOut.model_validate(b) for b in professor.blocks if occurs_on(b, day)),
+        key=lambda b: b.start_time,
+    )
+
+
+def week_of(professor: Professor, today: date, day_of_week: int) -> list[DayOut]:
+    """The working week a student plans with: this one, or the next once it is the weekend."""
+    sunday = today - timedelta(days=day_of_week)
+    if day_of_week >= WORKING_DAYS:
+        sunday += timedelta(days=7)
+    days = [sunday + timedelta(days=i) for i in range(WORKING_DAYS)]
+    return [DayOut(date=day, day_of_week=i, blocks=blocks_on(professor, day)) for i, day in enumerate(days)]
+
+
 def detail(
     professor: Professor, override: StatusOverride | None, now: datetime, pins: set[int] | None
 ) -> ProfessorDetailOut:
@@ -117,11 +138,9 @@ def detail(
             date=local.date(),
             day_of_week=today,
             now_local_time=local.time(),
-            blocks=sorted(
-                (BlockOut.model_validate(b) for b in professor.blocks if occurs_on(b, local.date())),
-                key=lambda b: b.start_time,
-            ),
+            blocks=blocks_on(professor, local.date()),
         ),
+        week=week_of(professor, local.date(), today),
         booking_periods=[PeriodOut.model_validate(p) for p in professor.booking_periods],
         booking_days=booking_days(professor.booking_periods, now),
         messages_closed_until=closed_until(professor.chat_closures, now),

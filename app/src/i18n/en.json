@@ -201,7 +201,11 @@
     "hide_password": "Hide password",
     "submit": "Sign in",
     "submitting": "Signing in",
-    "missing": "Enter your email and password."
+    "missing": "Enter your email and password.",
+    "demo_title": "Just looking?",
+    "demo_body": "Open Mawjood with a demo account. The data is fictional.",
+    "demo_student": "Demo student",
+    "demo_professor": "Demo professor"
   },
   "signup": {
     "link": "New to Mawjood? Create an account",
@@ -257,7 +261,10 @@
     "STUDENT_EMAIL": "Students sign up with their university number as the email, for example xxxxxxx@upm.edu.sa.",
     "CHAT_CLOSED": "This professor isn't taking messages right now. Try again when messages open.",
     "BOOKING_PERIOD_OVERLAP": "This booking time overlaps another booking time on the same day.",
-    "CHAT_CLOSURE_OVERLAP": "These closed hours overlap other closed hours in your week."
+    "CHAT_CLOSURE_OVERLAP": "These closed hours overlap other closed hours in your week.",
+    "WRONG_PASSWORD": "The current password is incorrect.",
+    "PASSWORD_UNCHANGED": "The new password is the same as the current one. Choose a different one.",
+    "DEMO_ACCOUNT": "This is a shared demo account, so its password can't be changed on the public link."
   },
   "home": {
     "search_label": "Search professors",
@@ -397,7 +404,11 @@
     "no_booking_times": "{{name}} hasn't set booking times yet, so booking isn't possible.",
     "messages_closed": "Not taking messages until {{time}}",
     "period_line": "{{day}}, {{start}}–{{end}}",
-    "book_on": "Book on {{when}}"
+    "book_on": "Book on {{when}}",
+    "week": "This week",
+    "next_week": "Next week",
+    "week_today": "Today",
+    "week_free": "no office hours or classes"
   },
   "booking": {
     "title": "Book with {{name}}",
@@ -697,7 +708,20 @@
     "summary_upcoming": "Upcoming appointments",
     "summary_upcoming_value": "{{count}} (waiting for approval: {{waiting}})",
     "search_departments": "Search by name or code",
-    "search_offices": "Search by building or room"
+    "search_offices": "Search by building or room",
+    "reports": "Reports",
+    "reports_by_professor": "Appointments per professor",
+    "reports_by_hour": "Start hour of appointments (declined and cancelled left out)",
+    "reports_empty": "No appointments yet.",
+    "reports_total_one": "1 appointment",
+    "reports_total_two": "2 appointments",
+    "reports_total_few": "{{count}} appointments",
+    "reports_total_many": "{{count}} appointments",
+    "reports_total_other": "{{count}} appointments",
+    "reports_done": "completed: {{count}}",
+    "reports_upcoming": "pending or approved: {{count}}",
+    "reports_no_show": "no-show: {{count}}",
+    "reports_dropped": "declined or cancelled: {{count}}"
   },
   "chat": {
     "reply": "Reply",
@@ -817,7 +841,7 @@
     "q3": "Can I cancel?",
     "a3": "Yes, in Appointments, until one hour before the start.",
     "q4": "I forgot my password.",
-    "a4": "Ask the Mawjood administrator at your university to set a new one.",
+    "a4": "If you know the current one, change it in Profile or Account. If you forgot it, ask the Mawjood administrator at your university to set a new one.",
     "q5": "I am a professor. Must I update my status all day?",
     "a5": "No. The status follows your timetable. Change it with one tap only when your day is different.",
     "q6": "Can I use it like an app on my phone?",
@@ -829,5 +853,19 @@
   },
   "nav": {
     "skip": "Skip to content"
+  },
+  "account": {
+    "change_password": "Change password",
+    "password_current": "Current password",
+    "password_new": "New password (at least 8 characters)",
+    "password_save": "Save the new password",
+    "password_changed": "Password changed",
+    "password_short": "The new password needs at least 8 characters.",
+    "password_current_missing": "Enter your current password.",
+    "study_edit": "Change year or department",
+    "study_title": "My study details",
+    "study_note": "Your name, email and university number are changed by the administrator.",
+    "study_save": "Save",
+    "study_saved": "Saved"
   }
 }

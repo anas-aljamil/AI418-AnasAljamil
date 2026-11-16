@@ -337,3 +337,20 @@ def test_closed_hours_input_is_validated(client, auth):
         {"day_of_week": 1, "start_time": "24:00", "end_time": "11:00"},
     ):
         assert client.post(CLOSED, json=bad, headers=headers).json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_a_student_changes_their_own_year_and_department(client, auth):
+    url = "/api/v1/me/student"
+    year = client.patch(url, json={"study_year": 4}, headers=auth(SAAD))
+    assert year.status_code == 200
+    assert (year.json()["student"]["study_year"], year.json()["student"]["department"]["code"]) == (4, "SE")
+    moved = client.patch(url, json={"department_id": 3}, headers=auth(SAAD))
+    assert (moved.json()["student"]["study_year"], moved.json()["student"]["department"]["code"]) == (4, "AI")
+    assert client.get("/api/v1/auth/me", headers=auth(SAAD)).json()["student"]["department"]["code"] == "AI"
+    # Nothing else can be changed here, and the values are checked.
+    ignored = client.patch(url, json={"university_no": "S0000", "study_year": 5}, headers=auth(SAAD))
+    assert ignored.json()["student"]["university_no"] != "S0000"
+    assert client.patch(url, json={"study_year": 9}, headers=auth(SAAD)).status_code == 422
+    missing = client.patch(url, json={"department_id": 999}, headers=auth(SAAD))
+    assert (missing.status_code, missing.json()["error"]["code"]) == (422, "INVALID_REFERENCE")
+    assert client.patch(url, json={"study_year": 2}, headers=auth(NORA)).status_code == 403

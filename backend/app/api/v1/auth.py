@@ -23,13 +23,14 @@ from app.core.clock import Clock, get_clock
 from app.core.errors import AppError
 from app.core.network import came_through_tunnel, client_address, is_https
 from app.core.rate_limit import RateLimiter
-from app.core.security import create_token, decode_token, verify_password
+from app.core.security import create_token, decode_token, hash_password, verify_password
 from app.db import get_db
 from app.deps import UNAUTHORIZED, get_current_user
 from app.models import Professor, Student, User
 from app.schemas import (
     LoginIn,
     MeOut,
+    PasswordChangeIn,
     PendingOut,
     ProfessorProfileOut,
     RefreshIn,
@@ -219,6 +220,35 @@ def logout(request: Request) -> Response:
         secure=get_settings().cookie_secure or is_https(request),
     )
     return response
+
+
+@router.post("/password", status_code=204, summary="Change my password (needs the current one)")
+def change_password(
+    body: PasswordChangeIn,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> Response:
+    # Limited like sign-in, per account: a stolen access token must not be a way to guess the
+    # current password.
+    login_limiter.check(f"password|{user.user_id}")
+    if not verify_password(body.current_password, user.password_hash):
+        raise AppError(400, "WRONG_PASSWORD", "The current password is incorrect.")
+    # The seed password is published, so anyone on the public link knows it: there, a demo
+    # account keeps it, or one visitor could lock everyone else out of it.
+    if body.current_password == SEED_PASSWORD and came_through_tunnel(request):
+        raise AppError(
+            403,
+            "DEMO_ACCOUNT",
+            "This is a shared demo account, so its password cannot be changed through the public link.",
+        )
+    if body.new_password == body.current_password:
+        raise AppError(400, "PASSWORD_UNCHANGED", "The new password is the same as the current one.")
+    user.password_hash = hash_password(body.new_password)
+    user.updated_at = clock.now()
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/me", response_model=MeOut, summary="The signed-in account")

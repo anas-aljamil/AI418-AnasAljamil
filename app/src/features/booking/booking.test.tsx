@@ -38,6 +38,7 @@ const noura = {
   has_office_hours_today: true,
   is_pinned: false,
   today: { date: '2026-10-05', day_of_week: 1, now_local_time: '10:00', blocks: [] },
+  week: [],
   booking_periods: [
     {
       period_id: 1,

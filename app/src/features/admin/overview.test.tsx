@@ -58,12 +58,34 @@ const students = [
   },
 ];
 const page = (items: unknown[]) => ({ items, total: items.length, limit: 100, offset: 0 });
+const reports = {
+  by_professor: [
+    {
+      professor_id: 1,
+      honorific: 'dr',
+      full_name_ar: 'نورة الحربي',
+      full_name_en: 'Noura Al-Harbi',
+      total: 5,
+      pending: 1,
+      approved: 1,
+      completed: 2,
+      no_show: 0,
+      declined: 1,
+      cancelled: 0,
+    },
+  ],
+  by_hour: [
+    { hour: 10, appointments: 3 },
+    { hour: 13, appointments: 1 },
+  ],
+};
 
 beforeEach(() => {
   mockApi.mockReset();
   mockNavigate.mockReset();
   mockApi.mockImplementation(async (path: string, method = 'GET') => {
     if (method === 'PATCH') return {};
+    if (path === '/admin/reports') return reports;
     if (path.startsWith('/admin/professors')) return page(professors);
     if (path.startsWith('/admin/students')) return page(students);
     if (path.startsWith('/admin/departments')) return page([se]);
@@ -132,4 +154,16 @@ it("never fills in the admin's own saved email and password when adding an accou
   expect(email.props.importantForAutofill).toBe('no');
   expect(password.props.autoComplete).toBe('new-password');
   expect(password.props.textContentType).toBe('none');
+});
+
+it('reports appointments per professor and per hour, in words as well', async () => {
+  await renderWithProviders(<AdminOverview />);
+  expect(await screen.findByText('Appointments per professor')).toBeTruthy();
+  expect(
+    screen.getByLabelText(
+      'Dr. Noura Al-Harbi, 5 appointments, completed: 2, pending or approved: 2, declined or cancelled: 1',
+    ),
+  ).toBeTruthy();
+  expect(screen.getByLabelText('10 AM, 3 appointments')).toBeTruthy();
+  expect(screen.getByLabelText('1 PM, 1 appointment')).toBeTruthy();
 });

@@ -1,5 +1,7 @@
 """Directory: live status in lists, Arabic-aware search, filters, profile timeline, slots."""
 
+from datetime import timedelta
+
 from tests.conftest import HUDA, KHALID, NORA, REEM, SAAD
 
 # At the default clock (Monday 10:00 Riyadh) Khalid, Huda and Reem are in
@@ -122,3 +124,18 @@ def test_departments_list(client, auth):
     page = client.get("/api/v1/departments", headers=auth(SAAD)).json()
     assert page["total"] == 12 and page["items"][0]["code"] == "ACC"
     assert page["items"][0]["college"]["name_en"] == "College of Business and Tourism"
+
+
+def test_profile_has_the_working_week_and_the_next_one_at_the_weekend(client, auth, clock):
+    nora = client.get(f"/api/v1/professors/{NORA}", headers=auth(SAAD)).json()
+    week = nora["week"]
+    assert [d["date"] for d in week] == [f"2026-10-0{n}" for n in range(4, 9)]  # Sunday to Thursday
+    assert [d["day_of_week"] for d in week] == [0, 1, 2, 3, 4]
+    assert week[1]["blocks"] == nora["today"]["blocks"]  # the demo day is Monday
+    assert any(day["blocks"] for day in week)
+    for day in week:
+        starts = [b["start_time"] for b in day["blocks"]]
+        assert starts == sorted(starts)
+    clock.at += timedelta(days=4)  # Friday: the week to come
+    weekend = client.get(f"/api/v1/professors/{NORA}", headers=auth(SAAD)).json()
+    assert [d["date"] for d in weekend["week"]][0] == "2026-10-11"

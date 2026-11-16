@@ -1,9 +1,10 @@
 /**
  * The additions from the site review (2026-11-16): help and contact, the search list before
  * anything is typed, booking from a booking time, booking again from a past appointment, the
- * professor's one-tap confirmation of a stale status, and the desktop skip button.
+ * professor's one-tap confirmation of a stale status, and the desktop skip button (S2); the
+ * week on a profile, a student's own year, the admin's reports and changing a password (S3).
  * Same setup as the other specs: seeded database, API with DEMO_NOW=2026-10-05T07:00:00Z.
- * The confirmation changes a status the other specs read, so the database is reseeded after.
+ * Several tests change rows the other specs read, so the database is reseeded after the file.
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -27,9 +28,12 @@ async function signIn(page: Page, email: string) {
   await expect(page).not.toHaveURL(/sign-in/);
 }
 
-test.afterAll(() => {
+const reseed = () =>
   execFileSync(PYTHON, ['scripts/reset_db.py'], { cwd: path.resolve(__dirname, '../..') });
-});
+// From the seed at the start too: earlier specs set statuses (p4 makes Prof. Khalid busy), and
+// the stale-status test needs his seeded "in office, not confirmed".
+test.beforeAll(reseed);
+test.afterAll(reseed);
 
 test('help and contact opens from sign-in without an account', async ({ page }) => {
   await open(page);
@@ -95,4 +99,68 @@ test('on desktop the first Tab stop skips to the content', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Skip to content' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: /^Good morning, Saad/ })).toBeFocused();
+});
+
+test("a professor's profile shows the working week", async ({ page }) => {
+  await open(page);
+  await signIn(page, 's.almutairi@university.example');
+  await page.goto('/professors/2');
+  await expect(page.getByRole('heading', { name: 'This week' })).toBeVisible();
+  // One ribbon per working day, each read as one sentence; the demo day is Monday.
+  await expect(
+    page.getByRole('img', {
+      name: /^Monday, 9:00 AM–11:00 AM, Office hours, 11:00 AM–12:30 PM, Class, Now 10:00 AM$/,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Sunday: no office hours or classes' })).toBeVisible();
+  await expect(page.getByRole('img', { name: /^Thursday/ })).toBeVisible();
+});
+
+test('a student changes their study year', async ({ page }) => {
+  await open(page);
+  await signIn(page, 's.almutairi@university.example');
+  await page.goto('/profile');
+  await expect(page.getByText('Software Engineering, year 3')).toBeVisible();
+  await page.getByRole('button', { name: 'Change year or department' }).click();
+  const sheet = page.getByRole('dialog', { name: 'My study details' });
+  await sheet.getByRole('button', { name: '4', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  await expect(page.getByText('Software Engineering, year 4')).toBeVisible();
+});
+
+test('the admin overview reports appointments per professor and per hour', async ({ page }) => {
+  await open(page, 1280);
+  await signIn(page, 'admin@university.example');
+  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+  await expect(
+    page.getByLabel(/^Dr\. Noura Al-Harbi, \d+ appointments?, completed: \d+/),
+  ).toBeVisible();
+  await expect(page.getByLabel(/^10 AM, \d+ appointments?$/)).toBeVisible();
+});
+
+// Last in the file: it changes Saad's password (the database is reseeded after the file).
+test('a student changes their password, and only the new one signs in', async ({ page }) => {
+  await open(page);
+  await signIn(page, 's.almutairi@university.example');
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Change password' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Change password' });
+  await sheet.getByLabel('Current password').fill('not-the-password');
+  await sheet.getByLabel('New password (at least 8 characters)').fill('New-pass-2026');
+  await sheet.getByRole('button', { name: 'Save the new password' }).click();
+  await expect(sheet.getByText('The current password is incorrect.')).toBeVisible();
+  await sheet.getByLabel('Current password').fill('Mawjood-Demo-2026');
+  await sheet.getByRole('button', { name: 'Save the new password' }).click();
+  await expect(page.getByText('Password changed')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.getByLabel('University email').fill('s.almutairi@university.example');
+  await page.getByLabel('Password', { exact: true }).fill('Mawjood-Demo-2026');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('The email or password is incorrect.')).toBeVisible();
+  await page.getByLabel('Password', { exact: true }).fill('New-pass-2026');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
 });

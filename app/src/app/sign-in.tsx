@@ -16,6 +16,7 @@ import { Button } from '@/components/Button';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { AuthFrame } from '@/features/auth/AuthFrame';
+import { demoAccounts } from '@/features/auth/demo';
 import { currentLanguage, switchLanguage } from '@/i18n';
 import { errorKey } from '@/lib/errors';
 import { safeNext } from '@/lib/nav';
@@ -38,22 +39,27 @@ export default function SignInScreen() {
   const destination = (safeNext(next) ?? '/') as Href;
   if (state.status === 'signedIn') return <Redirect href={destination} />;
 
-  const submit = async () => {
+  const enter = async (asEmail: string, withPassword: string) => {
     if (busy) return;
-    if (!email.trim() || !password) {
-      setError(t('signin.missing'));
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
-      await signIn(email, password);
+      await signIn(asEmail, withPassword);
       router.replace(destination);
     } catch (caught) {
       setError(t(errorKey(caught)));
       setBusy(false);
     }
   };
+
+  const submit = () => {
+    if (!email.trim() || !password) {
+      setError(t('signin.missing'));
+      return;
+    }
+    enter(email, password);
+  };
+  const demo = demoAccounts(process.env.EXPO_PUBLIC_DEMO);
 
   const otherLanguage = currentLanguage() === 'ar' ? 'en' : 'ar';
 
@@ -123,6 +129,31 @@ export default function SignInScreen() {
         />
         <Button variant="quiet" label={t('signup.link')} onPress={() => router.push('/sign-up')} />
         <Button variant="quiet" label={t('help.title')} onPress={() => router.push('/help')} />
+        {demo ? (
+          // Only in a build made for showing the app (EXPO_PUBLIC_DEMO=1).
+          <View style={styles.demo}>
+            <Text variant="label" role="heading">
+              {t('signin.demo_title')}
+            </Text>
+            <Text variant="caption" color="muted">
+              {t('signin.demo_body')}
+            </Text>
+            <View style={styles.demoButtons}>
+              <Button
+                variant="secondary"
+                label={t('signin.demo_student')}
+                disabled={busy}
+                onPress={() => enter(demo.student, demo.password)}
+              />
+              <Button
+                variant="secondary"
+                label={t('signin.demo_professor')}
+                disabled={busy}
+                onPress={() => enter(demo.professor, demo.password)}
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
     </AuthFrame>
   );
@@ -131,4 +162,6 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   form: { gap: space.sm },
   reveal: { alignItems: 'flex-start' },
+  demo: { gap: space.xs, marginTop: space.md },
+  demoButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
 });

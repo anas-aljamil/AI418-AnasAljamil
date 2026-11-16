@@ -1,6 +1,6 @@
 """Admin CRUD for departments, offices, professors and students (full CRUD on the real database)."""
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models import Professor
 from tests.conftest import ADMIN_EMAIL, DEMO_PASSWORD, NORA, SAAD
@@ -177,3 +177,24 @@ def test_non_admins_cannot_use_the_admin_api(client, auth):
         client.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}).status_code
         == 200
     )
+
+
+def test_reports_count_appointments_per_professor_and_per_hour(client, auth, db):
+    reports = client.get("/api/v1/admin/reports", headers=auth(ADMIN_EMAIL))
+    assert reports.status_code == 200
+    body = reports.json()
+    # The same numbers, counted the plain way.
+    rows = db.execute(
+        text("SELECT professor_id, status, HOUR(ADDTIME(starts_at, '03:00:00')) FROM appointments")
+    ).all()
+    assert sum(p["total"] for p in body["by_professor"]) == len(rows)
+    for professor in body["by_professor"]:
+        mine = [status for professor_id, status, _ in rows if professor_id == professor["professor_id"]]
+        assert professor["total"] == len(mine) > 0
+        for state in ("pending", "approved", "completed", "no_show", "declined", "cancelled"):
+            assert professor[state] == mine.count(state)
+    totals = [p["total"] for p in body["by_professor"]]
+    assert totals == sorted(totals, reverse=True)
+    kept = [hour for _, status, hour in rows if status not in ("declined", "cancelled")]
+    assert {h["hour"]: h["appointments"] for h in body["by_hour"]} == {h: kept.count(h) for h in set(kept)}
+    assert client.get("/api/v1/admin/reports", headers=auth(SAAD)).status_code == 403
