@@ -136,6 +136,8 @@ test('a declined request reaches the student, who cancels the other one and read
   const noura = await open(browser, 'n.alharbi@university.example');
   await noura.getByRole('tab', { name: 'Requests' }).click();
   await noura.getByRole('button', { name: /^Decline: Saad Al-Mutairi, / }).click();
+  // Declining asks first, with an optional reason (2026-11-16); none here.
+  await noura.getByRole('dialog').getByRole('button', { name: 'Decline', exact: true }).click();
   await expect(noura.getByText(/^Declined: Saad Al-Mutairi, /)).toBeVisible();
   expect(sql('SELECT status FROM appointments WHERE appointment_id = 7')).toBe('declined');
 

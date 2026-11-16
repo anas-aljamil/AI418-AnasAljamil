@@ -477,7 +477,8 @@
     "moving": "جارٍ التقديم",
     "length_line": "حتى {{end}}، {{minutes}} دقيقة",
     "book_again": "احجز مرة أخرى",
-    "book_again_label": "احجز مرة أخرى مع {{name}}"
+    "book_again_label": "احجز مرة أخرى مع {{name}}",
+    "decline_reason_label": "السبب"
   },
   "status_screen": {
     "title": "حالتي",
@@ -519,7 +520,12 @@
     "action_label": "{{action}}: {{name}}، {{when}}",
     "approved_toast": "تمت الموافقة: {{name}}، {{when}}",
     "declined_toast": "تم الاعتذار: {{name}}، {{when}}",
-    "updated_toast": "حُدّث الموعد"
+    "updated_toast": "حُدّث الموعد",
+    "decline_title": "الاعتذار عن طلب {{name}}؟",
+    "decline_body": "{{when}}. يُبلَّغ الطالب فورًا.",
+    "decline_reason": "السبب (اختياري)",
+    "decline_reason_helper": "يراه الطالب على الموعد. حتى 200 حرف.",
+    "decline_confirm": "اعتذر"
   },
   "schedule": {
     "repeat": "التكرار",
@@ -721,7 +727,21 @@
     "reports_done": "تمّت: {{count}}",
     "reports_upcoming": "بانتظار الرد أو مؤكدة: {{count}}",
     "reports_no_show": "لم يحضر: {{count}}",
-    "reports_dropped": "اعتُذر عنها أو أُلغيت: {{count}}"
+    "reports_dropped": "اعتُذر عنها أو أُلغيت: {{count}}",
+    "contact_heading": "رسائل المساعدة والتواصل",
+    "contact_title_one": "رسائل المساعدة والتواصل (واحدة مفتوحة)",
+    "contact_title_two": "رسائل المساعدة والتواصل (اثنتان مفتوحتان)",
+    "contact_title_few": "رسائل المساعدة والتواصل ({{count}} مفتوحة)",
+    "contact_title_many": "رسائل المساعدة والتواصل ({{count}} مفتوحة)",
+    "contact_title_other": "رسائل المساعدة والتواصل ({{count}} مفتوحة)",
+    "contact_title_zero": "رسائل المساعدة والتواصل (لا مفتوحة)",
+    "contact_none": "لا رسائل مفتوحة.",
+    "contact_no_account": "غير مسجّل الدخول",
+    "contact_reply": "ردّ بالبريد",
+    "contact_reply_label": "ردّ على {{name}} بالبريد",
+    "contact_mark": "تمّت المعالجة",
+    "contact_mark_label": "علّم رسالة {{name}} كمعالَجة",
+    "contact_handled": "عُلّمت كمعالَجة"
   },
   "chat": {
     "reply": "رد",
@@ -847,9 +867,26 @@
     "q6": "هل أستعمله كتطبيق على هاتفي؟",
     "a6": "نعم. افتح الموقع في متصفح الهاتف، ثم اختر «إضافة إلى الشاشة الرئيسية» من قائمة المتصفح.",
     "contact_title": "تواصل معنا",
-    "contact_body": "مشكلة في حسابك أو في موجود؟ راسل مسؤول النظام.",
+    "contact_body": "أو راسله من تطبيق البريد لديك:",
     "contact_email": "راسل {{email}}",
-    "contact_none": "مشكلة في حسابك أو في موجود؟ اسأل مكتب قسمك عن مسؤول موجود."
+    "contact_form_body": "راسل مسؤول موجود. يصلك الرد على البريد الذي تكتبه.",
+    "name": "اسمك",
+    "email": "بريدك",
+    "email_helper": "يصلك الرد هنا.",
+    "topic": "الموضوع",
+    "topic_account": "حسابي",
+    "topic_problem": "شيء لا يعمل",
+    "topic_idea": "فكرة",
+    "topic_other": "شيء آخر",
+    "message": "الرسالة",
+    "counter": "{{count}}/{{max}}",
+    "send": "أرسل",
+    "sent_title": "تم الإرسال",
+    "sent_body": "سيردّ المسؤول على {{email}}.",
+    "write_again": "اكتب رسالة أخرى",
+    "need_name": "اكتب اسمك.",
+    "need_email": "اكتب بريدًا يصله الرد.",
+    "need_body": "اكتب بضع كلمات على الأقل."
   },
   "nav": {
     "skip": "تخطَّ إلى المحتوى"

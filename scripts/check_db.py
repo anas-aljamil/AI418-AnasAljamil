@@ -190,10 +190,31 @@ MUST_FAIL = [
      "INSERT INTO notifications (user_id, type, conversation_id) VALUES (9, 'slot_freed', 1)", CHECK_FAILED),
     ("notifications: unknown type",
      "INSERT INTO notifications (user_id, type, appointment_id) VALUES (9, 'appointment_shrunk', 6)", CHECK_FAILED),
+    ("appointments: a decline reason on an appointment that was not declined",
+     "UPDATE appointments SET decline_reason = 'Busy' WHERE appointment_id = 6", CHECK_FAILED),
+    ("appointments: an empty decline reason",
+     "UPDATE appointments SET decline_reason = '' WHERE appointment_id = 4", CHECK_FAILED),
+    ("contact_messages: unknown topic",
+     "INSERT INTO contact_messages (sender_name, sender_email, topic, body) "
+     "VALUES ('Test Sender', 't.sender@university.example', 'spam', 'Hello there')", CHECK_FAILED),
+    ("contact_messages: a reply address that is not an email",
+     "INSERT INTO contact_messages (sender_name, sender_email, body) "
+     "VALUES ('Test Sender', 'not-an-address', 'Hello there')", CHECK_FAILED),
+    ("contact_messages: a message shorter than 5 characters",
+     "INSERT INTO contact_messages (sender_name, sender_email, body) "
+     "VALUES ('Test Sender', 't.sender@university.example', 'Hi')", CHECK_FAILED),
+    ("contact_messages: handled before it was sent",
+     "UPDATE contact_messages SET handled_at = '2026-09-01 00:00:00' WHERE contact_id = 2", CHECK_FAILED),
+    ("contact_messages: a sender account that does not exist",
+     "INSERT INTO contact_messages (user_id, sender_name, sender_email, body) "
+     "VALUES (999, 'Test Sender', 't.sender@university.example', 'Hello there')", FK_CHILD),
 ]
 
 # (description, SQL, verification query, expected first column of the last row)
 MUST_SUCCEED = [
+    ("contact_messages: deleting a sender's account keeps the message (SET NULL)",
+     "DELETE FROM users WHERE user_id = 11",
+     "SELECT CONCAT(COUNT(*), '/', COUNT(user_id)) FROM contact_messages WHERE contact_id = 5", "1/0"),
     ("booking_periods: a period may lie outside office hours (Sunday evening)",
      "INSERT INTO booking_periods (professor_id, day_of_week, start_time, end_time) VALUES (1, 0, '18:00', '19:00')",
      "SELECT COUNT(*) FROM booking_periods WHERE professor_id = 1 AND day_of_week = 0", "2"),

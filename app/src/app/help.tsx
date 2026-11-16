@@ -1,9 +1,9 @@
 /**
  * Help and contact (owner request 2026-11-16: "a contact-us button"). Open to everyone, signed
  * in or not: what Mawjood is, the questions people ask first, and how to reach the
- * administrator. Mawjood sends no email itself (CLAUDE.md Section 3), so the contact is a link
- * that opens the visitor's own mail app, to the address in EXPO_PUBLIC_SUPPORT_EMAIL; without
- * that setting the screen says whom to ask.
+ * administrator: a form that stores the message for them (ContactForm, S4), and, when the build
+ * sets EXPO_PUBLIC_SUPPORT_EMAIL, also a link that opens the visitor's own mail app. Mawjood
+ * sends no email itself (CLAUDE.md Section 3).
  */
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
@@ -13,6 +13,7 @@ import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Mail from 'lucide-react-native/icons/mail';
 
 import { Button } from '@/components/Button';
+import { ContactForm } from '@/features/account/ContactForm';
 import { IconButton } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
 import { useColumn } from '@/lib/layout';
@@ -71,9 +72,11 @@ export default function HelpScreen() {
           <Text variant="title" role="heading">
             {t('help.contact_title')}
           </Text>
-          <Text>{t(SUPPORT_EMAIL ? 'help.contact_body' : 'help.contact_none')}</Text>
+          <Text>{t('help.contact_form_body')}</Text>
+          <ContactForm />
           {SUPPORT_EMAIL ? (
             <View style={styles.start}>
+              <Text color="muted">{t('help.contact_body')}</Text>
               <Button
                 label={t('help.contact_email', { email: SUPPORT_EMAIL })}
                 icon={<Mail color={colors.onPrimary} size={20} strokeWidth={1.75} />}

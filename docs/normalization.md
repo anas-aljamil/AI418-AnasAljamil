@@ -27,6 +27,8 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 | New `colleges` table (added 2026-10-05) | Departments are grouped by college. Putting the college name on `departments` would create `department_id -> college -> college name` and repeat each name for every department of the college. |
 | New `pins` table | Needed by the student home screen ("My professors"). It is an M:N relationship, so it gets its own table. |
 | Admin has no subtype table | Admins have no attributes beyond `users`. |
+| New `contact_messages` table (owner request 2026-11-16) | Messages sent from Help and contact are facts of their own, not about any other entity: one row per message. The sender need not have an account, so the link to `users` is optional. |
+| New column `appointments.decline_reason` (owner request 2026-11-16) | The reason a professor gives when declining is one fact about one appointment, so it is a column of `appointments`, not a table. |
 
 ## 3. Table-by-table analysis
 
@@ -96,7 +98,8 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### appointments
 - Candidate key: **appointment_id**.
-- FDs: `appointment_id -> student_id, professor_id, starts_at, ends_at, status, topic, note, created_at, updated_at`.
+- FDs: `appointment_id -> student_id, professor_id, starts_at, ends_at, status, topic, note, decline_reason, created_at, updated_at`.
+- `decline_reason` (2026-11-16) depends on the appointment alone. "Only a declined appointment has one" is a `CHECK` (`ck_appointments_decline_reason`), a rule between two columns of the same row, not a functional dependency, so it does not affect the normal form.
 - `(professor_id, starts_at)` is unique only among *active* rows. A cancelled booking and a new booking may share a start time, so it is not a candidate key. MySQL enforces the active-only uniqueness through the virtual column `active_slot` (Section 8.4).
 - `active_slot` is not stored data: it is a **virtual** generated column (computed when read; only the unique index keeps a copy). It cannot disagree with `status` and `starts_at`, so it introduces no update anomaly.
 - `ends_at` is stored deliberately. It is **not** determined by `starts_at + professors.slot_minutes`: the student chooses the length (any number of 5-minute steps), and `slot_minutes` is only the length the app suggests first. `ends_at` records the length agreed at booking time, which is a fact about the appointment itself.
@@ -124,6 +127,14 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 - FDs: `notification_id -> user_id, type, appointment_id, conversation_id, created_at, read_at`.
 - The notification text is not stored. It is rendered from `type` and the linked appointment or conversation, in the reader's language. Storing it would duplicate appointment data and freeze one language.
 - The rule "exactly the reference that matches the type is set" is a `CHECK` constraint, not a functional dependency.
+- **BCNF**.
+
+### contact_messages
+- Candidate key: **contact_id**.
+- FDs: `contact_id -> user_id, sender_name, sender_email, topic, body, created_at, handled_at`.
+- **Why the name and address are stored although `user_id` may point to an account:** they are the name and reply address the sender typed *on this message*, which may differ from the account (a personal address, a name the person goes by) and must stay as written even if the account later changes or is deleted. So `user_id` does not determine them (`user_id -> sender_email` does not hold: the same account may give different addresses on different messages), and there is no transitive dependency. The same reasoning as a delivery address stored on an order.
+- `user_id` is `ON DELETE SET NULL`: deleting an account keeps the messages it sent, which the administrator may still need. (A `CHECK` tying `user_id` to the name columns is not possible anyway: MySQL forbids a CHECK on a column with a referential action, Section 8.3.)
+- Whether a message is open is derived from `handled_at IS NULL`; no separate status column repeats it.
 - **BCNF**.
 
 ## 4. Specialization without redundancy

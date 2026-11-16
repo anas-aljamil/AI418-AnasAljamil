@@ -139,6 +139,51 @@ test('the admin overview reports appointments per professor and per hour', async
   await expect(page.getByLabel(/^10 AM, \d+ appointments?$/)).toBeVisible();
 });
 
+test('a message from Help and contact reaches the admin, who marks it handled', async ({
+  page,
+}) => {
+  await open(page);
+  await page.goto('/help');
+  await page.getByLabel('Your name').fill('Rakan Al-Juhani');
+  await page.getByLabel('Your email').fill('r.aljuhani@university.example');
+  await page.getByLabel('Message').fill('The site test wrote this message.');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(
+    page.getByText('The administrator will answer at r.aljuhani@university.example.'),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, 'admin@university.example');
+  await expect(page.getByText('The site test wrote this message.')).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Mark the message from Rakan Al-Juhani as handled' })
+    .last()
+    .click();
+  await expect(page.getByText('Marked as handled')).toBeVisible();
+  await expect(page.getByText('The site test wrote this message.')).toHaveCount(0);
+});
+
+test('a professor declines with a reason, and the student reads it', async ({ browser }) => {
+  const professor = await browser.newPage();
+  await open(professor);
+  await signIn(professor, 'o.binsalem@university.example');
+  await professor.goto('/staff/requests');
+  await professor.getByRole('button', { name: /^Decline: Yousef Al-Ghamdi/ }).click();
+  await professor.getByLabel('Reason (optional)').fill('On leave that week.');
+  await professor.getByRole('dialog').getByRole('button', { name: 'Decline', exact: true }).click();
+  await expect(professor.getByText(/^Declined: Yousef Al-Ghamdi/)).toBeVisible();
+  await professor.close();
+
+  const student = await browser.newPage();
+  await open(student);
+  await signIn(student, 'y.alghamdi@university.example');
+  // It was for next Tuesday, so it stays under Upcoming (the tabs split by time), declined.
+  await student.goto('/appointments');
+  await expect(student.getByText('On leave that week.')).toBeVisible();
+  await expect(student.getByText('Reason given')).toBeVisible();
+  await student.close();
+});
+
 // Last in the file: it changes Saad's password (the database is reseeded after the file).
 test('a student changes their password, and only the new one signs in', async ({ page }) => {
   await open(page);

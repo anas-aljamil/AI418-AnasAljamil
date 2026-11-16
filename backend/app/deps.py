@@ -29,6 +29,19 @@ def get_current_user(
     return user
 
 
+def optional_user(
+    request: Request, db: Session = Depends(get_db), clock: Clock = Depends(get_clock)
+) -> User | None:
+    """The signed-in user when a valid access token comes with the request, else None (for
+    endpoints open to everyone, such as the contact form). A bad token counts as none."""
+    if not request.headers.get("Authorization"):
+        return None
+    try:
+        return get_current_user(request, db, clock)
+    except AppError:
+        return None
+
+
 def require_role(*roles: str) -> Callable[..., User]:
     def checker(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:

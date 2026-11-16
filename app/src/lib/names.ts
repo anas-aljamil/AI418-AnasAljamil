@@ -68,3 +68,12 @@ export function participantName(person: Participant, language: Language, t: TFun
     ? professorName({ ...person, honorific: person.honorific }, language, t)
     : fullName(person, language);
 }
+
+/**
+ * The script of text people typed themselves (a reason, a contact message), so it gets the
+ * right font and reading direction whatever the interface language: an English sentence in
+ * the Arabic interface reads left to right with its full stop at the end.
+ */
+export function scriptOf(text: string): Language {
+  return /[؀-ۿ]/.test(text) ? 'ar' : 'en';
+}

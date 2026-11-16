@@ -111,6 +111,8 @@ export interface Appointment {
   cancel_deadline: string;
   topic: Topic | null;
   note: string | null;
+  /** Only on a declined appointment, when the professor wrote one. */
+  decline_reason: string | null;
   student: Person;
   professor: Person & { honorific: Honorific; office: Office | null };
 }
@@ -295,4 +297,18 @@ export interface AdminReports {
     cancelled: number;
   }[];
   by_hour: { hour: number; appointments: number }[];
+}
+
+export type ContactTopic = 'account' | 'problem' | 'idea' | 'other';
+
+/** A message from Help and contact (admin only); user_id is set when the sender was signed in. */
+export interface ContactMessage {
+  contact_id: number;
+  user_id: number | null;
+  sender_name: string;
+  sender_email: string;
+  topic: ContactTopic;
+  body: string;
+  created_at: string;
+  handled_at: string | null;
 }

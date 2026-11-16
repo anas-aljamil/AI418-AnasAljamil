@@ -255,17 +255,17 @@ INSERT INTO status_overrides (override_id, professor_id, status, note, created_a
 -- Student 9 holds 2 active future appointments with professor 1 (the limit).
 -- -----------------------------------------------------------------------------
 INSERT INTO appointments (appointment_id, student_id, professor_id, starts_at, ends_at,
-                          status, topic, note, created_at, updated_at) VALUES
-    (1,  9,  1, '2026-09-27 07:00:00', '2026-09-27 07:15:00', 'completed', 'assignment',  NULL,                              '2026-09-24 12:10:00', '2026-09-27 07:20:00'),
-    (2,  10, 1, '2026-09-29 07:30:00', '2026-09-29 07:45:00', 'completed', 'exam_review', NULL,                              '2026-09-27 15:00:00', '2026-09-29 07:50:00'),
-    (3,  13, 2, '2026-09-28 06:30:00', '2026-09-28 07:00:00', 'no_show',   'advising',    NULL,                              '2026-09-25 09:00:00', '2026-09-28 07:05:00'),
-    (4,  11, 4, '2026-10-01 07:00:00', '2026-10-01 07:30:00', 'declined',  'advising',    'Choosing between two electives',  '2026-09-28 18:30:00', '2026-09-29 06:00:00'),
-    (5,  14, 5, '2026-09-30 09:15:00', '2026-09-30 09:30:00', 'cancelled', 'assignment',  NULL,                              '2026-09-27 10:00:00', '2026-09-29 16:00:00'),
-    (6,  9,  1, '2026-10-11 07:30:00', '2026-10-11 07:45:00', 'approved',  'exam_review', 'مراجعة الفصلين الثالث والرابع',   '2026-09-30 15:00:00', '2026-09-30 16:20:00'),
-    (7,  9,  1, '2026-10-13 07:00:00', '2026-10-13 07:15:00', 'pending',   'assignment',  NULL,                              '2026-10-01 13:05:00', '2026-10-01 13:05:00'),
-    (8,  12, 3, '2026-10-12 07:00:00', '2026-10-12 07:15:00', 'pending',   'advising',    'اختيار المسار التخصصي',           '2026-10-01 09:40:00', '2026-10-01 09:40:00'),
-    (9,  15, 7, '2026-10-12 07:30:00', '2026-10-12 08:00:00', 'approved',  'exam_review', NULL,                              '2026-09-30 11:00:00', '2026-09-30 14:00:00'),
-    (10, 11, 4, '2026-10-13 10:30:00', '2026-10-13 11:00:00', 'pending',   'other',       'Feedback on my project proposal', '2026-10-01 19:15:00', '2026-10-01 19:15:00');
+                          status, topic, note, created_at, updated_at, decline_reason) VALUES
+    (1,  9,  1, '2026-09-27 07:00:00', '2026-09-27 07:15:00', 'completed', 'assignment',  NULL,                              '2026-09-24 12:10:00', '2026-09-27 07:20:00', NULL),
+    (2,  10, 1, '2026-09-29 07:30:00', '2026-09-29 07:45:00', 'completed', 'exam_review', NULL,                              '2026-09-27 15:00:00', '2026-09-29 07:50:00', NULL),
+    (3,  13, 2, '2026-09-28 06:30:00', '2026-09-28 07:00:00', 'no_show',   'advising',    NULL,                              '2026-09-25 09:00:00', '2026-09-28 07:05:00', NULL),
+    (4,  11, 4, '2026-10-01 07:00:00', '2026-10-01 07:30:00', 'declined',  'advising',    'Choosing between two electives',  '2026-09-28 18:30:00', '2026-09-29 06:00:00', 'Elective advising is with the department coordinator this term.'),
+    (5,  14, 5, '2026-09-30 09:15:00', '2026-09-30 09:30:00', 'cancelled', 'assignment',  NULL,                              '2026-09-27 10:00:00', '2026-09-29 16:00:00', NULL),
+    (6,  9,  1, '2026-10-11 07:30:00', '2026-10-11 07:45:00', 'approved',  'exam_review', 'مراجعة الفصلين الثالث والرابع',   '2026-09-30 15:00:00', '2026-09-30 16:20:00', NULL),
+    (7,  9,  1, '2026-10-13 07:00:00', '2026-10-13 07:15:00', 'pending',   'assignment',  NULL,                              '2026-10-01 13:05:00', '2026-10-01 13:05:00', NULL),
+    (8,  12, 3, '2026-10-12 07:00:00', '2026-10-12 07:15:00', 'pending',   'advising',    'اختيار المسار التخصصي',           '2026-10-01 09:40:00', '2026-10-01 09:40:00', NULL),
+    (9,  15, 7, '2026-10-12 07:30:00', '2026-10-12 08:00:00', 'approved',  'exam_review', NULL,                              '2026-09-30 11:00:00', '2026-09-30 14:00:00', NULL),
+    (10, 11, 4, '2026-10-13 10:30:00', '2026-10-13 11:00:00', 'pending',   'other',       'Feedback on my project proposal', '2026-10-01 19:15:00', '2026-10-01 19:15:00', NULL);
 
 -- -----------------------------------------------------------------------------
 -- pins (8). Students 12, 13 and 15 have none (home screen empty state).
@@ -328,3 +328,15 @@ INSERT INTO notifications (notification_id, user_id, type, appointment_id, conve
     (8,  12, 'new_message',           NULL, 3,    '2026-10-01 06:35:00', '2026-10-01 09:30:00'),
     (9,  14, 'new_message',           NULL, 4,    '2026-09-29 17:01:00', NULL),
     (10, 7,  'new_message',           NULL, 5,    '2026-10-01 18:00:00', NULL);
+
+-- -----------------------------------------------------------------------------
+-- contact_messages (6). Three from signed-in accounts (user_id set), three from
+-- people without one or not signed in; three handled, three still open.
+-- -----------------------------------------------------------------------------
+INSERT INTO contact_messages (contact_id, user_id, sender_name, sender_email, topic, body, created_at, handled_at) VALUES
+    (1, 9,    'Saad Al-Mutairi',  's.almutairi@university.example', 'idea',    'Could Mawjood remind me ten minutes before an appointment?',          '2026-10-01 10:00:00', '2026-10-02 08:00:00'),
+    (2, NULL, 'Rakan Al-Juhani',  'r.aljuhani@university.example',  'account', 'I cannot sign in: it says my account is not active.',                 '2026-10-03 07:20:00', NULL),
+    (3, 2,    'Khalid Al-Otaibi', 'k.alotaibi@university.example',  'problem', 'My Wednesday office hours showed as a class on my profile.',          '2026-10-02 06:40:00', '2026-10-04 06:00:00'),
+    (4, NULL, 'منيرة السبيعي',     'm.alsubaie@university.example',  'other',   'هل يمكن إضافة قسم الهندسة الكيميائية إلى موجود؟',                    '2026-10-04 12:00:00', NULL),
+    (5, 11,   'Yousef Al-Ghamdi', 'y.alghamdi@university.example',  'problem', 'The booking calendar did not open on my phone the first time.',       '2026-10-02 18:30:00', '2026-10-03 09:00:00'),
+    (6, NULL, 'Faris Al-Harthy',  'f.alharthy@university.example',  'account', 'Please activate my professor account; I signed up yesterday.',      '2026-10-04 14:10:00', NULL);

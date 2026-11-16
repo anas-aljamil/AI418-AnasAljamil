@@ -2,14 +2,19 @@
  * What a professor can do with one appointment: approve or decline a request, mark an approved
  * appointment completed or no-show once it has started, and message the student. Each button
  * names the student and time for screen readers, since several cards show the same labels.
+ * Decline asks first, in a sheet, with room for an optional reason the student will see.
  */
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAppointmentAction, useOpenConversation, type AppointmentAction } from '@/api/queries';
 import type { Appointment } from '@/api/types';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
+import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { errorKey } from '@/lib/errors';
 import { fullName } from '@/lib/names';
@@ -23,6 +28,8 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
   const action = useAppointmentAction();
   const name = fullName(appointment.student, language);
   const when = appointmentWhen(appointment, now, t);
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState('');
 
   const openChat = useOpenConversation();
   const message = (
@@ -45,18 +52,21 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
     />
   );
 
-  const run = (kind: AppointmentAction) =>
+  const run = (kind: AppointmentAction, why?: string) =>
     action.mutate(
-      { id: appointment.appointment_id, action: kind },
+      { id: appointment.appointment_id, action: kind, reason: why },
       {
-        onSuccess: () =>
+        onSuccess: () => {
+          setDeclining(false);
+          setReason('');
           toast(
             kind === 'approve'
               ? t('requests.approved_toast', { name, when })
               : kind === 'decline'
                 ? t('requests.declined_toast', { name, when })
                 : t('requests.updated_toast'),
-          ),
+          );
+        },
         onError: (error) => toast(t(errorKey(error))),
       },
     );
@@ -68,7 +78,7 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       label={t(labelKey)}
       accessibilityLabel={t('requests.action_label', { action: t(labelKey), name, when })}
       disabled={action.isPending}
-      onPress={() => run(kind)}
+      onPress={() => (kind === 'decline' ? setDeclining(true) : run(kind))}
     />
   );
 
@@ -78,6 +88,27 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
         {button('approve', 'requests.approve', 'primary')}
         {button('decline', 'requests.decline', 'secondary')}
         {message}
+        <BottomSheet
+          visible={declining}
+          title={t('requests.decline_title', { name })}
+          onClose={() => setDeclining(false)}
+        >
+          <Text color="muted">{t('requests.decline_body', { when })}</Text>
+          <TextField
+            label={t('requests.decline_reason')}
+            helper={t('requests.decline_reason_helper')}
+            value={reason}
+            onChangeText={setReason}
+            maxLength={200}
+          />
+          <Button
+            variant="danger"
+            label={t('requests.decline_confirm')}
+            disabled={action.isPending}
+            onPress={() => run('decline', reason)}
+            block
+          />
+        </BottomSheet>
       </View>
     );
   }

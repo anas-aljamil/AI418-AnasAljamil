@@ -181,8 +181,21 @@ export type AppointmentAction = 'approve' | 'decline' | 'cancel' | 'complete' | 
 export function useAppointmentAction() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, action }: { id: number; action: AppointmentAction }) =>
-      api<Appointment>(`/appointments/${id}/${action}`, 'POST'),
+    mutationFn: ({
+      id,
+      action,
+      reason,
+    }: {
+      id: number;
+      action: AppointmentAction;
+      /** Only with decline: the professor's optional reason, shown to the student. */
+      reason?: string;
+    }) =>
+      api<Appointment>(
+        `/appointments/${id}/${action}`,
+        'POST',
+        reason?.trim() ? { reason: reason.trim() } : undefined,
+      ),
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.appointments }),
   });
 }

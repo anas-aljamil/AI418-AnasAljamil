@@ -175,9 +175,12 @@ test('student pushed screens fit 320 px: profile and booking sheet', async ({ pa
 test('professor pushed screens fit 320 px: notifications and a conversation', async ({ page }) => {
   await signIn(page, ROLES.professor.email, 'ar', 'light');
   await page.getByRole('button', { name: /^الإشعارات/ }).click();
+  // Wait for each move: going back before the page has moved would leave the app.
+  await expect(page).toHaveURL(/\/notifications$/);
   await page.waitForLoadState('networkidle');
   const problems = (await overflowing(page)).map((p) => `notifications: ${p}`);
   await page.goBack();
+  await expect(page).toHaveURL(/\/staff\/status$/);
   await openTab(page, 'الرسائل');
   await page.getByRole('button', { name: /^سعد المطيري/ }).click();
   await expect(page).toHaveURL(/\/conversations\/\d+$/);

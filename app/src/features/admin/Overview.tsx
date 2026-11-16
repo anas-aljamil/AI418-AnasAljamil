@@ -30,6 +30,7 @@ import { departmentName, fullName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
 import { StatTile } from './parts';
+import { ContactInbox } from './ContactInbox';
 import { Reports } from './Reports';
 import { useActivate } from './useActivate';
 
@@ -213,6 +214,8 @@ export function AdminOverview() {
             ))}
           </View>
         </View>
+
+        <ContactInbox />
 
         <View style={styles.section}>
           <Text variant="title" role="heading">
