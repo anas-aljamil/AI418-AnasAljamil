@@ -9,6 +9,10 @@
  * Phones and tablets: a full screen with a back button and the actions in a sticky bar within
  * thumb reach. Desktop: the actions sit in a row under the band, and in a pane (Search,
  * docs/desktop-plan.md) there is no back button, because the list stays beside it.
+ *
+ * Students also get the adaptive "next step" tip under the band (M3, features/adaptive), unless
+ * tips are off in Settings. Book and Message taps, here or in the tip, are counted on the
+ * device so the tip can put the student's usual move first.
  */
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -32,6 +36,8 @@ import { TallDoor } from '@/components/TallDoor';
 import { Text } from '@/components/Text';
 import { TodayTimeline } from '@/components/TodayTimeline';
 import { useToast } from '@/components/Toast';
+import { recordHabit } from '@/features/adaptive/habits';
+import { NextStepCard } from '@/features/adaptive/NextStepCard';
 import { BookingSheet } from '@/features/booking/BookingSheet';
 import { SectionError } from '@/features/home/HomeParts';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
@@ -40,6 +46,7 @@ import { errorKey } from '@/lib/errors';
 import { dateText, shortDateText, weekdayOf } from '@/lib/dates';
 import { clockText, laterText } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
+import { useSettings } from '@/settings/SettingsProvider';
 import { departmentName, officeFull, professorName, spokenList } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii, space, touchTarget, type Language } from '@/theme/tokens';
@@ -77,6 +84,7 @@ export function ProfessorDetail({
   const now = useNow();
   const { state } = useAuth();
   const isStudent = state.status === 'signedIn' && state.user.role === 'student';
+  const { assist } = useSettings();
   const professor = useProfessor(professorId);
   const togglePin = usePinWithToast();
   const toast = useToast();
@@ -84,6 +92,7 @@ export function ProfessorDetail({
   // A booking time tapped below opens the sheet on that time's first date.
   const [bookingDay, setBookingDay] = useState<string | null>(null);
   const startBooking = (date: string | null) => {
+    recordHabit('book');
     setBookingDay(date);
     setBooking(true);
   };
@@ -91,6 +100,7 @@ export function ProfessorDetail({
   const openChat = useOpenConversation();
   const message = () => {
     if (!data) return;
+    recordHabit('message');
     openChat.mutate(
       { professor_id: data.professor_id },
       {
@@ -230,6 +240,16 @@ export function ProfessorDetail({
           {data && status ? (
             <>
               {inline && actions ? <View style={styles.actionRow}>{actions}</View> : null}
+
+              {isStudent && assist.tips ? (
+                <NextStepCard
+                  professor={data}
+                  now={now}
+                  onBook={() => startBooking(null)}
+                  onMessage={message}
+                  messagePending={openChat.isPending}
+                />
+              ) : null}
 
               {updated || data.status.note || closedUntil ? (
                 <View style={styles.section}>

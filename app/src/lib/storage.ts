@@ -12,6 +12,10 @@ export const preferenceKeys = {
   textSize: 'mawjood.textSize',
   colorVision: 'mawjood.colorVision',
   notifications: 'mawjood.notifications',
+  /** Voice commands, reading answers aloud and smart tips (the M3 AI layers). */
+  assist: 'mawjood.assist',
+  /** What the student does from a professor's profile, counted (features/adaptive/habits.ts). */
+  habits: 'mawjood.habits',
   /** The language a direction reload was last tried for (stops a reload loop). */
   directionReload: 'mawjood.directionReload',
 } as const;

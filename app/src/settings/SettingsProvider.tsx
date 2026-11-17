@@ -3,7 +3,9 @@
  * - text size: small, medium (the default) or big, multiplying the phone's own font size;
  *   the total stays at most 200% (Text divides its maxFontSizeMultiplier by this factor);
  * - which in-app notifications to show (appointments, messages). Kept on the device rather
- *   than in the database: it only filters what this phone shows (no push, CLAUDE.md Section 3).
+ *   than in the database: it only filters what this phone shows (no push, CLAUDE.md Section 3);
+ * - the two M3 AI layers: voice commands (and whether answers are read aloud) and the smart
+ *   "next step" tip on a professor's profile. Both are on by default and can be turned off.
  */
 import {
   createContext,
@@ -30,13 +32,26 @@ export interface NotificationPrefs {
   messages: boolean;
 }
 
+export interface AssistPrefs {
+  /** The microphone on Home (features/voice). */
+  voice: boolean;
+  /** Read a voice answer aloud as well as showing it. */
+  readAloud: boolean;
+  /** The adaptive "next step" tip on a professor's profile (features/adaptive). */
+  tips: boolean;
+}
+
 interface SettingsValue {
   textSize: TextSize;
   textScale: number;
   setTextSize: (size: TextSize) => void;
   notifications: NotificationPrefs;
   setNotifications: (prefs: NotificationPrefs) => void;
+  assist: AssistPrefs;
+  setAssist: (prefs: AssistPrefs) => void;
 }
+
+export const DEFAULT_ASSIST: AssistPrefs = { voice: true, readAloud: true, tips: true };
 
 const DEFAULT_PREFS: NotificationPrefs = { appointments: true, messages: true };
 
@@ -46,6 +61,8 @@ const SettingsContext = createContext<SettingsValue>({
   setTextSize: () => undefined,
   notifications: DEFAULT_PREFS,
   setNotifications: () => undefined,
+  assist: DEFAULT_ASSIST,
+  setAssist: () => undefined,
 });
 
 /** Whether a notification of this type is shown under the current preferences. */
@@ -56,6 +73,7 @@ export function wantsNotification(prefs: NotificationPrefs, type: NotificationTy
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [textSize, setTextSizeState] = useState<TextSize>('medium');
   const [notifications, setNotificationsState] = useState<NotificationPrefs>(DEFAULT_PREFS);
+  const [assist, setAssistState] = useState<AssistPrefs>(DEFAULT_ASSIST);
 
   useEffect(() => {
     readPreference(preferenceKeys.textSize).then((stored) => {
@@ -65,6 +83,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     readPreference(preferenceKeys.notifications).then((stored) => {
       try {
         if (stored) setNotificationsState({ ...DEFAULT_PREFS, ...JSON.parse(stored) });
+      } catch {
+        // Unreadable: keep the defaults.
+      }
+    });
+    readPreference(preferenceKeys.assist).then((stored) => {
+      try {
+        if (stored) setAssistState({ ...DEFAULT_ASSIST, ...JSON.parse(stored) });
       } catch {
         // Unreadable: keep the defaults.
       }
@@ -79,6 +104,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setNotificationsState(prefs);
     writePreference(preferenceKeys.notifications, JSON.stringify(prefs));
   }, []);
+  const setAssist = useCallback((prefs: AssistPrefs) => {
+    setAssistState(prefs);
+    writePreference(preferenceKeys.assist, JSON.stringify(prefs));
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -87,8 +116,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setTextSize,
       notifications,
       setNotifications,
+      assist,
+      setAssist,
     }),
-    [textSize, setTextSize, notifications, setNotifications],
+    [textSize, setTextSize, notifications, setNotifications, assist, setAssist],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

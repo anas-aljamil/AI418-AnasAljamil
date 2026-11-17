@@ -17,6 +17,9 @@ import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
 import { MenuPicker } from '@/components/MenuPicker';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
+import { forgetHabits } from '@/features/adaptive/habits';
+import { useSpeechSupported } from '@/features/voice/useSpeech';
 import { switchLanguage } from '@/i18n';
 import { departmentName, fullName } from '@/lib/names';
 import { PasswordSheet, StudySheet } from './AccountSheets';
@@ -34,7 +37,10 @@ export function AccountScreen() {
   const column = useColumn();
   const { signOut } = useAuth();
   const user = useUser();
-  const { textSize, setTextSize, notifications, setNotifications } = useSettings();
+  const { textSize, setTextSize, notifications, setNotifications, assist, setAssist } =
+    useSettings();
+  const toast = useToast();
+  const canListen = useSpeechSupported();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
   const [sheet, setSheet] = useState<'password' | 'study' | null>(null);
 
@@ -187,6 +193,51 @@ export function AccountScreen() {
           <Text variant="caption" color="muted">
             {t('settings.notifications_helper')}
           </Text>
+        </View>
+      ) : null}
+
+      {/* The two M3 AI layers, students only: each can be turned off, and the learned habits
+          forgotten. */}
+      {user.student ? (
+        <View style={styles.section}>
+          <Text variant="label" role="heading">
+            {t('settings.assist')}
+          </Text>
+          <View style={styles.chips}>
+            {canListen ? (
+              <>
+                <Chip
+                  label={t('settings.assist_voice')}
+                  selected={assist.voice}
+                  onPress={() => setAssist({ ...assist, voice: !assist.voice })}
+                />
+                <Chip
+                  label={t('settings.assist_read_aloud')}
+                  selected={assist.readAloud}
+                  disabled={!assist.voice}
+                  onPress={() => setAssist({ ...assist, readAloud: !assist.readAloud })}
+                />
+              </>
+            ) : null}
+            <Chip
+              label={t('settings.assist_tips')}
+              selected={assist.tips}
+              onPress={() => setAssist({ ...assist, tips: !assist.tips })}
+            />
+          </View>
+          <Text variant="caption" color="muted">
+            {t(canListen ? 'settings.assist_helper' : 'settings.assist_helper_no_voice')}
+          </Text>
+          <View style={styles.chips}>
+            <Button
+              variant="quiet"
+              label={t('settings.forget_habits')}
+              onPress={() => {
+                forgetHabits();
+                toast(t('settings.habits_forgotten'));
+              }}
+            />
+          </View>
         </View>
       ) : null}
 
