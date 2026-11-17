@@ -141,8 +141,28 @@ describe('DayRibbon', () => {
     await renderWithProviders(
       <DayRibbon blocks={[block(1, 'class', '17:30', '19:00')]} now="10:00" />,
     );
+    // The labels are placed once the row's width is known.
+    await fireEvent(screen.getByTestId('ribbon-axis', { includeHiddenElements: true }), 'layout', {
+      nativeEvent: { layout: { width: 600, height: 20 } },
+    });
     // The hour labels are hidden from screen readers: the ribbon's own sentence has the times.
-    expect(screen.getByText('6 PM', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByText('7 PM', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('labels every hour when there is room, fewer when not', async () => {
+    await renderWithProviders(<DayRibbon blocks={[]} now={null} />);
+    const axis = screen.getByTestId('ribbon-axis', { includeHiddenElements: true });
+    const shown = (label: string) =>
+      screen.queryAllByText(label, { includeHiddenElements: true }).length > 0;
+    // 8 AM to 5 PM is 9 hours: 540 px leaves 60 px an hour, 300 px 33, 180 px 20.
+    await fireEvent(axis, 'layout', { nativeEvent: { layout: { width: 540, height: 20 } } });
+    expect(['8 AM', '9 AM', '11 AM', '5 PM'].every(shown)).toBe(true);
+    await fireEvent(axis, 'layout', { nativeEvent: { layout: { width: 300, height: 20 } } });
+    expect(['8 AM', '10 AM', '4 PM'].every(shown)).toBe(true);
+    expect(['9 AM', '5 PM'].some(shown)).toBe(false);
+    await fireEvent(axis, 'layout', { nativeEvent: { layout: { width: 180, height: 20 } } });
+    expect(['8 AM', '11 AM', '2 PM', '5 PM'].every(shown)).toBe(true);
+    expect(['10 AM', '4 PM'].some(shown)).toBe(false);
   });
 
   it('says so when the day is empty', async () => {

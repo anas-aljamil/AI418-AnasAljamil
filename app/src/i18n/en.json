@@ -408,7 +408,8 @@
     "week": "This week",
     "next_week": "Next week",
     "week_today": "Today",
-    "week_free": "no office hours or classes"
+    "week_free": "no office hours or classes",
+    "week_nothing": "Nothing on the timetable"
   },
   "booking": {
     "title": "Book with {{name}}",

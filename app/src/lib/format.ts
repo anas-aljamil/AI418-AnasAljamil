@@ -135,6 +135,26 @@ export function timeOfDay(minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/**
+ * A stretch of the day, short: "10:00–11:30 AM" with the period once when both ends share it,
+ * else both times in full ("11:00 AM–1:00 PM").
+ */
+export function rangeText(start: string, end: string, t: TFunction): string {
+  const [startHour = 0] = start.split(':').map(Number);
+  const [endHour = 0] = end.split(':').map(Number);
+  if (startHour < 12 !== endHour < 12) {
+    return t('prof.timeline_range', { start: clockText(start, t), end: clockText(end, t) });
+  }
+  const twelve = (hhmm: string) => {
+    const [hours = 0, minutes = 0] = hhmm.split(':').map(Number);
+    return `${hours % 12 === 0 ? 12 : hours % 12}:${String(minutes).padStart(2, '0')}`;
+  };
+  return t('time.clock', {
+    time: `${twelve(start)}–${twelve(end)}`,
+    period: t(startHour < 12 ? 'time.am' : 'time.pm'),
+  });
+}
+
 /** A whole hour on the 12-hour clock without minutes: "10 AM" / "10 ص". */
 export function hourText(hour: number, t: TFunction): string {
   return t('time.hour', {
