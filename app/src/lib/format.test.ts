@@ -16,6 +16,7 @@ import {
   riyadhDayDifference,
   riyadhTime,
   clockText,
+  rangeText,
   laterText,
   untilText,
 } from './format';
@@ -175,6 +176,17 @@ describe('12-hour clock (owner decision)', () => {
   ])('%s reads %s / %s', (hhmm, english, arabic) => {
     expect(clockText(hhmm, tFor(en))).toBe(english);
     expect(clockText(hhmm, tFor(ar))).toBe(arabic);
+  });
+
+  // The week's times under each ribbon (2026-11-17): the period once when both ends share it.
+  it.each([
+    ['10:00', '11:30', '10:00–11:30 AM', '10:00–11:30 ص'],
+    ['13:00', '15:15', '1:00–3:15 PM', '1:00–3:15 م'],
+    ['11:00', '13:00', '11:00 AM–1:00 PM', '11:00 ص–1:00 م'],
+    ['12:00', '12:45', '12:00–12:45 PM', '12:00–12:45 م'],
+  ])('%s to %s reads %s / %s', (start, end, english, arabic) => {
+    expect(rangeText(start, end, tFor(en))).toBe(english);
+    expect(rangeText(start, end, tFor(ar))).toBe(arabic);
   });
 });
 
