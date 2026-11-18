@@ -65,6 +65,7 @@ def me_out(db: Session, user: User) -> MeOut:
         full_name_ar=user.full_name_ar,
         full_name_en=user.full_name_en,
         preferred_locale=user.preferred_locale,
+        photo_updated_at=user.photo_updated_at,
     )
     if user.role == "student":
         out.student = StudentProfileOut.model_validate(db.get(Student, user.user_id))

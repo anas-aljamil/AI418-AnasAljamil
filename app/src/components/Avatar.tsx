@@ -1,11 +1,12 @@
 /**
- * The round marks at the start of a row: a person's initials (conversations, accounts) and an
- * icon for a kind of thing (notifications). Both are decorative: the row's own text names the
- * person or says what happened.
+ * The round marks at the start of a row: a person's photo or initials (conversations,
+ * accounts) and an icon for a kind of thing (notifications). All are decorative: the row's own
+ * text names the person or says what happened.
  */
 import type { ComponentType } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
+import { usePhoto } from '@/api/queries';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radii } from '@/theme/tokens';
 import { Text } from './Text';
@@ -65,6 +66,37 @@ export function Initials({ name, muted, size }: MarkProps & { name: string }) {
         {initialsOf(name)}
       </Text>
     </Mark>
+  );
+}
+
+/**
+ * A person's profile photo in the same circle (2026-11-18), or their initials while it loads,
+ * if it fails, and when they have none. Decorative like the initials.
+ */
+export function PersonMark({
+  userId,
+  photoVersion,
+  name,
+  muted,
+  size = SIZE,
+  initials = true,
+}: MarkProps & {
+  userId: number;
+  photoVersion?: string | null;
+  name: string;
+  /** False: nothing at all without a photo (the profile band, where the door is the mark). */
+  initials?: boolean;
+}) {
+  const photo = usePhoto(userId, photoVersion);
+  if (!photo.data) return initials ? <Initials name={name} muted={muted} size={size} /> : null;
+  return (
+    <Image
+      source={{ uri: photo.data }}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      aria-hidden
+      style={[styles.mark, { width: size, height: size }]}
+    />
   );
 }
 

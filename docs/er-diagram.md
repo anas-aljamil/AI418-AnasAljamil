@@ -65,6 +65,9 @@ erDiagram
         boolean is_active "default true"
         datetime created_at
         datetime updated_at
+        mediumblob photo "optional, at most 256 KB"
+        varchar photo_type "image/jpeg | image/png | image/webp"
+        datetime photo_updated_at "set with the photo"
     }
     OFFICES {
         int office_id PK
@@ -232,7 +235,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 |---|---|---|
 | COLLEGE | <ins>college_id</ins>, code, name_ar, name_en, created_at | none |
 | DEPARTMENT | <ins>department_id</ins>, code, name_ar, name_en, created_at | none |
-| USER | <ins>user_id</ins>, email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at | none |
+| USER | <ins>user_id</ins>, email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at, photo, photo_type, photo_updated_at (the photo's three attributes are optional, all set or all empty) | none |
 | STUDENT (subclass of USER) | inherits <ins>user_id</ins>; university_no, study_year | none |
 | PROFESSOR (subclass of USER) | inherits <ins>user_id</ins>; honorific, academic_rank | effective_status, last_updated (from overrides, schedule and the clock); messages_closed_until (from closed hours and the clock) |
 | OFFICE | <ins>office_id</ins>, building_code, floor, room_number, created_at | none |

@@ -46,6 +46,7 @@ def participant_out(db: Session, user_id: int) -> ParticipantOut:
         full_name_en=user.full_name_en,
         role=user.role,
         honorific=professor.honorific if professor else None,
+        photo_updated_at=user.photo_updated_at,
     )
 
 

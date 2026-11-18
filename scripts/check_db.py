@@ -46,6 +46,14 @@ MUST_FAIL = [
     ("users: email needs a dotted domain", NEW_USER.format(email="someone@localhost", role="student"), CHECK_FAILED),
     ("users: unknown role", NEW_USER.format(email="t@university.example", role="teacher"), CHECK_FAILED),
     ("users: codes are exact ('Student' is not 'student')", NEW_USER.format(email="t@university.example", role="Student"), CHECK_FAILED),
+    ("users: a photo needs its type and time as well",
+     "UPDATE users SET photo = REPEAT('x', 200) WHERE user_id = 9", CHECK_FAILED),
+    ("users: a photo is a JPEG, PNG or WebP image",
+     "UPDATE users SET photo = REPEAT('x', 200), photo_type = 'image/gif', photo_updated_at = UTC_TIMESTAMP() "
+     "WHERE user_id = 9", CHECK_FAILED),
+    ("users: a photo is at most 256 KB",
+     "UPDATE users SET photo = REPEAT('x', 262145), photo_type = 'image/jpeg', photo_updated_at = UTC_TIMESTAMP() "
+     "WHERE user_id = 9", CHECK_FAILED),
     ("users: role cannot change while a subtype row exists (ON UPDATE RESTRICT)",
      "UPDATE users SET role = 'admin' WHERE user_id = 9", FK_PARENT),
     ("students: row must point at a 'student' account (user 1 is a professor)",
