@@ -116,6 +116,11 @@ export interface Appointment {
   note: string | null;
   /** Only on a declined appointment, when the professor wrote one. */
   decline_reason: string | null;
+  /** Only when the professor cancelled and wrote a reason (2026-11-18). */
+  cancel_reason?: string | null;
+  /** Another time the professor suggests, until the student answers (2026-11-18). */
+  proposed_starts_at?: string | null;
+  proposed_ends_at?: string | null;
   student: Person;
   professor: Person & { honorific: Honorific; office: Office | null };
 }
@@ -180,7 +185,8 @@ export interface Slot {
   starts_at: string;
   local_time: string;
   available: boolean;
-  reason: 'past' | 'taken' | null;
+  /** 'short' is the app's own: free, but too short for the length being moved (2026-11-18). */
+  reason: 'past' | 'taken' | 'short' | null;
   /** Longest appointment that can start here (5-minute steps; 0 when unavailable). */
   max_minutes: number;
 }
@@ -275,6 +281,9 @@ export type NotificationType =
   | 'appointment_cancelled'
   | 'appointment_moved'
   | 'slot_freed'
+  | 'time_proposed'
+  | 'proposal_accepted'
+  | 'proposal_declined'
   | 'new_message';
 
 export interface AppNotification {

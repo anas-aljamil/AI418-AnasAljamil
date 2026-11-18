@@ -2,7 +2,9 @@
  * One appointment as a ticket (DESIGN.md 7.6 and Section 11): the time large at the start edge
  * with its day, then who, the length, where, topic and note, and a state pill. Students see
  * the professor, professors the student. Actions (cancel, approve, ...) are passed in as
- * children and sit under the ticket's two parts.
+ * children and sit under the ticket's two parts. A professor's reason for declining or
+ * cancelling shows as "Reason given", and another time the professor suggested shows until the
+ * student answers (2026-11-18).
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +60,8 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
       : fullName(appointment.student, language);
   const state = appointment.status;
   const start = new Date(appointment.starts_at);
+  const reason = appointment.decline_reason ?? appointment.cancel_reason ?? null;
+  const proposed = !!appointment.proposed_starts_at && !!appointment.proposed_ends_at;
   return (
     <Ticket
       stub={
@@ -96,13 +100,31 @@ export function AppointmentCard({ appointment, now, perspective, children }: App
           {appointment.note}
         </Text>
       ) : null}
-      {appointment.decline_reason ? (
+      {reason ? (
         <View>
           <Text variant="label" weight="semibold">
             {t('appointments.decline_reason_label')}
           </Text>
-          <Text variant="label" lang={scriptOf(appointment.decline_reason)}>
-            {appointment.decline_reason}
+          <Text variant="label" lang={scriptOf(reason)}>
+            {reason}
+          </Text>
+        </View>
+      ) : null}
+      {proposed ? (
+        <View accessibilityLiveRegion="polite">
+          <Text variant="label" weight="semibold" color="primary">
+            {t(
+              perspective === 'student'
+                ? 'appointments.proposed_label'
+                : 'appointments.proposed_label_professor',
+              { name: who },
+            )}
+          </Text>
+          <Text variant="label">
+            {t('appointments.proposed_time', {
+              when: appointmentWhen({ starts_at: appointment.proposed_starts_at! }, now, t),
+              end: clockText(riyadhTime(new Date(appointment.proposed_ends_at!)), t),
+            })}
           </Text>
         </View>
       ) : null}

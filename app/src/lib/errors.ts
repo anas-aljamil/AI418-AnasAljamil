@@ -36,6 +36,8 @@ const KNOWN = [
   'STUDENT_EMAIL_FIXED',
   'PASSWORD_NEEDED',
   'PHOTO_INVALID',
+  'NO_PROPOSAL',
+  'PROPOSAL_SAME_TIME',
 ];
 
 /** The i18n key that says what happened and how to fix it (DESIGN.md Section 8). */

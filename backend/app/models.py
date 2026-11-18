@@ -231,6 +231,10 @@ class Appointment(Base):
     topic: Mapped[str | None] = mapped_column(String(12))
     note: Mapped[str | None] = mapped_column(String(200))
     decline_reason: Mapped[str | None] = mapped_column(String(200))
+    cancel_reason: Mapped[str | None] = mapped_column(String(200))
+    # Another time the professor suggests (2026-11-18); both or neither.
+    proposed_starts_at: Mapped[datetime | None] = mapped_column(DateTime)
+    proposed_ends_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
     # Virtual generated column behind the double-booking unique index.

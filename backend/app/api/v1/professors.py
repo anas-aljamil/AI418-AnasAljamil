@@ -140,9 +140,13 @@ def get_professor(
 def get_slots(
     professor_id: int,
     day: Annotated[date, Query(alias="date")],
+    exclude: Annotated[
+        int | None,
+        Query(description="An appointment of this professor to leave out (the professor moving it)"),
+    ] = None,
     db: Session = Depends(get_db),
     clock: Clock = Depends(get_clock),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> DaySlotsOut:
     now = clock.now()
     found = directory.load_professors(db, ids=[professor_id])
@@ -152,14 +156,17 @@ def get_slots(
     if not to_riyadh(now).date() <= day < to_riyadh(booking_window_end(now)).date():
         raise AppError(422, "OUTSIDE_BOOKING_WINDOW", "Choose a day in this week or next week.")
     day_start = local_slot_to_utc(day, time())
-    busy = db.execute(
-        select(Appointment.starts_at, Appointment.ends_at).where(
-            Appointment.professor_id == professor_id,
-            Appointment.status.in_(ACTIVE),
-            Appointment.starts_at < day_start + timedelta(days=1),
-            Appointment.ends_at > day_start,
-        )
-    ).all()
+    query = select(Appointment.starts_at, Appointment.ends_at).where(
+        Appointment.professor_id == professor_id,
+        Appointment.status.in_(ACTIVE),
+        Appointment.starts_at < day_start + timedelta(days=1),
+        Appointment.ends_at > day_start,
+    )
+    # When the professor suggests another time for one of their appointments, its own time
+    # counts as free (2026-11-18); for anyone else the parameter changes nothing.
+    if exclude is not None and user.user_id == professor_id:
+        query = query.where(Appointment.appointment_id != exclude)
+    busy = db.execute(query).all()
     slots = day_slots(professor.booking_periods, day, now, [tuple(r) for r in busy])
     return DaySlotsOut(
         professor_id=professor_id,

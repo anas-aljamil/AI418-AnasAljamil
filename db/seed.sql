@@ -253,19 +253,22 @@ INSERT INTO status_overrides (override_id, professor_id, status, note, created_a
 -- appointments (10): every row sits inside one of the professor's booking
 -- periods on the 5-minute grid. 1-5 are last week (closed states); 6-10 are next week.
 -- Student 9 holds 2 active future appointments with professor 1 (the limit).
+-- Professor 4 suggests another time for 10 (Thursday 10:00, inside their
+-- Thursday booking time); student 11 has not answered yet (2026-11-18).
 -- -----------------------------------------------------------------------------
 INSERT INTO appointments (appointment_id, student_id, professor_id, starts_at, ends_at,
-                          status, topic, note, created_at, updated_at, decline_reason) VALUES
-    (1,  9,  1, '2026-09-27 07:00:00', '2026-09-27 07:15:00', 'completed', 'assignment',  NULL,                              '2026-09-24 12:10:00', '2026-09-27 07:20:00', NULL),
-    (2,  10, 1, '2026-09-29 07:30:00', '2026-09-29 07:45:00', 'completed', 'exam_review', NULL,                              '2026-09-27 15:00:00', '2026-09-29 07:50:00', NULL),
-    (3,  13, 2, '2026-09-28 06:30:00', '2026-09-28 07:00:00', 'no_show',   'advising',    NULL,                              '2026-09-25 09:00:00', '2026-09-28 07:05:00', NULL),
-    (4,  11, 4, '2026-10-01 07:00:00', '2026-10-01 07:30:00', 'declined',  'advising',    'Choosing between two electives',  '2026-09-28 18:30:00', '2026-09-29 06:00:00', 'Elective advising is with the department coordinator this term.'),
-    (5,  14, 5, '2026-09-30 09:15:00', '2026-09-30 09:30:00', 'cancelled', 'assignment',  NULL,                              '2026-09-27 10:00:00', '2026-09-29 16:00:00', NULL),
-    (6,  9,  1, '2026-10-11 07:30:00', '2026-10-11 07:45:00', 'approved',  'exam_review', 'مراجعة الفصلين الثالث والرابع',   '2026-09-30 15:00:00', '2026-09-30 16:20:00', NULL),
-    (7,  9,  1, '2026-10-13 07:00:00', '2026-10-13 07:15:00', 'pending',   'assignment',  NULL,                              '2026-10-01 13:05:00', '2026-10-01 13:05:00', NULL),
-    (8,  12, 3, '2026-10-12 07:00:00', '2026-10-12 07:15:00', 'pending',   'advising',    'اختيار المسار التخصصي',           '2026-10-01 09:40:00', '2026-10-01 09:40:00', NULL),
-    (9,  15, 7, '2026-10-12 07:30:00', '2026-10-12 08:00:00', 'approved',  'exam_review', NULL,                              '2026-09-30 11:00:00', '2026-09-30 14:00:00', NULL),
-    (10, 11, 4, '2026-10-13 10:30:00', '2026-10-13 11:00:00', 'pending',   'other',       'Feedback on my project proposal', '2026-10-01 19:15:00', '2026-10-01 19:15:00', NULL);
+                          status, topic, note, created_at, updated_at, decline_reason,
+                          cancel_reason, proposed_starts_at, proposed_ends_at) VALUES
+    (1,  9,  1, '2026-09-27 07:00:00', '2026-09-27 07:15:00', 'completed', 'assignment',  NULL,                              '2026-09-24 12:10:00', '2026-09-27 07:20:00', NULL, NULL, NULL, NULL),
+    (2,  10, 1, '2026-09-29 07:30:00', '2026-09-29 07:45:00', 'completed', 'exam_review', NULL,                              '2026-09-27 15:00:00', '2026-09-29 07:50:00', NULL, NULL, NULL, NULL),
+    (3,  13, 2, '2026-09-28 06:30:00', '2026-09-28 07:00:00', 'no_show',   'advising',    NULL,                              '2026-09-25 09:00:00', '2026-09-28 07:05:00', NULL, NULL, NULL, NULL),
+    (4,  11, 4, '2026-10-01 07:00:00', '2026-10-01 07:30:00', 'declined',  'advising',    'Choosing between two electives',  '2026-09-28 18:30:00', '2026-09-29 06:00:00', 'Elective advising is with the department coordinator this term.', NULL, NULL, NULL),
+    (5,  14, 5, '2026-09-30 09:15:00', '2026-09-30 09:30:00', 'cancelled', 'assignment',  NULL,                              '2026-09-27 10:00:00', '2026-09-29 16:00:00', NULL, NULL, NULL, NULL),
+    (6,  9,  1, '2026-10-11 07:30:00', '2026-10-11 07:45:00', 'approved',  'exam_review', 'مراجعة الفصلين الثالث والرابع',   '2026-09-30 15:00:00', '2026-09-30 16:20:00', NULL, NULL, NULL, NULL),
+    (7,  9,  1, '2026-10-13 07:00:00', '2026-10-13 07:15:00', 'pending',   'assignment',  NULL,                              '2026-10-01 13:05:00', '2026-10-01 13:05:00', NULL, NULL, NULL, NULL),
+    (8,  12, 3, '2026-10-12 07:00:00', '2026-10-12 07:15:00', 'pending',   'advising',    'اختيار المسار التخصصي',           '2026-10-01 09:40:00', '2026-10-01 09:40:00', NULL, NULL, NULL, NULL),
+    (9,  15, 7, '2026-10-12 07:30:00', '2026-10-12 08:00:00', 'approved',  'exam_review', NULL,                              '2026-09-30 11:00:00', '2026-09-30 14:00:00', NULL, NULL, NULL, NULL),
+    (10, 11, 4, '2026-10-13 10:30:00', '2026-10-13 11:00:00', 'pending',   'other',       'Feedback on my project proposal', '2026-10-01 19:15:00', '2026-10-01 19:15:00', NULL, NULL, '2026-10-15 07:00:00', '2026-10-15 07:30:00');
 
 -- -----------------------------------------------------------------------------
 -- pins (8). Students 12, 13 and 15 have none (home screen empty state).

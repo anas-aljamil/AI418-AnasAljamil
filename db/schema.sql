@@ -393,6 +393,15 @@ CREATE TABLE appointments (
     -- Optional, written by the professor when declining; only a declined
     -- appointment has one (2026-11-16).
     decline_reason    VARCHAR(200) NULL,
+    -- Optional, written by the professor when cancelling; only a cancelled
+    -- appointment has one (2026-11-18). A student's own cancellation has none.
+    cancel_reason     VARCHAR(200) NULL,
+    -- Another time the professor suggests (2026-11-18), both set or both NULL,
+    -- only while the request is pending or approved. It reserves nothing: the
+    -- student's Accept moves starts_at and ends_at here, through the same
+    -- overlap triggers as any other change.
+    proposed_starts_at DATETIME    NULL,
+    proposed_ends_at   DATETIME    NULL,
     created_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     updated_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     active_slot       VARCHAR(19)  COLLATE utf8mb4_0900_bin GENERATED ALWAYS AS (
@@ -412,6 +421,13 @@ CREATE TABLE appointments (
     CONSTRAINT ck_appointments_note   CHECK (CHAR_LENGTH(note) >= 1),
     CONSTRAINT ck_appointments_decline_reason CHECK (
         decline_reason IS NULL OR (status = 'declined' AND CHAR_LENGTH(decline_reason) >= 1)),
+    CONSTRAINT ck_appointments_cancel_reason CHECK (
+        cancel_reason IS NULL OR (status = 'cancelled' AND CHAR_LENGTH(cancel_reason) >= 1)),
+    CONSTRAINT ck_appointments_proposal CHECK (
+        (proposed_starts_at IS NULL AND proposed_ends_at IS NULL)
+        OR (proposed_starts_at IS NOT NULL AND proposed_ends_at IS NOT NULL
+            AND proposed_ends_at > proposed_starts_at
+            AND status IN ('pending', 'approved'))),
     CONSTRAINT ck_appointments_time_order CHECK (ends_at > starts_at),
     CONSTRAINT ck_appointments_updated_after_created CHECK (updated_at >= created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -515,7 +531,8 @@ CREATE TABLE notifications (
     CONSTRAINT ck_notifications_type CHECK (type IN ('appointment_requested', 'appointment_approved',
                                                      'appointment_declined', 'appointment_cancelled',
                                                      'appointment_moved', 'slot_freed',
-                                                     'new_message')),
+                                                     'time_proposed', 'proposal_accepted',
+                                                     'proposal_declined', 'new_message')),
     CONSTRAINT ck_notifications_reference CHECK (
         (type = 'new_message' AND conversation_id IS NOT NULL AND appointment_id IS NULL)
         OR (type <> 'new_message' AND appointment_id IS NOT NULL AND conversation_id IS NULL)),
