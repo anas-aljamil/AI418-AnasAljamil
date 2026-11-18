@@ -453,7 +453,11 @@
     "longer": "أطول بخمس دقائق",
     "minutes_chip": "{{minutes}} د",
     "choose_start": "اختر وقت البداية",
-    "minutes_long": "{{minutes}} دقيقة"
+    "minutes_long": "{{minutes}} دقيقة",
+    "wheel_hour": "الساعة",
+    "wheel_minutes": "الدقائق",
+    "hour_full": "{{hour}}، محجوزة بالكامل",
+    "start_chosen": "يبدأ الساعة {{time}}"
   },
   "appointments": {
     "title": "مواعيدي",
