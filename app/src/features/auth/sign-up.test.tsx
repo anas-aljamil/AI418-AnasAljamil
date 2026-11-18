@@ -44,6 +44,7 @@ async function fillAccount(email = ' 4519001@UPM.edu.sa ') {
     screen.getByLabelText('Password (at least 8 characters)'),
     'a-long-password',
   );
+  await fireEvent.changeText(screen.getByLabelText('Confirm the password'), 'a-long-password');
   // The department menu: open it, then choose under its college.
   await fireEvent.press(screen.getByRole('button', { name: 'Department, Choose a department' }));
   expect(screen.getByText('College of Computer and Cyber Sciences')).toBeTruthy();
@@ -124,5 +125,14 @@ it.each([
   await fillAccount(email);
   await fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
   expect(await screen.findByText(message)).toBeTruthy();
+  expect(mockSignUp).not.toHaveBeenCalled();
+});
+
+it('asks for the same password twice before sending', async () => {
+  await renderWithProviders(<SignUpScreen />, 'en');
+  await fillAccount();
+  await fireEvent.changeText(screen.getByLabelText('Confirm the password'), 'a-long-passwrd');
+  await fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+  expect(await screen.findByText('The two passwords are not the same.')).toBeTruthy();
   expect(mockSignUp).not.toHaveBeenCalled();
 });
