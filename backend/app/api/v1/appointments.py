@@ -10,7 +10,7 @@ from app.core.clock import Clock, get_clock
 from app.core.errors import AppError
 from app.core.pagination import Page, PageParams, page_params, paginate
 from app.db import get_db
-from app.deps import current_student, get_current_user
+from app.deps import current_professor, current_student, get_current_user
 from app.models import Appointment, Professor, Student, User
 from app.schemas import (
     ActionIn,
@@ -21,6 +21,7 @@ from app.schemas import (
     MoveIn,
     OfficeOut,
     PersonOut,
+    ProposeIn,
 )
 from app.services import booking
 
@@ -40,6 +41,9 @@ def appointment_out(a: Appointment) -> AppointmentOut:
         topic=a.topic,
         note=a.note,
         decline_reason=a.decline_reason,
+        cancel_reason=a.cancel_reason,
+        proposed_starts_at=a.proposed_starts_at,
+        proposed_ends_at=a.proposed_ends_at,
         created_at=a.created_at,
         updated_at=a.updated_at,
         student=PersonOut(
@@ -148,6 +152,36 @@ def move_appointment(
 
 
 @router.post(
+    "/{appointment_id}/propose",
+    response_model=AppointmentOut,
+    summary="Suggest another time for a pending or approved request (its professor); length stays",
+)
+def propose_time(
+    appointment_id: int,
+    body: ProposeIn,
+    user: User = Depends(current_professor),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> AppointmentOut:
+    return appointment_out(booking.propose(db, appointment_id, body.starts_at_utc(), user, clock.now()))
+
+
+@router.post(
+    "/{appointment_id}/proposal/{answer}",
+    response_model=AppointmentOut,
+    summary="accept (move there, approved) | decline (keep my time): answer a suggested time (its student)",
+)
+def answer_proposal(
+    appointment_id: int,
+    answer: Literal["accept", "decline"],
+    user: User = Depends(current_student),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> AppointmentOut:
+    return appointment_out(booking.answer_proposal(db, appointment_id, answer == "accept", user, clock.now()))
+
+
+@router.post(
     "/{appointment_id}/{action}",
     response_model=AppointmentOut,
     summary="approve | decline (professor), cancel (either side), complete | no-show (professor)",
@@ -161,6 +195,7 @@ def change_appointment(
     clock: Clock = Depends(get_clock),
 ) -> AppointmentOut:
     reason = body.reason if body else None
-    if reason and action != "decline":
-        raise AppError(422, "VALIDATION_ERROR", "Only declining takes a reason.")
+    # A reason is the professor's, for declining or cancelling (2026-11-18).
+    if reason and not (action == "decline" or (action == "cancel" and user.role == "professor")):
+        raise AppError(422, "VALIDATION_ERROR", "Only a professor declining or cancelling gives a reason.")
     return appointment_out(booking.transition(db, appointment_id, action, user, clock.now(), reason))

@@ -13,7 +13,12 @@ index and overlap triggers) act as the backstop:
 * when an appointment is cancelled, the student booked right after it that day is
   told the time before theirs is free if they could move into it; a student may
   move their own pending or approved appointment earlier on the same day, keeping
-  its length and status (the professor is told).
+  its length and status (the professor is told);
+* a professor may give a reason when declining or cancelling, and may suggest
+  another time for a pending or approved request (same length, inside a booking
+  time, free); the student accepts it (the appointment moves there and is
+  approved) or turns it down (it stays as it was). A suggestion reserves nothing,
+  so Accept checks the time is still free. Any other change ends the suggestion.
 """
 
 from datetime import date, datetime, time, timedelta
@@ -215,8 +220,12 @@ def transition(
         raise AppError(409, "TOO_EARLY", "You can mark the outcome once the appointment has started.")
 
     appointment.status, appointment.updated_at = new_state, now
+    # Whatever happens to the request, an open suggestion of another time is over.
+    _end_proposal(db, appointment, now)
     if new_state == "declined":
         appointment.decline_reason = reason
+    if new_state == "cancelled" and user.role == "professor":
+        appointment.cancel_reason = reason
     if new_state in NOTIFY_STUDENT:
         notify(
             db,
@@ -262,6 +271,7 @@ def move_earlier(
         raise SLOT_TAKEN
 
     appointment.starts_at, appointment.ends_at, appointment.updated_at = starts_at, starts_at + length, now
+    _end_proposal(db, appointment, now)
     try:
         db.flush()
     except DBAPIError as exc:
@@ -280,5 +290,100 @@ def move_earlier(
         .values(read_at=now)
     )
     notify(db, appointment.professor_id, "appointment_moved", now, appointment_id=appointment.appointment_id)
+    db.commit()
+    return appointment
+
+
+# --- another time, suggested by the professor (owner request S5c, 2026-11-18) ------------
+
+NO_PROPOSAL = AppError(409, "NO_PROPOSAL", "There is no other time suggested for this appointment.")
+
+
+def _end_proposal(db: Session, appointment: Appointment, now: datetime) -> None:
+    """Clear an open suggestion; its notice to the student no longer asks for an answer."""
+    if appointment.proposed_starts_at is None:
+        return
+    appointment.proposed_starts_at = appointment.proposed_ends_at = None
+    db.execute(
+        update(Notification)
+        .where(
+            Notification.appointment_id == appointment.appointment_id,
+            Notification.type == "time_proposed",
+            Notification.read_at.is_(None),
+        )
+        .values(read_at=now)
+    )
+
+
+def _flush_move(db: Session) -> None:
+    try:
+        db.flush()
+    except DBAPIError as exc:
+        # The overlap trigger (1644) or the unique active slot (1062): someone took the time.
+        db.rollback()
+        if mysql_error_number(exc) in (1062, 1644):
+            raise SLOT_TAKEN from exc
+        raise
+
+
+def propose(db: Session, appointment_id: int, starts_at: datetime, user: User, now: datetime) -> Appointment:
+    """The professor suggests another start for a pending or approved request; same length."""
+    appointment = get_for_participant(db, appointment_id, user)
+    if user.user_id != appointment.professor_id:
+        raise forbidden("Only the professor of this appointment can suggest another time.")
+    if appointment.status not in ACTIVE:
+        raise AppError(
+            409,
+            "INVALID_TRANSITION",
+            f"An appointment that is {appointment.status} cannot be changed this way.",
+        )
+    if starts_at == appointment.starts_at:
+        raise AppError(422, "PROPOSAL_SAME_TIME", "Choose a time other than the one already booked.")
+    if starts_at <= now:
+        raise AppError(422, "SLOT_IN_PAST", "This time has already passed.")
+    if starts_at >= booking_window_end(now):
+        raise AppError(422, "OUTSIDE_BOOKING_WINDOW", "Choose a day in this week or next week.")
+    length = appointment.ends_at - appointment.starts_at
+    if (
+        find_period(_periods(db, appointment.professor_id), starts_at, int(length / timedelta(minutes=1)))
+        is None
+    ):
+        raise INVALID_SLOT
+    if overlapping_active(
+        db, appointment.professor_id, starts_at, starts_at + length, exclude_id=appointment.appointment_id
+    ):
+        raise SLOT_TAKEN
+    # A new suggestion replaces an earlier one, and its notice.
+    _end_proposal(db, appointment, now)
+    appointment.proposed_starts_at, appointment.proposed_ends_at = starts_at, starts_at + length
+    appointment.updated_at = now
+    notify(db, appointment.student_id, "time_proposed", now, appointment_id=appointment.appointment_id)
+    db.commit()
+    return appointment
+
+
+def answer_proposal(db: Session, appointment_id: int, accept: bool, user: User, now: datetime) -> Appointment:
+    """The student takes the suggested time (the appointment moves there and is approved) or
+    keeps their own; the professor is told either way."""
+    appointment = get_for_participant(db, appointment_id, user)
+    if user.user_id != appointment.student_id:
+        raise forbidden("Only the student who booked can answer a suggested time.")
+    if appointment.proposed_starts_at is None:
+        raise NO_PROPOSAL
+    if accept:
+        starts_at, ends_at = appointment.proposed_starts_at, appointment.proposed_ends_at
+        if starts_at <= now:
+            raise AppError(422, "SLOT_IN_PAST", "The suggested time has already passed.")
+        if overlapping_active(db, appointment.professor_id, starts_at, ends_at, exclude_id=appointment_id):
+            raise SLOT_TAKEN
+        _end_proposal(db, appointment, now)
+        appointment.starts_at, appointment.ends_at, appointment.status = starts_at, ends_at, "approved"
+        appointment.updated_at = now
+        _flush_move(db)
+    else:
+        _end_proposal(db, appointment, now)
+        appointment.updated_at = now
+    kind = "proposal_accepted" if accept else "proposal_declined"
+    notify(db, appointment.professor_id, kind, now, appointment_id=appointment.appointment_id)
     db.commit()
     return appointment

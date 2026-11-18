@@ -202,6 +202,15 @@ MUST_FAIL = [
      "UPDATE appointments SET decline_reason = 'Busy' WHERE appointment_id = 6", CHECK_FAILED),
     ("appointments: an empty decline reason",
      "UPDATE appointments SET decline_reason = '' WHERE appointment_id = 4", CHECK_FAILED),
+    ("appointments: a cancel reason on an appointment that was not cancelled",
+     "UPDATE appointments SET cancel_reason = 'Ill' WHERE appointment_id = 6", CHECK_FAILED),
+    ("appointments: a suggested time needs its end as well",
+     "UPDATE appointments SET proposed_starts_at = '2026-10-12 08:00:00' WHERE appointment_id = 9", CHECK_FAILED),
+    ("appointments: a suggested time ends after it starts",
+     "UPDATE appointments SET proposed_starts_at = '2026-10-12 08:00:00', proposed_ends_at = '2026-10-12 07:00:00' "
+     "WHERE appointment_id = 9", CHECK_FAILED),
+    ("appointments: only a pending or approved request has a suggested time",
+     "UPDATE appointments SET status = 'cancelled' WHERE appointment_id = 10", CHECK_FAILED),
     ("contact_messages: unknown topic",
      "INSERT INTO contact_messages (sender_name, sender_email, topic, body) "
      "VALUES ('Test Sender', 't.sender@university.example', 'spam', 'Hello there')", CHECK_FAILED),

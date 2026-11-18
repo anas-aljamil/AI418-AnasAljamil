@@ -37,7 +37,7 @@ import { space, type Language } from '@/theme/tokens';
 /** What happened, as a picture: a message, an appointment that went ahead, one that did not. */
 function iconFor(type: AppNotification['type']): IconComponent {
   if (type === 'new_message') return MessageCircle;
-  if (type === 'appointment_approved') return CalendarCheck;
+  if (type === 'appointment_approved' || type === 'proposal_accepted') return CalendarCheck;
   if (type === 'appointment_declined' || type === 'appointment_cancelled') return CalendarX;
   return CalendarClock;
 }

@@ -1,9 +1,10 @@
 /**
- * What a professor can do with one appointment: approve or decline a request, cancel an approved
- * appointment until 1 hour before it starts (asked first, owner request 2026-11-18), mark it
- * completed or no-show once it has started, and message the student. Each button
- * names the student and time for screen readers, since several cards show the same labels.
- * Decline asks first, in a sheet, with room for an optional reason the student will see.
+ * What a professor can do with one appointment: approve or decline a request; cancel an
+ * approved appointment until 1 hour before it starts; suggest another time for a request that
+ * has not started (owner requests 2026-11-18, ProposeSheet); mark it completed or no-show once
+ * it has started; message the student. Each button names the student and time for screen
+ * readers, since several cards show the same labels. Decline and cancel ask first, in a
+ * sheet, with room for an optional reason the student will see.
  */
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,7 +15,6 @@ import { useAppointmentAction, useOpenConversation, type AppointmentAction } fro
 import type { Appointment } from '@/api/types';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
-import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
@@ -22,6 +22,7 @@ import { errorKey } from '@/lib/errors';
 import { fullName } from '@/lib/names';
 import { space, type Language } from '@/theme/tokens';
 import { appointmentWhen, cancelState } from './AppointmentCard';
+import { ProposeSheet } from './ProposeSheet';
 
 export function RequestActions({ appointment, now }: { appointment: Appointment; now: Date }) {
   const { t, i18n } = useTranslation();
@@ -32,7 +33,9 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
   const when = appointmentWhen(appointment, now, t);
   const [declining, setDeclining] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [proposing, setProposing] = useState(false);
   const [reason, setReason] = useState('');
+  const notStarted = now < new Date(appointment.starts_at);
 
   const openChat = useOpenConversation();
   const message = (
@@ -94,37 +97,78 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
     />
   );
 
+  // Another time, for a request that has not started (a new one replaces an unanswered one).
+  const suggest = notStarted ? (
+    <Button
+      key="propose"
+      variant="secondary"
+      label={t(appointment.proposed_starts_at ? 'requests.propose_again' : 'requests.propose')}
+      accessibilityLabel={t('requests.action_label', {
+        action: t(appointment.proposed_starts_at ? 'requests.propose_again' : 'requests.propose'),
+        name,
+        when,
+      })}
+      onPress={() => setProposing(true)}
+    />
+  ) : null;
+  const proposeSheet = notStarted ? (
+    <ProposeSheet
+      // Each opening starts from the appointment's own day.
+      key={proposing ? 'open' : 'closed'}
+      appointment={appointment}
+      visible={proposing}
+      onClose={() => setProposing(false)}
+    />
+  ) : null;
+
+  /** Decline and cancel ask first, with an optional reason the student sees. */
+  const reasonSheet = (kind: 'decline' | 'cancel') => (
+    <BottomSheet
+      visible={kind === 'decline' ? declining : cancelling}
+      title={t(kind === 'decline' ? 'requests.decline_title' : 'requests.cancel_title', { name })}
+      onClose={() => (kind === 'decline' ? setDeclining(false) : setCancelling(false))}
+    >
+      <Text color="muted">
+        {t(kind === 'decline' ? 'requests.decline_body' : 'requests.cancel_body', { when })}
+      </Text>
+      <TextField
+        label={t('requests.decline_reason')}
+        helper={t('requests.decline_reason_helper')}
+        value={reason}
+        onChangeText={setReason}
+        maxLength={200}
+      />
+      <Button
+        variant="danger"
+        label={t(kind === 'decline' ? 'requests.decline_confirm' : 'appointments.cancel')}
+        disabled={action.isPending}
+        onPress={() => run(kind, reason)}
+        block
+      />
+      {kind === 'cancel' ? (
+        <Button
+          variant="quiet"
+          label={t('requests.cancel_keep')}
+          onPress={() => setCancelling(false)}
+          block
+        />
+      ) : null}
+    </BottomSheet>
+  );
+
   if (appointment.status === 'pending') {
     return (
       <View style={styles.row}>
         {button('approve', 'requests.approve', 'primary')}
         {button('decline', 'requests.decline', 'secondary')}
+        {suggest}
         {message}
-        <BottomSheet
-          visible={declining}
-          title={t('requests.decline_title', { name })}
-          onClose={() => setDeclining(false)}
-        >
-          <Text color="muted">{t('requests.decline_body', { when })}</Text>
-          <TextField
-            label={t('requests.decline_reason')}
-            helper={t('requests.decline_reason_helper')}
-            value={reason}
-            onChangeText={setReason}
-            maxLength={200}
-          />
-          <Button
-            variant="danger"
-            label={t('requests.decline_confirm')}
-            disabled={action.isPending}
-            onPress={() => run('decline', reason)}
-            block
-          />
-        </BottomSheet>
+        {reasonSheet('decline')}
+        {proposeSheet}
       </View>
     );
   }
-  if (appointment.status === 'approved' && now >= new Date(appointment.starts_at)) {
+  if (appointment.status === 'approved' && !notStarted) {
     return (
       <View style={styles.row}>
         {button('complete', 'requests.complete', 'secondary')}
@@ -133,23 +177,18 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       </View>
     );
   }
-  // Before it starts, the professor may cancel an approved appointment until the same deadline
-  // as the student (1 hour before); the API tells the student and frees the time.
-  if (appointment.status === 'approved' && cancelState(appointment, now) === 'open') {
+  // Before it starts: cancel until the same deadline as the student (1 hour before), or
+  // suggest another time; the API tells the student either way.
+  if (appointment.status === 'approved') {
     return (
       <View style={styles.row}>
-        {button('cancel', 'requests.cancel', 'secondary')}
+        {cancelState(appointment, now) === 'open'
+          ? button('cancel', 'requests.cancel', 'secondary')
+          : null}
+        {suggest}
         {message}
-        <ConfirmSheet
-          visible={cancelling}
-          title={t('requests.cancel_title', { name })}
-          body={t('requests.cancel_body', { when })}
-          confirmLabel={t('appointments.cancel')}
-          cancelLabel={t('requests.cancel_keep')}
-          onConfirm={() => run('cancel')}
-          onCancel={() => setCancelling(false)}
-          busy={action.isPending}
-        />
+        {reasonSheet('cancel')}
+        {proposeSheet}
       </View>
     );
   }

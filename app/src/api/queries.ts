@@ -38,7 +38,8 @@ export const queryKeys = {
   search: (filters: SearchFilters, language: Language) =>
     ['professors', 'search', filters, language] as const,
   professor: (id: number) => ['professor', id] as const,
-  slots: (id: number, date: string) => ['professor', id, 'slots', date] as const,
+  slots: (id: number, date: string, exclude?: number) =>
+    ['professor', id, 'slots', date, exclude ?? 0] as const,
   departments: ['departments'] as const,
   colleges: ['colleges'] as const,
   offices: ['offices'] as const,
@@ -168,10 +169,12 @@ export function useProfessor(id: number) {
 }
 
 /** Bookable times on one Riyadh day; taken and past times come back marked unavailable. */
-export function useSlots(id: number, date: string | null) {
+/** A day's starts. `exclude`: the professor's own appointment being moved counts as free. */
+export function useSlots(id: number, date: string | null, exclude?: number) {
   return useQuery({
-    queryKey: queryKeys.slots(id, date ?? ''),
-    queryFn: () => api<DaySlots>(`/professors/${id}/slots?date=${date}`),
+    queryKey: queryKeys.slots(id, date ?? '', exclude),
+    queryFn: () =>
+      api<DaySlots>(`/professors/${id}/slots?date=${date}${exclude ? `&exclude=${exclude}` : ''}`),
     enabled: id > 0 && !!date,
   });
 }
@@ -217,7 +220,7 @@ export function useAppointmentAction() {
     }: {
       id: number;
       action: AppointmentAction;
-      /** Only with decline: the professor's optional reason, shown to the student. */
+      /** Only with a professor's decline or cancel: the optional reason the student sees. */
       reason?: string;
     }) =>
       api<Appointment>(
@@ -226,6 +229,29 @@ export function useAppointmentAction() {
         reason?.trim() ? { reason: reason.trim() } : undefined,
       ),
     onSettled: () => client.invalidateQueries({ queryKey: queryKeys.appointments }),
+  });
+}
+
+/** The professor suggests another start for a request; its length stays (2026-11-18). */
+export function useProposeTime() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, starts_at }: { id: number; starts_at: string }) =>
+      api<Appointment>(`/appointments/${id}/propose`, 'POST', { starts_at }),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.appointments }),
+  });
+}
+
+/** The student takes the suggested time or keeps their own (2026-11-18). */
+export function useAnswerProposal() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accept }: { id: number; accept: boolean }) =>
+      api<Appointment>(`/appointments/${id}/proposal/${accept ? 'accept' : 'decline'}`, 'POST'),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: queryKeys.appointments });
+      client.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
   });
 }
 

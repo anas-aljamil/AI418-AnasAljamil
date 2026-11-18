@@ -276,7 +276,9 @@
     "DEMO_ACCOUNT": "هذا حساب تجريبي مشترك، لذلك لا تتغير كلمة مروره ولا بريده عبر الرابط العام.",
     "STUDENT_EMAIL_FIXED": "بريد الطالب هو رقمه الجامعي، لذلك لا يغيّره إلا مسؤول النظام.",
     "PASSWORD_NEEDED": "أدخل كلمة المرور الحالية لتغيير بريدك.",
-    "PHOTO_INVALID": "اختر صورة لا يزيد حجمها على 256 كيلوبايت."
+    "PHOTO_INVALID": "اختر صورة لا يزيد حجمها على 256 كيلوبايت.",
+    "NO_PROPOSAL": "لم يعد هناك وقت مقترح للرد عليه. اسحب للأسفل للتحديث.",
+    "PROPOSAL_SAME_TIME": "هذا هو الوقت المحجوز أصلًا. اختر وقتًا آخر."
   },
   "home": {
     "search_label": "ابحث عن أستاذ",
@@ -461,7 +463,8 @@
     "wheel_hour": "الساعة",
     "wheel_minutes": "الدقائق",
     "hour_full": "{{hour}}، محجوزة بالكامل",
-    "start_chosen": "يبدأ الساعة {{time}}"
+    "start_chosen": "يبدأ الساعة {{time}}",
+    "option_short": "{{time}}، الوقت لا يكفي"
   },
   "appointments": {
     "title": "مواعيدي",
@@ -495,7 +498,15 @@
     "length_line": "حتى {{end}}، {{minutes}} دقيقة",
     "book_again": "احجز مرة أخرى",
     "book_again_label": "احجز مرة أخرى مع {{name}}",
-    "decline_reason_label": "السبب"
+    "decline_reason_label": "السبب",
+    "proposed_label": "يقترح {{name}} وقتًا آخر",
+    "proposed_label_professor": "اقترحت وقتًا آخر. بانتظار رد {{name}}.",
+    "proposed_time": "{{when}}، حتى {{end}}",
+    "proposal_accept": "وافق على {{time}}",
+    "proposal_accept_label": "وافق على {{when}} مع {{name}}",
+    "proposal_keep": "أبقِ موعدي",
+    "proposal_accepted": "نُقل الموعد إلى {{when}}",
+    "proposal_kept": "أبقيت موعدك، وأُبلغ {{name}}."
   },
   "status_screen": {
     "title": "حالتي",
@@ -547,7 +558,16 @@
     "cancel_title": "إلغاء الموعد مع {{name}}؟",
     "cancel_body": "{{when}}. يُبلَّغ الطالب فورًا، ويصبح الوقت متاحًا لطلاب آخرين.",
     "cancel_keep": "أبقِ الموعد",
-    "cancelled_toast": "أُلغي: {{name}}، {{when}}"
+    "cancelled_toast": "أُلغي: {{name}}، {{when}}",
+    "propose": "اقترح وقتًا آخر",
+    "propose_again": "اقترح وقتًا مختلفًا",
+    "propose_title": "اقتراح وقت آخر على {{name}}",
+    "propose_body": "الموعد الآن {{when}}، {{minutes}} دقيقة. تبقى المدة كما هي، ولا يتغير شيء حتى يوافق الطالب.",
+    "propose_until": "من {{start}} إلى {{end}}",
+    "propose_none": "لا وقت متاحًا بهذه المدة في هذا اليوم. اختر يومًا آخر.",
+    "propose_send": "اقترح {{time}}",
+    "propose_choose": "اختر وقتًا",
+    "proposed_toast": "اقترحت على {{name}}: {{when}}"
   },
   "schedule": {
     "repeat": "التكرار",
@@ -830,7 +850,10 @@
     "appointment_cancelled": "أُلغي الموعد مع {{name}}: {{when}}",
     "new_message": "رسالة جديدة من {{name}}",
     "appointment_moved": "قدّم {{name}} الموعد إلى {{when}}",
-    "slot_freed": "أُلغي الموعد الذي قبل موعدك مع {{name}}. هل تريد تقديم موعدك؟ موعدك {{when}}"
+    "slot_freed": "أُلغي الموعد الذي قبل موعدك مع {{name}}. هل تريد تقديم موعدك؟ موعدك {{when}}",
+    "time_proposed": "يقترح {{name}} وقتًا آخر لموعدك {{when}}",
+    "proposal_accepted": "وافق {{name}} على الوقت الذي اقترحته، والموعد الآن {{when}}",
+    "proposal_declined": "أبقى {{name}} على الموعد الأصلي، {{when}}"
   },
   "time_picker": {
     "length": "المدة",

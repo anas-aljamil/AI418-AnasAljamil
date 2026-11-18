@@ -412,6 +412,11 @@ class AppointmentOut(BaseModel):
     note: str | None
     # Only on a declined appointment, and only when the professor wrote one.
     decline_reason: str | None
+    # Only on an appointment the professor cancelled with a reason (2026-11-18).
+    cancel_reason: str | None = None
+    # Another time the professor suggests, until the student accepts or turns it down.
+    proposed_starts_at: UtcDatetime | None = None
+    proposed_ends_at: UtcDatetime | None = None
     created_at: UtcDatetime
     updated_at: UtcDatetime
     student: PersonOut
@@ -419,7 +424,7 @@ class AppointmentOut(BaseModel):
 
 
 class ActionIn(BaseModel):
-    """Optional body of an appointment action: only decline takes a reason."""
+    """Optional body of an appointment action: a professor's decline or cancel takes a reason."""
 
     reason: OptionalText200
 
@@ -438,6 +443,15 @@ class BookingIn(BaseModel):
 
 class MoveIn(BaseModel):
     """Move an appointment earlier on the same day; its length stays."""
+
+    starts_at: AwareDatetime
+
+    def starts_at_utc(self) -> datetime:
+        return to_naive_utc(self.starts_at)
+
+
+class ProposeIn(BaseModel):
+    """Another start a professor suggests for a request; its length stays."""
 
     starts_at: AwareDatetime
 
@@ -652,6 +666,9 @@ class NotificationOut(BaseModel):
         "appointment_cancelled",
         "appointment_moved",
         "slot_freed",
+        "time_proposed",
+        "proposal_accepted",
+        "proposal_declined",
         "new_message",
     ]
     created_at: UtcDatetime

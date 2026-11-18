@@ -276,7 +276,9 @@
     "DEMO_ACCOUNT": "This is a shared demo account, so its password and email can't be changed on the public link.",
     "STUDENT_EMAIL_FIXED": "A student's email is their university number, so only the administrator can change it.",
     "PASSWORD_NEEDED": "Enter your current password to change your email.",
-    "PHOTO_INVALID": "Choose a JPEG, PNG or WebP picture of at most 256 KB."
+    "PHOTO_INVALID": "Choose a JPEG, PNG or WebP picture of at most 256 KB.",
+    "NO_PROPOSAL": "There is no other time to answer any more. Pull down to refresh.",
+    "PROPOSAL_SAME_TIME": "That is the time already booked. Choose another one."
   },
   "home": {
     "search_label": "Search professors",
@@ -461,7 +463,8 @@
     "wheel_hour": "Hour",
     "wheel_minutes": "Minutes",
     "hour_full": "{{hour}}, fully booked",
-    "start_chosen": "Starts at {{time}}"
+    "start_chosen": "Starts at {{time}}",
+    "option_short": "{{time}}, too short"
   },
   "appointments": {
     "title": "Appointments",
@@ -495,7 +498,15 @@
     "length_line": "Until {{end}}, {{minutes}} min",
     "book_again": "Book again",
     "book_again_label": "Book again with {{name}}",
-    "decline_reason_label": "Reason given"
+    "decline_reason_label": "Reason given",
+    "proposed_label": "{{name}} suggests another time",
+    "proposed_label_professor": "You suggested another time. Waiting for {{name}}.",
+    "proposed_time": "{{when}}, until {{end}}",
+    "proposal_accept": "Accept {{time}}",
+    "proposal_accept_label": "Accept {{when}} with {{name}}",
+    "proposal_keep": "Keep my time",
+    "proposal_accepted": "Moved to {{when}}",
+    "proposal_kept": "You kept your time. {{name}} has been told."
   },
   "status_screen": {
     "title": "My status",
@@ -547,7 +558,16 @@
     "cancel_title": "Cancel the appointment with {{name}}?",
     "cancel_body": "{{when}}. The student is told at once, and the time becomes free for other students.",
     "cancel_keep": "Keep it",
-    "cancelled_toast": "Cancelled: {{name}}, {{when}}"
+    "cancelled_toast": "Cancelled: {{name}}, {{when}}",
+    "propose": "Suggest another time",
+    "propose_again": "Suggest a different time",
+    "propose_title": "Suggest another time to {{name}}",
+    "propose_body": "Now {{when}}, {{minutes}} min. The length stays the same, and nothing moves until the student accepts.",
+    "propose_until": "{{start}} to {{end}}",
+    "propose_none": "No free time on this day for this length. Choose another day.",
+    "propose_send": "Suggest {{time}}",
+    "propose_choose": "Choose a time",
+    "proposed_toast": "Suggested to {{name}}: {{when}}"
   },
   "schedule": {
     "repeat": "Repeats",
@@ -830,7 +850,10 @@
     "appointment_cancelled": "Appointment with {{name}} cancelled, {{when}}",
     "new_message": "New message from {{name}}",
     "appointment_moved": "{{name}} moved the appointment earlier, to {{when}}",
-    "slot_freed": "The appointment before yours with {{name}} was cancelled. Move yours earlier? It is {{when}}"
+    "slot_freed": "The appointment before yours with {{name}} was cancelled. Move yours earlier? It is {{when}}",
+    "time_proposed": "{{name}} suggests another time for your appointment {{when}}",
+    "proposal_accepted": "{{name}} accepted the time you suggested, now {{when}}",
+    "proposal_declined": "{{name}} kept the original time, {{when}}"
   },
   "time_picker": {
     "length": "Length",

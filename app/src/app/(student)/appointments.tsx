@@ -26,6 +26,7 @@ import {
   cancelState,
 } from '@/features/appointments/AppointmentCard';
 import { MoveSheet } from '@/features/appointments/MoveSheet';
+import { ProposalAnswer } from '@/features/appointments/ProposalAnswer';
 import { SectionError } from '@/features/home/HomeParts';
 import { errorKey } from '@/lib/errors';
 import { useNow } from '@/lib/hooks';
@@ -113,6 +114,9 @@ export default function AppointmentsScreen() {
           const state = scope === 'upcoming' ? cancelState(item, now) : 'none';
           return (
             <AppointmentCard appointment={item} now={now} perspective="student">
+              {scope === 'upcoming' && item.proposed_starts_at ? (
+                <ProposalAnswer appointment={item} now={now} />
+              ) : null}
               {state === 'open' ? (
                 <View style={styles.actions}>
                   <Button

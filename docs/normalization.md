@@ -29,6 +29,7 @@ The project brief proposed User, Student, Professor, Department, OfficeHourSlot,
 | Admin has no subtype table | Admins have no attributes beyond `users`. |
 | New `contact_messages` table (owner request 2026-11-16) | Messages sent from Help and contact are facts of their own, not about any other entity: one row per message. The sender need not have an account, so the link to `users` is optional. |
 | New column `appointments.decline_reason` (owner request 2026-11-16) | The reason a professor gives when declining is one fact about one appointment, so it is a column of `appointments`, not a table. |
+| New columns `appointments.cancel_reason`, `proposed_starts_at`, `proposed_ends_at` (owner request 2026-11-18) | A professor's reason for cancelling, and the one other time they suggest, are again single facts about one appointment. A request has at most one open suggestion (a new one replaces it), so a table of suggestions would only add a 1 : 0..1 join. |
 
 ## 3. Table-by-table analysis
 
@@ -99,8 +100,9 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### appointments
 - Candidate key: **appointment_id**.
-- FDs: `appointment_id -> student_id, professor_id, starts_at, ends_at, status, topic, note, decline_reason, created_at, updated_at`.
+- FDs: `appointment_id -> student_id, professor_id, starts_at, ends_at, status, topic, note, decline_reason, cancel_reason, proposed_starts_at, proposed_ends_at, created_at, updated_at`.
 - `decline_reason` (2026-11-16) depends on the appointment alone. "Only a declined appointment has one" is a `CHECK` (`ck_appointments_decline_reason`), a rule between two columns of the same row, not a functional dependency, so it does not affect the normal form.
+- `cancel_reason`, `proposed_starts_at` and `proposed_ends_at` (2026-11-18) also depend on the appointment alone; the length of a suggestion is not stored apart from its two times, and "only a cancelled appointment has a reason" and "a suggestion only while pending or approved" are CHECKs (`ck_appointments_cancel_reason`, `ck_appointments_proposal`) like the decline reason's.
 - `(professor_id, starts_at)` is unique only among *active* rows. A cancelled booking and a new booking may share a start time, so it is not a candidate key. MySQL enforces the active-only uniqueness through the virtual column `active_slot` (Section 8.4).
 - `active_slot` is not stored data: it is a **virtual** generated column (computed when read; only the unique index keeps a copy). It cannot disagree with `status` and `starts_at`, so it introduces no update anomaly.
 - `ends_at` is stored deliberately. It is **not** determined by `starts_at + professors.slot_minutes`: the student chooses the length (any number of 5-minute steps), and `slot_minutes` is only the length the app suggests first. `ends_at` records the length agreed at booking time, which is a fact about the appointment itself.

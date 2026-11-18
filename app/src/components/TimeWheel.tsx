@@ -199,9 +199,14 @@ export function TimeWheel({ slots, value, onChange }: TimeWheelProps) {
             label: slot.local_time.slice(3, 5),
             accessibilityLabel: slot.available
               ? time
-              : t(slot.reason === 'past' ? 'booking.option_past' : 'booking.option_taken', {
-                  time,
-                }),
+              : t(
+                  slot.reason === 'past'
+                    ? 'booking.option_past'
+                    : slot.reason === 'short'
+                      ? 'booking.option_short'
+                      : 'booking.option_taken',
+                  { time },
+                ),
             disabled: !slot.available,
           };
         }),

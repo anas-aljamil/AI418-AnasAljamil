@@ -146,6 +146,9 @@ erDiagram
         varchar topic "nullable"
         varchar note "nullable, max 200"
         varchar decline_reason "nullable, max 200; only when declined"
+        varchar cancel_reason "nullable, max 200; only when cancelled by the professor"
+        datetime proposed_starts_at "nullable; a time the professor suggests"
+        datetime proposed_ends_at "set with proposed_starts_at"
         datetime created_at
         datetime updated_at
         varchar active_slot "virtual: starts_at if pending/approved"
@@ -244,7 +247,7 @@ Foreign-key columns are not drawn as attributes in Chen notation: they *are* the
 | CHAT_CLOSED_HOURS | <ins>closure_id</ins>, day_of_week, on_date, ends_on, start_time, end_time | dates (as for SCHEDULE_BLOCK) |
 | SKIPPED_DATE | <ins>skip_id</ins>, skip_date, created_at | none |
 | STATUS_OVERRIDE | <ins>override_id</ins>, status, note, created_at, expires_at | none |
-| APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, decline_reason, created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
+| APPOINTMENT | <ins>appointment_id</ins>, starts_at, ends_at, status, topic, note, decline_reason, cancel_reason, proposed_starts_at, proposed_ends_at (a suggested time, both or neither, while pending or approved), created_at, updated_at | active_slot (starts_at while pending/approved; a virtual column in MySQL) |
 | CONVERSATION | <ins>conversation_id</ins>, created_at | none |
 | MESSAGE | <ins>message_id</ins>, sender_role, body, created_at, edited_at, deleted_at, read_at | edited, deleted (whether those times are set) |
 | NOTIFICATION | <ins>notification_id</ins>, type, created_at, read_at | text (rendered in the reader's language) |
