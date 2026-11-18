@@ -104,6 +104,7 @@ def summary(
         status=status_out(effective_status(now, professor.blocks, override)),
         has_office_hours_today=has_office_hours_today(professor, now),
         is_pinned=None if pins is None else professor.professor_id in pins,
+        photo_updated_at=professor.user.photo_updated_at,
     )
 
 

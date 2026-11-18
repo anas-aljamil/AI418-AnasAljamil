@@ -1,7 +1,8 @@
 /**
- * Account and settings (DESIGN.md 7.9): who is signed in, language, theme, text size, which
- * in-app notifications to show, and sign-out (student Profile tab, professor and admin
- * Account tabs).
+ * Account and settings (DESIGN.md 7.9): who is signed in, with their photo or initials,
+ * what they may change about themselves (profile, study details, password), language, theme,
+ * text size, which in-app notifications to show, and sign-out (student Profile tab, professor
+ * and admin Account tabs).
  */
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColumn } from '@/lib/layout';
 import { useAuth, useUser } from '@/auth/AuthProvider';
-import { Initials } from '@/components/Avatar';
+import { PersonMark } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Door } from '@/components/Door';
@@ -22,7 +23,7 @@ import { forgetHabits } from '@/features/adaptive/habits';
 import { useSpeechSupported } from '@/features/voice/useSpeech';
 import { switchLanguage } from '@/i18n';
 import { departmentName, fullName } from '@/lib/names';
-import { PasswordSheet, StudySheet } from './AccountSheets';
+import { PasswordSheet, ProfileSheet, StudySheet } from './AccountSheets';
 import { TEXT_SIZES, useSettings, type TextSize } from '@/settings/SettingsProvider';
 import { useTheme, type ThemePreference } from '@/theme/ThemeProvider';
 import { COLOR_VISIONS, space, type ColorVision, type Language } from '@/theme/tokens';
@@ -42,7 +43,9 @@ export function AccountScreen() {
   const toast = useToast();
   const canListen = useSpeechSupported();
   const language: Language = i18n.language === 'ar' ? 'ar' : 'en';
-  const [sheet, setSheet] = useState<'password' | 'study' | null>(null);
+  const [sheet, setSheet] = useState<'password' | 'study' | 'profile' | null>(null);
+  // Each opening of the profile sheet starts from the saved values (a new key).
+  const [profileOpens, setProfileOpens] = useState(0);
 
   const leave = async () => {
     await signOut();
@@ -60,7 +63,12 @@ export function AccountScreen() {
       </Text>
 
       <View style={styles.person}>
-        <Initials name={fullName(user, language)} size={56} />
+        <PersonMark
+          userId={user.user_id}
+          photoVersion={user.photo_updated_at}
+          name={fullName(user, language)}
+          size={72}
+        />
         <View style={styles.identity}>
           <Text variant="title">{fullName(user, language)}</Text>
           <Text color="muted">{t(`role.${user.role}`)}</Text>
@@ -81,6 +89,14 @@ export function AccountScreen() {
 
       {/* What a person may change about their own account. */}
       <View style={styles.chips}>
+        <Button
+          variant="secondary"
+          label={t('account.profile_edit')}
+          onPress={() => {
+            setProfileOpens((count) => count + 1);
+            setSheet('profile');
+          }}
+        />
         {user.student ? (
           <Button
             variant="secondary"
@@ -251,6 +267,12 @@ export function AccountScreen() {
         />
       ) : null}
       <PasswordSheet visible={sheet === 'password'} onClose={() => setSheet(null)} />
+      <ProfileSheet
+        key={profileOpens}
+        visible={sheet === 'profile'}
+        onClose={() => setSheet(null)}
+        user={user}
+      />
       {user.student ? (
         <StudySheet
           // Opened again, it starts from the saved values.

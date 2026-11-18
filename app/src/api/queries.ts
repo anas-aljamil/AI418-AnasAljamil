@@ -22,6 +22,7 @@ import type {
   MyStatus,
   Office,
   Page,
+  Photo,
   ProfessorDetail,
   ProfessorSummary,
   Repeats,
@@ -40,6 +41,8 @@ export const queryKeys = {
   slots: (id: number, date: string) => ['professor', id, 'slots', date] as const,
   departments: ['departments'] as const,
   colleges: ['colleges'] as const,
+  offices: ['offices'] as const,
+  photo: (userId: number, version: string) => ['photo', userId, version] as const,
   appointments: ['appointments'] as const,
   appointmentList: (scope: 'upcoming' | 'past') => ['appointments', 'list', scope] as const,
   nextAppointment: ['appointments', 'next'] as const,
@@ -125,6 +128,32 @@ export function useColleges() {
     queryKey: queryKeys.colleges,
     queryFn: () => api<Page<College>>('/colleges?limit=100').then((page) => page.items),
     staleTime: 10 * 60_000,
+  });
+}
+
+/** The offices a professor can choose from (professors and admins). */
+export function useOffices(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.offices,
+    queryFn: () => api<Page<Office>>('/offices?limit=100').then((page) => page.items),
+    staleTime: 10 * 60_000,
+    enabled,
+  });
+}
+
+/**
+ * A person's profile photo as a data URL, or null without one. `version` is the person's
+ * photo_updated_at: a new photo is a new key, so an unchanged one is never fetched twice.
+ */
+export function usePhoto(userId: number, version: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.photo(userId, version ?? ''),
+    queryFn: () =>
+      api<Photo>(`/users/${userId}/photo?v=${encodeURIComponent(version ?? '')}`).then(
+        (photo) => `data:${photo.content_type};base64,${photo.data}`,
+      ),
+    enabled: !!version,
+    staleTime: Infinity,
   });
 }
 

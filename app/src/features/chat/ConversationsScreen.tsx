@@ -12,7 +12,7 @@ import { useColumn, useLayout } from '@/lib/layout';
 import { useConversations } from '@/api/queries';
 import type { Conversation } from '@/api/types';
 import { useUser } from '@/auth/AuthProvider';
-import { Initials } from '@/components/Avatar';
+import { PersonMark } from '@/components/Avatar';
 import { EmptyState, SkeletonRow } from '@/components/Placeholders';
 import { ListRow, Pill } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
@@ -53,7 +53,13 @@ export function ConversationsScreen() {
       : null;
     return (
       <ListRow
-        leading={<Initials name={fullName(conversation.other, language)} />}
+        leading={
+          <PersonMark
+            userId={conversation.other.user_id}
+            photoVersion={conversation.other.photo_updated_at}
+            name={fullName(conversation.other, language)}
+          />
+        }
         title={name}
         subtitle={preview}
         trailing={

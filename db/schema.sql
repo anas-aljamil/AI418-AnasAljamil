@@ -91,6 +91,10 @@ CREATE TABLE departments (
 -- subtype row). The role comes from the account, never from a user choice.
 -- UNIQUE (user_id, role) lets each subtype reference (id, role), so a student
 -- row can only point at a 'student' account (and likewise for professors).
+-- photo, photo_type, photo_updated_at (2026-11-18): an optional profile photo the
+-- person adds themselves, all three set or all three NULL; photo_updated_at also
+-- tells the app when a cached copy is out of date. At most 256 KB (the app sends
+-- a 320 x 320 JPEG of about 30 KB); InnoDB keeps a large BLOB off the row's page.
 -- -----------------------------------------------------------------------------
 CREATE TABLE users (
     user_id           INT          NOT NULL AUTO_INCREMENT,
@@ -103,6 +107,9 @@ CREATE TABLE users (
     is_active         BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
     updated_at        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP()),
+    photo             MEDIUMBLOB   NULL,
+    photo_type        VARCHAR(10)  COLLATE utf8mb4_0900_bin NULL,
+    photo_updated_at  DATETIME     NULL,
     PRIMARY KEY (user_id),
     CONSTRAINT uq_users_email   UNIQUE (email),
     CONSTRAINT uq_users_id_role UNIQUE (user_id, role),
@@ -115,7 +122,12 @@ CREATE TABLE users (
     CONSTRAINT ck_users_full_name_en  CHECK (CHAR_LENGTH(full_name_en) >= 2),
     CONSTRAINT ck_users_locale        CHECK (preferred_locale IN ('ar', 'en')),
     CONSTRAINT ck_users_is_active     CHECK (is_active IN (0, 1)),
-    CONSTRAINT ck_users_updated_after_created CHECK (updated_at >= created_at)
+    CONSTRAINT ck_users_updated_after_created CHECK (updated_at >= created_at),
+    CONSTRAINT ck_users_photo_parts CHECK (
+        (photo IS NULL AND photo_type IS NULL AND photo_updated_at IS NULL)
+        OR (photo IS NOT NULL AND photo_type IS NOT NULL AND photo_updated_at IS NOT NULL)),
+    CONSTRAINT ck_users_photo_type CHECK (photo_type IN ('image/jpeg', 'image/png', 'image/webp')),
+    CONSTRAINT ck_users_photo_size CHECK (LENGTH(photo) BETWEEN 100 AND 262144)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------

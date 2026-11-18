@@ -39,6 +39,8 @@ export interface Me {
   full_name_ar: string;
   full_name_en: string;
   preferred_locale: string;
+  /** When the profile photo last changed (2026-11-18); null or missing without one. */
+  photo_updated_at?: string | null;
   student?: { university_no: string; study_year: number; department: Department } | null;
   professor?: {
     honorific: Honorific;
@@ -91,6 +93,7 @@ export interface ProfessorSummary {
   status: ProfessorStatus;
   has_office_hours_today: boolean;
   is_pinned?: boolean | null;
+  photo_updated_at?: string | null;
 }
 
 export type AppointmentStatus =
@@ -222,6 +225,15 @@ export interface AdminStudent extends Account {
 export interface Participant extends Person {
   role: 'student' | 'professor';
   honorific: Honorific | null;
+  photo_updated_at?: string | null;
+}
+
+/** GET /users/{id}/photo: the image in base64. */
+export interface Photo {
+  user_id: number;
+  content_type: 'image/jpeg' | 'image/png' | 'image/webp';
+  data: string;
+  updated_at: string;
 }
 
 /** The message a reply quotes; body is null when that message was deleted. */

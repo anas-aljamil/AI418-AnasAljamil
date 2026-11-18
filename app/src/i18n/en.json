@@ -264,7 +264,7 @@
     "FORBIDDEN": "Your account can't do this.",
     "EMAIL_TAKEN": "An account with this email already exists. Sign in instead, or use another email.",
     "UNIVERSITY_NO_TAKEN": "Another account already uses this university number.",
-    "EMAIL_DOMAIN": "Only university email addresses (@upm.edu.sa) can create an account.",
+    "EMAIL_DOMAIN": "Use a university email address, ending in @upm.edu.sa.",
     "INVALID_REFERENCE": "That department or office no longer exists. Choose another one.",
     "STUDENT_EMAIL": "Students sign up with their university number as the email, for example xxxxxxx@upm.edu.sa.",
     "CHAT_CLOSED": "This professor isn't taking messages right now. Try again when messages open.",
@@ -272,7 +272,10 @@
     "CHAT_CLOSURE_OVERLAP": "These closed hours overlap other closed hours in your week.",
     "WRONG_PASSWORD": "The current password is incorrect.",
     "PASSWORD_UNCHANGED": "The new password is the same as the current one. Choose a different one.",
-    "DEMO_ACCOUNT": "This is a shared demo account, so its password can't be changed on the public link."
+    "DEMO_ACCOUNT": "This is a shared demo account, so its password and email can't be changed on the public link.",
+    "STUDENT_EMAIL_FIXED": "A student's email is their university number, so only the administrator can change it.",
+    "PASSWORD_NEEDED": "Enter your current password to change your email.",
+    "PHOTO_INVALID": "Choose a JPEG, PNG or WebP picture of at most 256 KB."
   },
   "home": {
     "search_label": "Search professors",
@@ -925,7 +928,23 @@
     "study_title": "My study details",
     "study_note": "Your name, email and university number are changed by the administrator.",
     "study_save": "Save",
-    "study_saved": "Saved"
+    "study_saved": "Saved",
+    "profile_edit": "Edit profile",
+    "profile_title": "My profile",
+    "profile_save": "Save",
+    "profile_saved": "Profile saved",
+    "photo": "Photo",
+    "photo_seen": "Everyone signed in sees it on your profile and in messages.",
+    "photo_seen_student": "Only professors and the administrator see it.",
+    "photo_choose": "Add a photo",
+    "photo_change": "Change photo",
+    "photo_remove": "Remove photo",
+    "photo_saved": "Photo saved",
+    "photo_removed": "Photo removed",
+    "photo_unreadable": "That file can't be read as a picture. Choose a JPEG or PNG photo.",
+    "photo_browser_only": "Add or change your photo in the browser version of Mawjood.",
+    "email_password": "Current password (needed to change the email)",
+    "email_student_note": "Your email, {{email}}, is your university number, so only the administrator can change it."
   },
   "voice": {
     "open": "Ask by voice",

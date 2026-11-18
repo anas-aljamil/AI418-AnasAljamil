@@ -46,11 +46,14 @@ export const persistOptions = {
   maxAge: DAY_MS,
   // Change this whenever an API response changes shape, so data saved by an older app version
   // is dropped instead of read (departments gained their college in 'colleges').
-  buster: 'decline-reason',
+  buster: 'profile-photo',
   dehydrateOptions: {
-    // Keep what the home screen shows; search results are not worth keeping.
+    // Keep what the home screen shows; search results are not worth keeping, and photos would
+    // fill the device's small storage (they are fetched again, once per change).
     shouldDehydrateQuery: (query: Query) =>
-      query.state.status === 'success' && query.queryKey[1] !== 'search',
+      query.state.status === 'success' &&
+      query.queryKey[1] !== 'search' &&
+      query.queryKey[0] !== 'photo',
   },
 };
 
