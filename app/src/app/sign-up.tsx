@@ -179,6 +179,14 @@ export default function SignUpScreen() {
           }
           value={email}
           onChangeText={setEmail}
+          // A student's address has one shape, so the empty box shows it (owner request
+          // 2026-11-18). The marks around it keep it left to right in the Arabic layout, where
+          // it would otherwise read "upm.edu.sa@#######".
+          placeholder={
+            role === 'student'
+              ? `⁦${t('signup.email_example', { domain: UNIVERSITY_DOMAIN })}⁩`
+              : undefined
+          }
           keyboardType="email-address"
           inputMode="email"
           autoCapitalize="none"
