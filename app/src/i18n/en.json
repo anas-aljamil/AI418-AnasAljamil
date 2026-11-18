@@ -456,7 +456,11 @@
     "longer": "5 minutes longer",
     "minutes_chip": "{{minutes}} min",
     "choose_start": "Choose a start time",
-    "minutes_long": "{{minutes}} minutes"
+    "minutes_long": "{{minutes}} minutes",
+    "wheel_hour": "Hour",
+    "wheel_minutes": "Minutes",
+    "hour_full": "{{hour}}, fully booked",
+    "start_chosen": "Starts at {{time}}"
   },
   "appointments": {
     "title": "Appointments",

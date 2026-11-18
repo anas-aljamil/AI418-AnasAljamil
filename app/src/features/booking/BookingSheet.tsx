@@ -1,7 +1,9 @@
 /**
  * Booking (DESIGN.md 7.5): a bottom sheet with a calendar of this week and next (Sunday to
- * Thursday, owner request 2026-11-11; days without a booking time are dimmed), the free stretches of that day, a start on any 5-minute step (one menu, grouped by
- * hour, owner request 2026-11-11), an optional length (15 minutes unless the
+ * Thursday, owner request 2026-11-11; days without a booking time are dimmed), the free
+ * stretches of that day, a start on any 5-minute step (an hour wheel and a minute wheel like
+ * the phone's alarm, owner request 2026-11-18, replacing the menu of 2026-11-11; the day's
+ * first free start is chosen to begin with), an optional length (15 minutes unless the
  * student opens "Change length": a stepper and one-tap lengths in 5-minute steps, never past
  * the next booking or the end of the booking time), optional topic and note, a summary, then
  * the one orchestrated moment: the door opens, a check appears, "Booked with Dr. X, Sunday
@@ -9,9 +11,9 @@
  *
  * Times come from the professor's booking times, which may lie outside office hours; days
  * without one are dimmed. Steps from the profile: Book, (day, defaulted to the first day with
- * a booking time, weekly or dated), start, confirm. Unavailable starts stay in the menu, dimmed, and say why
- * ("10:15 AM, booked"). An error never clears the day, topic or note; only a time that was
- * just taken by someone else is unselected.
+ * a booking time, weekly or dated), start, confirm. Unavailable starts stay on the wheel,
+ * dimmed, and say why ("10:15 AM, booked"). An error never clears the day, topic or note; a
+ * time that was just taken by someone else moves to the first free one.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -27,15 +29,15 @@ import { Button } from '@/components/Button';
 import { Calendar } from '@/components/Calendar';
 import { Chip } from '@/components/Chip';
 import { TallDoor } from '@/components/TallDoor';
-import { MenuPicker, type MenuOption } from '@/components/MenuPicker';
 import { SkeletonRow } from '@/components/Placeholders';
 import { StepButton } from '@/components/StepButton';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { TimeWheel } from '@/components/TimeWheel';
 import { insetEnd } from '@/lib/direction';
 import { errorKey } from '@/lib/errors';
 import { todayKey } from '@/lib/dates';
-import { addMinutes, bookingDays, clockText, hourText, whenText } from '@/lib/format';
+import { addMinutes, bookingDays, clockText, whenText } from '@/lib/format';
 import { officeText, professorName } from '@/lib/names';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type Language } from '@/theme/tokens';
@@ -65,7 +67,8 @@ export function BookingSheet({ professor, visible, onClose, initialDay }: Bookin
       ? initialDay
       : ((days.find((d) => bookable.has(d.date)) ?? days[0])?.date ?? null),
   );
-  const [slot, setSlot] = useState<Slot | null>(null);
+  // The start the student turned the wheel to; until then the day's first free start.
+  const [picked, setPicked] = useState<Slot | null>(null);
   // The length the student chose; until then the professor's usual length (both fitted).
   const [length, setLength] = useState<number | null>(null);
   // Length is optional: its controls stay folded until the student asks to change it.
@@ -82,7 +85,7 @@ export function BookingSheet({ professor, visible, onClose, initialDay }: Bookin
     // A new booking starts fresh; an unfinished one keeps its choices while the sheet is open.
     if (booked) {
       setBooked(null);
-      setSlot(null);
+      setPicked(null);
       setLength(null);
       setLengthOpen(false);
       setTopic(null);
@@ -93,32 +96,23 @@ export function BookingSheet({ professor, visible, onClose, initialDay }: Bookin
 
   const chooseDay = (date: string) => {
     setDay(date);
-    setSlot(null);
+    setPicked(null);
     setMessage(null);
   };
 
   const daySlots = slots.data?.slots ?? [];
+  // A start that has just been taken falls back to the first free one, which the wheel shows.
+  const slot =
+    (picked && daySlots.find((s) => s.starts_at === picked.starts_at && s.available)) ||
+    (daySlots.find((s) => s.available) ?? null);
   const windows = freeWindows(daySlots);
   const usual = slots.data?.default_minutes ?? DEFAULT_MINUTES;
   const minutes = slot ? fitLength(length ?? usual, slot.max_minutes) : 0;
   const listSeparator = language === 'ar' ? '، ' : ', ';
-  // Every start of the day under its hour; taken and past ones stay, dimmed, and say why.
-  const startOptions: MenuOption[] = daySlots.map((option) => {
-    const time = clockText(option.local_time, t);
-    return {
-      value: option.starts_at,
-      label: option.available
-        ? time
-        : t(option.reason === 'past' ? 'booking.option_past' : 'booking.option_taken', { time }),
-      group: hourText(Number(option.local_time.slice(0, 2)), t),
-      disabled: !option.available,
-    };
-  });
-
   const chooseSlot = (startsAt: string) => {
     const option = daySlots.find((s) => s.starts_at === startsAt && s.available);
     if (!option) return;
-    setSlot(option);
+    setPicked(option);
     setMessage(null);
   };
 
@@ -145,7 +139,7 @@ export function BookingSheet({ professor, visible, onClose, initialDay }: Bookin
         onError: (error) => {
           setMessage(t(errorKey(error)));
           // The times reload with the professor's data after every booking attempt.
-          if (error instanceof ApiError && error.code === 'SLOT_TAKEN') setSlot(null);
+          if (error instanceof ApiError && error.code === 'SLOT_TAKEN') setPicked(null);
         },
       },
     );
@@ -203,14 +197,12 @@ export function BookingSheet({ professor, visible, onClose, initialDay }: Bookin
                     })
                   : t('booking.no_free')}
               </Text>
-              <MenuPicker
-                label={t('booking.start')}
-                options={startOptions}
-                value={slot?.starts_at ?? ''}
-                onChange={chooseSlot}
-                placeholder={t('booking.choose_start')}
-                compact
-              />
+              <TimeWheel slots={daySlots} value={slot?.starts_at ?? null} onChange={chooseSlot} />
+              {slot ? (
+                <Text weight="semibold" accessibilityLiveRegion="polite" style={styles.center}>
+                  {t('booking.start_chosen', { time: clockText(slot.local_time, t) })}
+                </Text>
+              ) : null}
             </>
           ) : (
             <Text color="muted">{t('booking.no_times')}</Text>

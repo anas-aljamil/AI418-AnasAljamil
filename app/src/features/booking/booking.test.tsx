@@ -1,9 +1,9 @@
 /**
- * Booking sheet (DESIGN.md 7.5): the start is chosen from one menu grouped by hour, where
- * unavailable times stay, cannot be chosen and say why; the length is optional (the
- * professor's usual length unless changed) and any 5-minute step that fits; an error never
- * loses the selection (only a time someone else just took is unselected), and success shows
- * the "Booked with ..." moment.
+ * Booking sheet (DESIGN.md 7.5): the start is chosen on an hour wheel and a minute wheel
+ * (2026-11-18), the day's first free start to begin with; unavailable times stay, cannot be
+ * chosen and say why; the length is optional (15 minutes unless changed) and any 5-minute step
+ * that fits; an error never loses the topic or note (a time someone else just took moves to
+ * the first free one), and success shows the "Booked with ..." moment.
  */
 import { screen, waitFor, fireEvent } from '@testing-library/react-native';
 
@@ -79,10 +79,11 @@ function serve(onBook: () => unknown) {
   });
 }
 
-/** Opens the Start menu and picks a time (on phones the menu is a sheet of radio rows). */
-async function chooseStart(time: string) {
-  await fireEvent.press(await screen.findByRole('button', { name: /^Start, / }));
-  await fireEvent.press(screen.getByRole('radio', { name: time }));
+/** Turns the wheels to a start: the hour first when it is another one, then the minutes.
+ * Each wheel row is a radio, so a tap chooses it, as a screen reader would. */
+async function chooseStart(time: string, hour?: string) {
+  if (hour) await fireEvent.press(await screen.findByRole('radio', { name: hour }));
+  await fireEvent.press(await screen.findByRole('radio', { name: time }));
 }
 
 async function chooseTimeAndTopic() {
@@ -108,16 +109,20 @@ it('keeps the time, topic and note when the API refuses the booking', async () =
   expect(screen.getByRole('button', { name: 'Advising' })).toBeSelected();
 });
 
-it('unselects only a time that someone else just took, and reloads the times', async () => {
+it('moves a time someone else just took to the first free one, and reloads the times', async () => {
   serve(() => {
     throw new ApiError(409, 'SLOT_TAKEN', 'raw');
   });
-  await chooseTimeAndTopic();
+  await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
+  await chooseStart('10:05 AM');
+  await fireEvent.press(screen.getByRole('button', { name: 'Advising' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Book 10:05 AM, 10 min' }));
   expect(
     await screen.findByText('This time was just booked by someone else. Choose another time.'),
   ).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Choose a time' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Start, Choose a start time' })).toBeTruthy();
+  // The wheel is back on the day's first free start; the topic stays.
+  expect(screen.getByRole('radio', { name: '10:00 AM' })).toBeChecked();
+  expect(screen.getByRole('button', { name: 'Book 10:00 AM, 15 min' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Advising' })).toBeSelected();
   await waitFor(() =>
     expect(
@@ -145,7 +150,7 @@ it('shows the free stretches and lets the student choose any length that fits', 
   });
   await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
   expect(await screen.findByText('Free: 10:00 AM–10:15 AM, 11:00 AM–12:00 PM')).toBeTruthy();
-  await chooseStart('11:00 AM');
+  await chooseStart('11:00 AM', '11 AM');
   // Length is optional: the professor's usual 15 minutes, folded until the student changes it.
   expect(screen.getByText('15 min, until 11:15 AM')).toBeTruthy();
   expect(screen.getByText('The suggested length')).toBeTruthy();
@@ -180,21 +185,34 @@ it('fits the length to a start with less free time', async () => {
   expect(screen.getByRole('button', { name: '5 minutes shorter' })).toBeDisabled();
 });
 
-it('lists every start under its hour; a taken one says so and cannot be chosen', async () => {
+it('starts on the first free time of the day, with hours and minutes on two wheels', async () => {
   serve(() => {
     throw new Error('not booked in this test');
   });
   await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
-  await fireEvent.press(await screen.findByRole('button', { name: 'Start, Choose a start time' }));
-  expect(screen.getByRole('heading', { name: '10 AM' })).toBeTruthy();
-  expect(screen.getByRole('heading', { name: '11 AM' })).toBeTruthy();
-  const taken = screen.getByRole('radio', { name: '10:15 AM, booked' });
+  // The hour wheel and the minute wheel each have the band's row checked.
+  expect(await screen.findByRole('radio', { name: '10 AM' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: '11 AM' })).not.toBeChecked();
+  expect(screen.getByRole('radio', { name: '10:00 AM' })).toBeChecked();
+  expect(screen.getByText('Starts at 10:00 AM')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Book 10:00 AM, 15 min' })).toBeEnabled();
+});
+
+it('dims a taken start, says why, and skips it; another hour keeps a free minute', async () => {
+  serve(() => {
+    throw new Error('not booked in this test');
+  });
+  await renderWithProviders(<BookingSheet professor={noura} visible onClose={() => undefined} />);
+  const taken = await screen.findByRole('radio', { name: '10:15 AM, booked' });
   expect(taken).toBeDisabled();
   await fireEvent.press(taken);
-  expect(screen.getByRole('button', { name: 'Choose a time' })).toBeDisabled();
-  await fireEvent.press(screen.getByRole('radio', { name: '10:05 AM' }));
-  expect(screen.getByRole('button', { name: 'Start, 10:05 AM' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Book 10:00 AM, 15 min' })).toBeTruthy();
+  await chooseStart('10:05 AM');
   expect(screen.getByRole('button', { name: 'Book 10:05 AM, 10 min' })).toBeEnabled();
+  // 11:05 is not a start, so the 11 o'clock hour opens on its first free minute.
+  await fireEvent.press(screen.getByRole('radio', { name: '11 AM' }));
+  expect(screen.getByRole('radio', { name: '11:00 AM' })).toBeChecked();
+  expect(screen.getByRole('button', { name: 'Book 11:00 AM, 15 min' })).toBeEnabled();
 });
 
 it('opens the calendar on the first day with a booking time and dims the others', async () => {
