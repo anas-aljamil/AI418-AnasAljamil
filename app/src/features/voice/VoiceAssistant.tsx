@@ -125,10 +125,11 @@ function VoicePanel({ speech, listenIn, onListen, onClose, onTypeInstead }: Voic
   const answer = professor ? statusSentence(professor.status, now, language, t) : null;
   const name = professor ? professorName(professor, language, t) : '';
 
-  // A new attempt forgets the professor chosen from the last one.
-  useEffect(() => {
-    if (state.phase === 'listening') setPicked(null);
-  }, [state.phase]);
+  // A new attempt forgets the professor chosen from the last one (the panel opens with none).
+  const listen = (language?: Language) => {
+    setPicked(null);
+    onListen(language);
+  };
 
   // Say the answer to "Is … in?" aloud, in the interface language.
   const spoken = professor && answer && intent === 'status' ? `${name}: ${answer.sentence}` : null;
@@ -163,14 +164,14 @@ function VoicePanel({ speech, listenIn, onListen, onClose, onTypeInstead }: Voic
           key={option}
           label={t(`settings.language_${option}`)}
           selected={listenIn === option}
-          onPress={() => onListen(option)}
+          onPress={() => listen(option)}
         />
       ))}
     </View>
   );
 
   const retry = (
-    <Button variant="secondary" label={t('voice.try_again')} onPress={() => onListen()} />
+    <Button variant="secondary" label={t('voice.try_again')} onPress={() => listen()} />
   );
   const typeInstead = (
     <Button variant="quiet" label={t('voice.type_instead')} onPress={onTypeInstead} />
@@ -201,7 +202,7 @@ function VoicePanel({ speech, listenIn, onListen, onClose, onTypeInstead }: Voic
     body = (
       <>
         <Text color="muted">{t('voice.example')}</Text>
-        <Button label={t('voice.speak')} onPress={() => onListen()} />
+        <Button label={t('voice.speak')} onPress={() => listen()} />
       </>
     );
   } else if (!result) {
@@ -248,7 +249,7 @@ function VoicePanel({ speech, listenIn, onListen, onClose, onTypeInstead }: Voic
               onPress={() => leave(() => router.push(`/professors/${professor.professor_id}`))}
             />
           )}
-          <Button variant="quiet" label={t('voice.not_this')} onPress={() => onListen()} />
+          <Button variant="quiet" label={t('voice.not_this')} onPress={() => listen()} />
         </View>
       </>
     );
