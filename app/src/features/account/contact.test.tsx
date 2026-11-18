@@ -1,5 +1,6 @@
 /**
- * Help and contact's form (2026-11-16), and the professor's optional reason when declining.
+ * Help and contact's form (2026-11-16), the professor's optional reason when declining, and
+ * the professor's Cancel on an approved appointment (2026-11-18).
  */
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
@@ -45,25 +46,26 @@ it('sends a message without an account and says where the answer goes', async ()
   ).toBeTruthy();
 });
 
+const pending: Appointment = {
+  appointment_id: 7,
+  status: 'pending',
+  starts_at: '2026-10-13T07:00:00Z',
+  ends_at: '2026-10-13T07:15:00Z',
+  cancel_deadline: '2026-10-13T06:00:00Z',
+  topic: null,
+  note: null,
+  decline_reason: null,
+  student: { user_id: 9, full_name_ar: 'سعد المطيري', full_name_en: 'Saad Al-Mutairi' },
+  professor: {
+    user_id: 1,
+    full_name_ar: 'نورة الحربي',
+    full_name_en: 'Noura Al-Harbi',
+    honorific: 'dr',
+    office: null,
+  },
+};
+
 it('asks before declining and sends the optional reason', async () => {
-  const pending: Appointment = {
-    appointment_id: 7,
-    status: 'pending',
-    starts_at: '2026-10-13T07:00:00Z',
-    ends_at: '2026-10-13T07:15:00Z',
-    cancel_deadline: '2026-10-13T06:00:00Z',
-    topic: null,
-    note: null,
-    decline_reason: null,
-    student: { user_id: 9, full_name_ar: 'سعد المطيري', full_name_en: 'Saad Al-Mutairi' },
-    professor: {
-      user_id: 1,
-      full_name_ar: 'نورة الحربي',
-      full_name_en: 'Noura Al-Harbi',
-      honorific: 'dr',
-      office: null,
-    },
-  };
   await renderWithProviders(
     <RequestActions appointment={pending} now={new Date('2026-10-05T07:00:00Z')} />,
   );
@@ -77,4 +79,27 @@ it('asks before declining and sends the optional reason', async () => {
       reason: 'On leave that week.',
     }),
   );
+});
+
+it('lets the professor cancel an approved appointment until 1 hour before, after asking', async () => {
+  const approved: Appointment = { ...pending, status: 'approved' };
+  await renderWithProviders(
+    <RequestActions appointment={approved} now={new Date('2026-10-05T07:00:00Z')} />,
+  );
+  await fireEvent.press(screen.getByRole('button', { name: /^Cancel: Saad Al-Mutairi/ }));
+  expect(mockApi).not.toHaveBeenCalled();
+  expect(await screen.findByText('Cancel the appointment with Saad Al-Mutairi?')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancel appointment' }));
+  await waitFor(() =>
+    expect(mockApi).toHaveBeenCalledWith('/appointments/7/cancel', 'POST', undefined),
+  );
+});
+
+it('offers no Cancel once the last hour before the start has begun', async () => {
+  const approved: Appointment = { ...pending, status: 'approved' };
+  await renderWithProviders(
+    <RequestActions appointment={approved} now={new Date('2026-10-13T06:30:00Z')} />,
+  );
+  expect(screen.queryByRole('button', { name: /^Cancel:/ })).toBeNull();
+  expect(screen.getByRole('button', { name: /^Message/ })).toBeTruthy();
 });

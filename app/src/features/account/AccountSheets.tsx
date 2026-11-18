@@ -38,6 +38,7 @@ export function PasswordSheet({ visible, onClose }: SheetProps) {
   const toast = useToast();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
+  const [again, setAgain] = useState('');
   const [shown, setShown] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const change = useMutation({
@@ -48,14 +49,20 @@ export function PasswordSheet({ visible, onClose }: SheetProps) {
   const close = () => {
     setCurrent('');
     setNext('');
+    setAgain('');
     setShown(false);
     setProblem(null);
     onClose();
   };
   const save = () => {
-    // The same rules as the API, checked first so the answer is immediate.
+    // The same rules as the API, checked first so the answer is immediate; the second copy of
+    // the new password is checked here only (the API takes the password once).
     if (!current || next.length < MIN_PASSWORD) {
       setProblem(t(current ? 'account.password_short' : 'account.password_current_missing'));
+      return;
+    }
+    if (again !== next) {
+      setProblem(t('account.password_mismatch'));
       return;
     }
     setProblem(null);
@@ -84,6 +91,16 @@ export function PasswordSheet({ visible, onClose }: SheetProps) {
         label={t('account.password_new')}
         value={next}
         onChangeText={setNext}
+        secureTextEntry={!shown}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="new-password"
+        textContentType="newPassword"
+      />
+      <TextField
+        label={t('account.password_confirm')}
+        value={again}
+        onChangeText={setAgain}
         secureTextEntry={!shown}
         autoCapitalize="none"
         autoCorrect={false}

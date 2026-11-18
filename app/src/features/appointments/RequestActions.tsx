@@ -1,6 +1,7 @@
 /**
- * What a professor can do with one appointment: approve or decline a request, mark an approved
- * appointment completed or no-show once it has started, and message the student. Each button
+ * What a professor can do with one appointment: approve or decline a request, cancel an approved
+ * appointment until 1 hour before it starts (asked first, owner request 2026-11-18), mark it
+ * completed or no-show once it has started, and message the student. Each button
  * names the student and time for screen readers, since several cards show the same labels.
  * Decline asks first, in a sheet, with room for an optional reason the student will see.
  */
@@ -13,13 +14,14 @@ import { useAppointmentAction, useOpenConversation, type AppointmentAction } fro
 import type { Appointment } from '@/api/types';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
+import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { errorKey } from '@/lib/errors';
 import { fullName } from '@/lib/names';
 import { space, type Language } from '@/theme/tokens';
-import { appointmentWhen } from './AppointmentCard';
+import { appointmentWhen, cancelState } from './AppointmentCard';
 
 export function RequestActions({ appointment, now }: { appointment: Appointment; now: Date }) {
   const { t, i18n } = useTranslation();
@@ -29,6 +31,7 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
   const name = fullName(appointment.student, language);
   const when = appointmentWhen(appointment, now, t);
   const [declining, setDeclining] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
   const openChat = useOpenConversation();
@@ -58,13 +61,16 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       {
         onSuccess: () => {
           setDeclining(false);
+          setCancelling(false);
           setReason('');
           toast(
             kind === 'approve'
               ? t('requests.approved_toast', { name, when })
               : kind === 'decline'
                 ? t('requests.declined_toast', { name, when })
-                : t('requests.updated_toast'),
+                : kind === 'cancel'
+                  ? t('requests.cancelled_toast', { name, when })
+                  : t('requests.updated_toast'),
           );
         },
         onError: (error) => toast(t(errorKey(error))),
@@ -78,7 +84,13 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
       label={t(labelKey)}
       accessibilityLabel={t('requests.action_label', { action: t(labelKey), name, when })}
       disabled={action.isPending}
-      onPress={() => (kind === 'decline' ? setDeclining(true) : run(kind))}
+      onPress={() =>
+        kind === 'decline'
+          ? setDeclining(true)
+          : kind === 'cancel'
+            ? setCancelling(true)
+            : run(kind)
+      }
     />
   );
 
@@ -118,6 +130,26 @@ export function RequestActions({ appointment, now }: { appointment: Appointment;
         {button('complete', 'requests.complete', 'secondary')}
         {button('no-show', 'requests.no_show', 'secondary')}
         {message}
+      </View>
+    );
+  }
+  // Before it starts, the professor may cancel an approved appointment until the same deadline
+  // as the student (1 hour before); the API tells the student and frees the time.
+  if (appointment.status === 'approved' && cancelState(appointment, now) === 'open') {
+    return (
+      <View style={styles.row}>
+        {button('cancel', 'requests.cancel', 'secondary')}
+        {message}
+        <ConfirmSheet
+          visible={cancelling}
+          title={t('requests.cancel_title', { name })}
+          body={t('requests.cancel_body', { when })}
+          confirmLabel={t('appointments.cancel')}
+          cancelLabel={t('requests.cancel_keep')}
+          onConfirm={() => run('cancel')}
+          onCancel={() => setCancelling(false)}
+          busy={action.isPending}
+        />
       </View>
     );
   }

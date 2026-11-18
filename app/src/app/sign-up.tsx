@@ -31,7 +31,8 @@ import {
 import { space, type Language } from '@/theme/tokens';
 
 type Role = 'student' | 'professor';
-type Field = 'full_name_ar' | 'full_name_en' | 'email' | 'password' | 'department';
+type Field =
+  'full_name_ar' | 'full_name_en' | 'email' | 'password' | 'password_again' | 'department';
 
 const HONORIFICS: Honorific[] = ['dr', 'prof', 'mr', 'ms', 'eng'];
 const RANKS: Rank[] = ['lecturer', 'assistant_professor', 'associate_professor', 'professor'];
@@ -55,6 +56,7 @@ export default function SignUpScreen() {
   const [nameEn, setNameEn] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordAgain, setPasswordAgain] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [departmentId, setDepartmentId] = useState<number | null>(null);
   const [studyYear, setStudyYear] = useState(1);
@@ -81,6 +83,8 @@ export default function SignUpScreen() {
       found.email = t('signup.email_student', { domain: UNIVERSITY_DOMAIN });
     }
     if (password.length < 8) found.password = t('admin.password_short');
+    // Checked here only: the API takes the password once.
+    else if (passwordAgain !== password) found.password_again = t('admin.password_mismatch');
     if (departmentId === null) found.department = t('signup.choose');
     return found;
   };
@@ -193,6 +197,17 @@ export default function SignUpScreen() {
           autoComplete="new-password"
           textContentType="newPassword"
           error={errors.password}
+        />
+        <TextField
+          label={t('admin.password_confirm')}
+          value={passwordAgain}
+          onChangeText={setPasswordAgain}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="new-password"
+          textContentType="newPassword"
+          error={errors.password_again}
         />
         <View style={styles.reveal}>
           <Button
