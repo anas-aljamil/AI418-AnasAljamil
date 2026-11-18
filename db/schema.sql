@@ -95,6 +95,10 @@ CREATE TABLE departments (
 -- person adds themselves, all three set or all three NULL; photo_updated_at also
 -- tells the app when a cached copy is out of date. At most 256 KB (the app sends
 -- a 320 x 320 JPEG of about 30 KB); InnoDB keeps a large BLOB off the row's page.
+-- password_reset_hash, password_reset_expires_at (2026-11-18): the one open
+-- "forgot password" link of an account, both set or both NULL. Only the SHA-256
+-- of the link's token is stored, so the table never holds a usable link; a new
+-- request replaces the old one, and using it clears both.
 -- -----------------------------------------------------------------------------
 CREATE TABLE users (
     user_id           INT          NOT NULL AUTO_INCREMENT,
@@ -110,8 +114,11 @@ CREATE TABLE users (
     photo             MEDIUMBLOB   NULL,
     photo_type        VARCHAR(10)  COLLATE utf8mb4_0900_bin NULL,
     photo_updated_at  DATETIME     NULL,
+    password_reset_hash       CHAR(64) COLLATE utf8mb4_0900_bin NULL,
+    password_reset_expires_at DATETIME NULL,
     PRIMARY KEY (user_id),
     CONSTRAINT uq_users_email   UNIQUE (email),
+    CONSTRAINT uq_users_password_reset UNIQUE (password_reset_hash),
     CONSTRAINT uq_users_id_role UNIQUE (user_id, role),
     -- Lower-case address with a dotted domain ('c' = case-sensitive match).
     CONSTRAINT ck_users_email CHECK (
@@ -127,7 +134,11 @@ CREATE TABLE users (
         (photo IS NULL AND photo_type IS NULL AND photo_updated_at IS NULL)
         OR (photo IS NOT NULL AND photo_type IS NOT NULL AND photo_updated_at IS NOT NULL)),
     CONSTRAINT ck_users_photo_type CHECK (photo_type IN ('image/jpeg', 'image/png', 'image/webp')),
-    CONSTRAINT ck_users_photo_size CHECK (LENGTH(photo) BETWEEN 100 AND 262144)
+    CONSTRAINT ck_users_photo_size CHECK (LENGTH(photo) BETWEEN 100 AND 262144),
+    CONSTRAINT ck_users_password_reset CHECK (
+        (password_reset_hash IS NULL AND password_reset_expires_at IS NULL)
+        OR (password_reset_hash IS NOT NULL AND password_reset_expires_at IS NOT NULL
+            AND REGEXP_LIKE(password_reset_hash, '^[0-9a-f]{64}$', 'c')))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------------------------------

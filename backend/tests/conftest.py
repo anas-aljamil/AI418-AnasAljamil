@@ -22,7 +22,7 @@ os.environ.setdefault("JWT_SECRET", "test-only-secret-that-is-long-enough-for-hs
 import mysql_cli  # noqa: E402
 import reset_db  # noqa: E402
 
-from app.api.v1.auth import login_limiter  # noqa: E402
+from app.api.v1.auth import login_limiter, reset_limiter  # noqa: E402
 from app.core.clock import FixedClock, get_clock  # noqa: E402
 from app.db import get_db, make_engine  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -105,6 +105,7 @@ def client(connection, clock):
     app.dependency_overrides[get_db] = test_db
     app.dependency_overrides[get_clock] = lambda: clock
     login_limiter.reset()
+    reset_limiter.reset()
     return TestClient(app)
 
 

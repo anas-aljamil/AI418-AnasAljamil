@@ -47,6 +47,19 @@ class Settings(BaseSettings):
     messages_per_minute: int = 20
     # The Help and contact form, per client address (it is open without an account).
     contact_messages_per_minute: int = 3
+    # "Forgot password" requests and resets, per client address and per email (2026-11-18).
+    password_resets_per_minute: int = 3
+
+    # Outgoing mail (only the reset link). Without smtp_host, mail is written to outbox_dir.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_starttls: bool = True
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    outbox_dir: Path = REPO_ROOT / "backend" / "outbox"
+    # Where reset links point when a request did not come through the public link's tunnel.
+    public_url: str = "http://localhost:8000"
 
     # Freeze the API clock for screenshots and demos, e.g. 2026-10-05T07:00:00Z. Empty = real time.
     demo_now: datetime | None = None

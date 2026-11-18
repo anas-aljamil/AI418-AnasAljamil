@@ -24,3 +24,5 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+# Emails written instead of sent when SMTP is not configured (2026-11-18)
+backend/outbox/

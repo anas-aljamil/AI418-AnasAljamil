@@ -213,7 +213,8 @@
     "demo_title": "Just looking?",
     "demo_body": "Open Mawjood with a demo account. The data is fictional.",
     "demo_student": "Demo student",
-    "demo_professor": "Demo professor"
+    "demo_professor": "Demo professor",
+    "forgot": "Forgot password?"
   },
   "signup": {
     "link": "New to Mawjood? Create an account",
@@ -278,7 +279,8 @@
     "PASSWORD_NEEDED": "Enter your current password to change your email.",
     "PHOTO_INVALID": "Choose a JPEG, PNG or WebP picture of at most 256 KB.",
     "NO_PROPOSAL": "There is no other time to answer any more. Pull down to refresh.",
-    "PROPOSAL_SAME_TIME": "That is the time already booked. Choose another one."
+    "PROPOSAL_SAME_TIME": "That is the time already booked. Choose another one.",
+    "RESET_LINK_INVALID": "This link no longer works. Ask for a new one."
   },
   "home": {
     "search_label": "Search professors",
@@ -908,7 +910,7 @@
     "q3": "Can I cancel?",
     "a3": "Yes, in Appointments, until one hour before the start.",
     "q4": "I forgot my password.",
-    "a4": "If you know the current one, change it in Profile or Account. If you forgot it, ask the Mawjood administrator at your university to set a new one.",
+    "a4": "On sign-in, tap Forgot password? and type your university email: Mawjood emails you a link to set a new one. If you know the current one, change it in Profile or Account.",
     "q5": "I am a professor. Must I update my status all day?",
     "a5": "No. The status follows your timetable. Change it with one tap only when your day is different.",
     "q6": "Can I use it like an app on my phone?",
@@ -1025,5 +1027,25 @@
     "why_habit_message": "You usually message first, so Message comes first.",
     "why_no_booking_times": "{{name}} has no booking times, so booking isn't possible.",
     "why_messages_closed": "{{name}} isn't taking messages right now."
+  },
+  "forgot": {
+    "title": "Forgot password",
+    "subtitle": "Type your university email. We will email you a link to set a new password.",
+    "send": "Email me a link",
+    "sending": "Sending…",
+    "sent_title": "Check your email",
+    "sent_body": "If an account uses {{email}}, a link to set a new password is on its way. It works once, for 30 minutes.",
+    "sent_hint": "Nothing after a few minutes? Look in junk mail, check the address, or ask the administrator through Help and contact.",
+    "try_again": "Use another email"
+  },
+  "reset": {
+    "title": "Set a new password",
+    "subtitle": "Type the new password twice. Then sign in with it.",
+    "save": "Save the new password",
+    "done_title": "Password changed",
+    "done_body": "Sign in with your new password.",
+    "invalid_title": "This link no longer works",
+    "invalid_body": "It was used already, is older than 30 minutes, or a newer link was sent. Ask for a new one.",
+    "new_link": "Email me a new link"
   }
 }
