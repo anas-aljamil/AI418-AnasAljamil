@@ -23,7 +23,7 @@ export function resetNavMemory(): void {
  */
 export function safeNext(next: unknown): string | null {
   if (typeof next !== 'string' || !/^\/[^/\\]/.test(next) || next.includes('\\')) return null;
-  if (/^\/(sign-in|sign-up)(\/|\?|$)/.test(next)) return null;
+  if (/^\/(sign-in|sign-up|forgot-password|reset-password)(\/|\?|$)/.test(next)) return null;
   return next;
 }
 
@@ -39,6 +39,8 @@ export function signInHref(pathname: string): string {
 const TITLES: [RegExp, string][] = [
   [/^\/sign-in$/, 'signin.title'],
   [/^\/sign-up$/, 'signup.title'],
+  [/^\/forgot-password$/, 'forgot.title'],
+  [/^\/reset-password$/, 'reset.title'],
   [/^\/home$/, 'tabs.home'],
   [/^\/search$/, 'tabs.search'],
   [/^\/appointments$/, 'tabs.appointments'],

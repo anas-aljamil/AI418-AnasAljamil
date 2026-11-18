@@ -64,6 +64,9 @@ class User(Base):
     photo: Mapped[bytes | None] = mapped_column(LargeBinary(16_777_215), deferred=True)
     photo_type: Mapped[str | None] = mapped_column(String(10))
     photo_updated_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # The open "forgot password" link: SHA-256 of its token, and when it stops working.
+    password_reset_hash: Mapped[str | None] = mapped_column(String(64))
+    password_reset_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class Office(Base):

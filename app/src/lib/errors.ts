@@ -38,6 +38,7 @@ const KNOWN = [
   'PHOTO_INVALID',
   'NO_PROPOSAL',
   'PROPOSAL_SAME_TIME',
+  'RESET_LINK_INVALID',
 ];
 
 /** The i18n key that says what happened and how to fix it (DESIGN.md Section 8). */

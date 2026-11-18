@@ -10,36 +10,45 @@ Sign-up needs an address at the university domain (SIGNUP_EMAIL_DOMAIN). A
 student's address is their university number (1234567@upm.edu.sa), so the
 number is read from it. A student is signed in at once; a professor's account is created inactive and
 waits for an admin to activate it, so nobody can make themselves a professor.
+
+A forgotten password (owner request S5d, 2026-11-18) is reset through a link sent by email:
+it works once, for 30 minutes, and only the SHA-256 of its token is stored. The answer to a
+request is the same whether or not the email has an account (docs/security.md).
 """
 
+import hashlib
 import re
+import secrets
+from datetime import timedelta
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.core.clock import Clock, get_clock
 from app.core.errors import AppError
-from app.core.network import came_through_tunnel, client_address, is_https
+from app.core.network import came_through_tunnel, client_address, is_https, public_origin
 from app.core.rate_limit import RateLimiter
 from app.core.security import create_token, decode_token, hash_password, verify_password
 from app.db import get_db
 from app.deps import UNAUTHORIZED, get_current_user
 from app.models import Professor, Student, User
 from app.schemas import (
+    ForgotPasswordIn,
     LoginIn,
     MeOut,
     PasswordChangeIn,
     PendingOut,
     ProfessorProfileOut,
     RefreshIn,
+    ResetPasswordIn,
     SignUpIn,
     StudentProfileOut,
     StudentSignUpIn,
     TokenOut,
 )
-from app.services import accounts
+from app.services import accounts, mail
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -48,6 +57,8 @@ COOKIE_PATH = "/api/v1/auth"
 CSRF_HEADER, CSRF_VALUE = "X-Requested-With", "mawjood"
 login_limiter = RateLimiter(get_settings().login_attempts_per_minute, 60)
 signup_limiter = RateLimiter(get_settings().signups_per_minute, 60)
+reset_limiter = RateLimiter(get_settings().password_resets_per_minute, 60)
+RESET_LINK_LIFETIME = timedelta(minutes=30)
 STUDENT_NUMBER = re.compile(r"[0-9]{4,12}")  # the local part of a student's university email
 # Every seed account shares this published password (db/seed.sql). Through the public link the
 # demo students and professors may use it (fictional data, owner decision 2026-11-11), but an
@@ -255,3 +266,83 @@ def change_password(
 @router.get("/me", response_model=MeOut, summary="The signed-in account")
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MeOut:
     return me_out(db, user)
+
+
+# --- forgotten password (owner request S5d, 2026-11-18) -----------------------------------
+
+RESET_SUBJECT = {"ar": "موجود: تعيين كلمة مرور جديدة", "en": "Mawjood: set a new password"}
+RESET_BODY = {
+    "ar": (
+        "مرحبًا {name}،\n\nطلب أحدهم تعيين كلمة مرور جديدة لحسابك في موجود. لتعيينها افتح هذا الرابط"
+        " خلال 30 دقيقة:\n\n{link}\n\nيعمل الرابط مرة واحدة. إن لم تطلب ذلك فتجاهل هذه الرسالة،"
+        " وتبقى كلمة مرورك كما هي.\n"
+    ),
+    "en": (
+        "Hello {name},\n\nSomeone asked to set a new password for your Mawjood account. To set it,"
+        " open this link within 30 minutes:\n\n{link}\n\nThe link works once. If you did not ask for"
+        " this, ignore this email; your password stays as it is.\n"
+    ),
+}
+
+
+def token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("ascii", "replace")).hexdigest()
+
+
+@router.post("/forgot-password", status_code=202, summary="Email me a link to set a new password")
+def forgot_password(
+    body: ForgotPasswordIn,
+    request: Request,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> Response:
+    """Always 202 with no body, account or not, so the answer reveals no addresses. The email
+    is sent after the response, so its time reveals nothing either."""
+    reset_limiter.check(f"forgot|{client_address(request)}")
+    reset_limiter.check(f"forgot|{body.email}")
+    user = db.scalar(select(User).where(User.email == body.email))
+    if user is None or not user.is_active:
+        return Response(status_code=202)
+    # Through the public link, a shared demo account keeps its published password: a reset
+    # would lock every other visitor out of it (as for changing the password).
+    if came_through_tunnel(request) and verify_password(SEED_PASSWORD, user.password_hash):
+        return Response(status_code=202)
+    token = secrets.token_urlsafe(32)
+    user.password_reset_hash = token_hash(token)
+    user.password_reset_expires_at = clock.now() + RESET_LINK_LIFETIME
+    db.commit()
+    language = "ar" if user.preferred_locale == "ar" else "en"
+    link = f"{public_origin(request, get_settings().public_url)}/reset-password?token={token}"
+    name = user.full_name_ar if language == "ar" else user.full_name_en
+    background.add_task(
+        mail.send,
+        user.email,
+        RESET_SUBJECT[language],
+        RESET_BODY[language].format(name=name, link=link),
+        user.user_id,
+    )
+    return Response(status_code=202)
+
+
+@router.post("/reset-password", status_code=204, summary="Set a new password with the emailed link")
+def reset_password(
+    body: ResetPasswordIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> Response:
+    reset_limiter.check(f"reset|{client_address(request)}")
+    now = clock.now()
+    user = db.scalar(select(User).where(User.password_reset_hash == token_hash(body.token)))
+    if user is None or user.password_reset_expires_at <= now or not user.is_active:
+        raise AppError(
+            400,
+            "RESET_LINK_INVALID",
+            "This link no longer works: it was used, it is older than 30 minutes, or a newer one was sent.",
+        )
+    user.password_hash = hash_password(body.new_password)
+    user.password_reset_hash = user.password_reset_expires_at = None
+    user.updated_at = now
+    db.commit()
+    return Response(status_code=204)

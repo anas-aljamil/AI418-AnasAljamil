@@ -205,6 +205,15 @@ class StudentSelfIn(BaseModel):
     department_id: int | None = Field(default=None, ge=1)
 
 
+class ForgotPasswordIn(BaseModel):
+    email: Annotated[Email, BeforeValidator(_strip_lower)]
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=100)
+    new_password: Password
+
+
 class AccountSelfIn(BaseModel):
     """What anyone may change about their own account (2026-11-18). A new email (professors and
     admins only) also needs the current password."""

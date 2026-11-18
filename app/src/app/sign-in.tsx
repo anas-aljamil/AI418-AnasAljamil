@@ -114,6 +114,12 @@ export default function SignInScreen() {
             label={showPassword ? t('signin.hide_password') : t('signin.show_password')}
             onPress={() => setShowPassword((shown) => !shown)}
           />
+          {/* A link by email (owner request 2026-11-18). */}
+          <Button
+            variant="quiet"
+            label={t('signin.forgot')}
+            onPress={() => router.push('/forgot-password')}
+          />
         </View>
 
         {/* Announced when it appears (live region on Android and web, alert role on iOS). */}

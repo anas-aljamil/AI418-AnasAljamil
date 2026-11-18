@@ -54,6 +54,11 @@ MUST_FAIL = [
     ("users: a photo is at most 256 KB",
      "UPDATE users SET photo = REPEAT('x', 262145), photo_type = 'image/jpeg', photo_updated_at = UTC_TIMESTAMP() "
      "WHERE user_id = 9", CHECK_FAILED),
+    ("users: a reset link needs its expiry as well",
+     "UPDATE users SET password_reset_hash = REPEAT('a', 64) WHERE user_id = 9", CHECK_FAILED),
+    ("users: a reset link is stored as a SHA-256 in lower-case hex",
+     "UPDATE users SET password_reset_hash = REPEAT('Z', 64), password_reset_expires_at = UTC_TIMESTAMP() "
+     "WHERE user_id = 9", CHECK_FAILED),
     ("users: role cannot change while a subtype row exists (ON UPDATE RESTRICT)",
      "UPDATE users SET role = 'admin' WHERE user_id = 9", FK_PARENT),
     ("students: row must point at a 'student' account (user 1 is a professor)",
