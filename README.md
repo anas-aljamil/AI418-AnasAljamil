@@ -21,7 +21,7 @@ Students walk to a professor's office during the posted office hours and find it
 ## Milestones
 - [ ] M1 (Week 5) — Understand: interviews, personas, storyboard, requirements
 - [ ] M2 (Week 8) — Design & audit: wireframes to Figma prototype, WCAG 2.2 audit (AR + EN)
-- [ ] M3 (Week 11) — Intelligence: one adaptive layer + honest uncertainty
+- [ ] M3 (Week 11) — Intelligence: adaptive "next step" tip + voice commands, usability study ([docs/m3-ai-layers.md](docs/m3-ai-layers.md))
 - [ ] Week 14 — Final report (8%) + Demo Day presentation (7%). There is no M4; the spatial layer is optional and built in Week 13 if your team takes it.
  
 ## Decision log

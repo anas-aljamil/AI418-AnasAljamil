@@ -27,6 +27,7 @@ import {
 import { clearCachedData } from '@/api/queryClient';
 import { refreshTokenStore } from '@/auth/tokenStore';
 import type { Me, SignUpBody } from '@/api/types';
+import { forgetHabits } from '@/features/adaptive/habits';
 import { preferenceKeys, readPreference, removePreference, writePreference } from '@/lib/storage';
 
 type AuthState =
@@ -64,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const forget = useCallback(async () => {
+    // The learned habits (features/adaptive) belong to this person, not to the device.
+    forgetHabits();
     await Promise.all([clearCachedData(), removePreference(preferenceKeys.user)]);
     setState({ status: 'signedOut', user: null });
   }, []);

@@ -44,6 +44,7 @@ import {
   SectionError,
 } from '@/features/home/HomeParts';
 import { useStatusAnnouncement } from '@/features/home/useStatusAnnouncement';
+import { VoiceAssistant } from '@/features/voice/VoiceAssistant';
 import { usePinWithToast } from '@/features/professors/usePinWithToast';
 import { errorKey } from '@/lib/errors';
 import { greetingKey } from '@/lib/format';
@@ -161,7 +162,11 @@ export default function HomeScreen() {
     <Band style={[styles.band, { paddingTop: insets.top + space.sm }]}>
       <View style={[styles.bandInner, desktop ? null : column]}>
         <AppBar onBand>
-          <NotificationBell onBand />
+          <View style={styles.barEnd}>
+            {/* Ask by voice (M3 conversational layer); hidden where the browser cannot listen. */}
+            <VoiceAssistant onBand onTypeInstead={() => searchRef.current?.focus()} />
+            <NotificationBell onBand />
+          </View>
         </AppBar>
         {desktop ? (
           <View style={styles.bandRow}>
@@ -292,6 +297,7 @@ const styles = StyleSheet.create({
   page: { paddingBottom: space.xl },
   band: { paddingHorizontal: space.md, paddingBottom: space.md },
   bandInner: { gap: space.sm },
+  barEnd: { flexDirection: 'row', alignItems: 'center' },
   bandRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xl },
   greeting: { width: 360, paddingTop: space.md },
   emptyPins: { gap: space.xs, alignItems: 'flex-start', paddingVertical: space.sm },
