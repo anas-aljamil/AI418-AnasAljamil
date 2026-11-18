@@ -234,11 +234,12 @@
     "pending_body": "سيتحقق مسؤول النظام من حسابك ويفعّله. بعدها سجّل الدخول بالبريد {{email}}.",
     "back_to_sign_in": "العودة إلى تسجيل الدخول",
     "have_account": "لديك حساب؟ سجّل الدخول",
-    "email_helper_student": "رقمك الجامعي ثم @{{domain}} (مثل xxxxxxx@{{domain}}).",
-    "email_helper_professor": "بريدك الجامعي المنتهي بـ @{{domain}}.",
+    "email_helper_student": "رقمك الجامعي ثم ⁦@{{domain}}⁩ (مثل ⁦#######@{{domain}}⁩).",
+    "email_helper_professor": "بريدك الجامعي المنتهي بـ ⁦@{{domain}}⁩.",
     "number_found": "الرقم الجامعي: {{number}}",
-    "email_domain": "استخدم بريدك الجامعي المنتهي بـ @{{domain}}.",
-    "email_student": "يستخدم الطلاب رقمهم الجامعي بريدًا، مثل xxxxxxx@{{domain}}."
+    "email_domain": "استخدم بريدك الجامعي المنتهي بـ ⁦@{{domain}}⁩.",
+    "email_student": "يستخدم الطلاب رقمهم الجامعي بريدًا، مثل ⁦#######@{{domain}}⁩.",
+    "email_example": "#######@{{domain}}"
   },
   "errors": {
     "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",

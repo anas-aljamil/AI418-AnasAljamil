@@ -53,6 +53,15 @@ async function fillAccount(email = ' 4519001@UPM.edu.sa ') {
   );
 }
 
+it('shows a student the shape of their email inside the empty box', async () => {
+  await renderWithProviders(<SignUpScreen />, 'en');
+  const field = screen.getByLabelText('University email');
+  expect(field.props.placeholder).toBe('⁦#######@upm.edu.sa⁩');
+  // A professor may use a name, so there is no single example to show.
+  await fireEvent.press(screen.getByRole('tab', { name: 'Professor' }));
+  expect(screen.getByLabelText('University email').props.placeholder).toBeUndefined();
+});
+
 it('says what is missing next to each field before sending anything', async () => {
   await renderWithProviders(<SignUpScreen />, 'en');
   await fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
@@ -118,7 +127,7 @@ it.each([
   ['4519001@gmail.com', 'Use your university email, ending in @upm.edu.sa.'],
   [
     'r.alqahtani@upm.edu.sa',
-    'Students use their university number as the email, for example xxxxxxx@upm.edu.sa.',
+    'Students use their university number as the email, for example #######@upm.edu.sa.',
   ],
 ])('explains the email rule for %s before sending', async (email, message) => {
   await renderWithProviders(<SignUpScreen />, 'en');
