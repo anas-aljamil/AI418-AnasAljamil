@@ -5,7 +5,7 @@
  * "go-and-check" student (persona Faisal) or the "message-first" student (persona Nawaf).
  * Nothing leaves the device and nothing is sent to the server.
  */
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import { preferenceKeys, readPreference, removePreference, writePreference } from '@/lib/storage';
 
@@ -18,11 +18,11 @@ export const NO_HABITS: Habits = { book: 0, message: 0 };
 
 let current: Habits = NO_HABITS;
 let loaded = false;
-const listeners = new Set<(habits: Habits) => void>();
+const listeners = new Set<() => void>();
 
 function publish(next: Habits) {
   current = next;
-  for (const listener of listeners) listener(next);
+  for (const listener of listeners) listener();
 }
 
 async function load(): Promise<void> {
@@ -52,16 +52,17 @@ export function forgetHabits(): void {
   void removePreference(preferenceKeys.habits);
 }
 
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  void load();
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+const snapshot = () => current;
+
 /** The counts, kept up to date while the screen is open. */
 export function useHabits(): Habits {
-  const [habits, setHabits] = useState(current);
-  useEffect(() => {
-    listeners.add(setHabits);
-    void load();
-    setHabits(current);
-    return () => {
-      listeners.delete(setHabits);
-    };
-  }, []);
-  return habits;
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
