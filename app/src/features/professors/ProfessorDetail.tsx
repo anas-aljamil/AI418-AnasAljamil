@@ -33,6 +33,7 @@ import { SkeletonRow } from '@/components/Placeholders';
 import { describeStatus, statusSentence } from '@/components/StatusLabel';
 import { IconButton } from '@/components/Surfaces';
 import { TallDoor } from '@/components/TallDoor';
+import { PersonMark } from '@/components/Avatar';
 import { Text } from '@/components/Text';
 import { TodayTimeline } from '@/components/TodayTimeline';
 import { useToast } from '@/components/Toast';
@@ -207,6 +208,14 @@ export function ProfessorDetail({
                 accessibilityLabel={t('status.door', { status: status.label })}
               />
               <View style={styles.heroText}>
+                {/* The professor's own photo, when they added one (2026-11-18). */}
+                <PersonMark
+                  userId={data.professor_id}
+                  photoVersion={data.photo_updated_at}
+                  name={name}
+                  size={56}
+                  initials={false}
+                />
                 <Text variant="heading" role="heading" color="onBand">
                   {name}
                 </Text>

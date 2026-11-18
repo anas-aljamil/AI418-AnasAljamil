@@ -45,7 +45,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
-import { Initials } from '@/components/Avatar';
+import { PersonMark } from '@/components/Avatar';
 import { SkeletonRow } from '@/components/Placeholders';
 import { IconButton } from '@/components/Surfaces';
 import { Text } from '@/components/Text';
@@ -369,7 +369,13 @@ export function ConversationThread({ conversationId, pane = false }: Conversatio
             }
           />
         )}
-        {conversation ? <Initials name={fullName(conversation.other, language)} /> : null}
+        {conversation ? (
+          <PersonMark
+            userId={conversation.other.user_id}
+            photoVersion={conversation.other.photo_updated_at}
+            name={fullName(conversation.other, language)}
+          />
+        ) : null}
         <View style={styles.grow}>
           <Text variant="title" role="heading" numberOfLines={1}>
             {name}

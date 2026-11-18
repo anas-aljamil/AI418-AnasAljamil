@@ -33,6 +33,9 @@ const KNOWN = [
   'WRONG_PASSWORD',
   'PASSWORD_UNCHANGED',
   'DEMO_ACCOUNT',
+  'STUDENT_EMAIL_FIXED',
+  'PASSWORD_NEEDED',
+  'PHOTO_INVALID',
 ];
 
 /** The i18n key that says what happened and how to fix it (DESIGN.md Section 8). */

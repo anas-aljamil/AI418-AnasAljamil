@@ -67,6 +67,16 @@ StatusValue = Literal["in_office", "in_class", "busy", "away"]
 BlockKind = Literal["office_hours", "class", "meeting"]
 Topic = Literal["assignment", "exam_review", "advising", "other"]
 Locale = Literal["ar", "en"]
+
+
+def _strip(value: object) -> object:
+    return value.strip() if isinstance(value, str) else value
+
+
+def _strip_lower(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
 Honorific = Literal["dr", "prof", "mr", "ms", "eng"]
 Rank = Literal["lecturer", "assistant_professor", "associate_professor", "professor"]
 
@@ -177,6 +187,8 @@ class MeOut(BaseModel):
     full_name_ar: str
     full_name_en: str
     preferred_locale: str
+    # When the profile photo last changed; None without one (GET /users/{id}/photo).
+    photo_updated_at: UtcDatetime | None = None
     student: StudentProfileOut | None = None
     professor: ProfessorProfileOut | None = None
 
@@ -191,6 +203,38 @@ class StudentSelfIn(BaseModel):
 
     study_year: int | None = Field(default=None, ge=1, le=6)
     department_id: int | None = Field(default=None, ge=1)
+
+
+class AccountSelfIn(BaseModel):
+    """What anyone may change about their own account (2026-11-18). A new email (professors and
+    admins only) also needs the current password."""
+
+    full_name_ar: Annotated[NameAr, BeforeValidator(_strip)] | None = None
+    full_name_en: Annotated[NameEn, BeforeValidator(_strip)] | None = None
+    email: Annotated[Email, BeforeValidator(_strip_lower)] | None = None
+    current_password: str | None = Field(default=None, max_length=128)
+
+
+class ProfessorSelfIn(BaseModel):
+    """A professor's own office; null means no office."""
+
+    office_id: int | None = Field(ge=1)
+
+
+PhotoType = Literal["image/jpeg", "image/png", "image/webp"]
+
+
+class PhotoIn(BaseModel):
+    content_type: PhotoType
+    # The image in base64; at most 256 KB once decoded (checked in the API).
+    data: str = Field(min_length=100, max_length=350_000)
+
+
+class PhotoOut(BaseModel):
+    user_id: int
+    content_type: PhotoType
+    data: str  # base64
+    updated_at: UtcDatetime
 
 
 class TokenOut(BaseModel):
@@ -225,6 +269,7 @@ class ProfessorSummaryOut(BaseModel):
     status: StatusOut
     has_office_hours_today: bool
     is_pinned: bool | None = None  # set for students only
+    photo_updated_at: UtcDatetime | None = None  # None without a photo
 
 
 class TodayOut(BaseModel):
@@ -477,10 +522,6 @@ class AdminStudentPatch(AccountPatch):
     study_year: int | None = Field(default=None, ge=1, le=6)
 
 
-def _strip_lower(value: object) -> object:
-    return value.strip().lower() if isinstance(value, str) else value
-
-
 class _SignUpBase(AccountIn):
     # Typed emails are forgiven their case and spaces; the stored address is lower case.
     email: Annotated[Email, BeforeValidator(_strip_lower)]
@@ -541,6 +582,7 @@ class AdminStudentOut(AccountOut):
 class ParticipantOut(PersonOut):
     role: Literal["student", "professor"]
     honorific: str | None = None  # professors only
+    photo_updated_at: UtcDatetime | None = None  # None without a photo
 
 
 class QuotedOut(BaseModel):

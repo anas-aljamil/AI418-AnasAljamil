@@ -47,9 +47,10 @@ Surrogate keys (`*_id`) are written in **bold** where they are the primary key. 
 
 ### users
 - Candidate keys: **user_id**, `email`.
-- FDs: `user_id -> email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at`; `email -> user_id`.
+- FDs: `user_id -> email, password_hash, role, full_name_ar, full_name_en, preferred_locale, is_active, created_at, updated_at, photo, photo_type, photo_updated_at`; `email -> user_id`.
 - 1NF note: a full name is stored as one value per language rather than split into first and last parts. Arabic names vary in structure (patronymics, "bin", family names), and the system never queries name parts separately. For our purposes the name is atomic.
 - `UNIQUE (user_id, role)` is a superkey; it exists so the subtype tables can reference it (Section 4).
+- Profile photo (2026-11-18): an account has at most one photo, so `photo`, `photo_type` and `photo_updated_at` depend on `user_id` alone and stay in `users` rather than in a 1 : 0..1 table of their own. `photo_type` is not derived from the bytes by the database, so it is stored; `ck_users_photo_parts` keeps the three columns all set or all NULL. The image is a `MEDIUMBLOB`, which InnoDB stores off the row's page, and the API loads it only when a photo is asked for (a deferred column), so reading accounts stays as fast as before.
 - **BCNF**.
 
 ### offices

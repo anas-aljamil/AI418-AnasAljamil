@@ -1,18 +1,25 @@
 """The signed-in user's own data: professor status, schedule, booking periods and chat closed
-hours (weekly or dated, with skipped dates); student pins."""
+hours (weekly or dated, with skipped dates); student pins; and since S5b the account itself
+(names, email, a professor's office, the profile photo)."""
 
+import base64
+import binascii
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.v1.auth import me_out
+from app.api.v1.auth import SEED_PASSWORD, login_limiter, me_out
+from app.config import get_settings
 from app.core.clock import Clock, get_clock, to_naive_utc
 from app.core.errors import AppError, not_found
+from app.core.network import came_through_tunnel
 from app.core.pagination import Page, PageParams, page_params, paginate
+from app.core.rate_limit import RateLimiter
+from app.core.security import verify_password
 from app.db import get_db
-from app.deps import current_professor, current_student
+from app.deps import current_professor, current_student, get_current_user
 from app.models import (
     BookingPeriod,
     ChatClosedHours,
@@ -25,6 +32,7 @@ from app.models import (
     User,
 )
 from app.schemas import (
+    AccountSelfIn,
     BlockIn,
     BlockOut,
     ClosureIn,
@@ -32,6 +40,8 @@ from app.schemas import (
     MeOut,
     PeriodIn,
     PeriodOut,
+    PhotoIn,
+    ProfessorSelfIn,
     ProfessorSummaryOut,
     SkipIn,
     StatusIn,
@@ -449,4 +459,112 @@ def update_my_student(
     if changes:
         user.updated_at = clock.now()
     db.commit()
+    return me_out(db, user)
+
+
+# --- own account: names, email, office, photo (owner request S5b, 2026-11-18) ------------
+
+
+@router.patch("/account", response_model=MeOut, summary="Change my name, or my email (needs my password)")
+def update_my_account(
+    body: AccountSelfIn,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MeOut:
+    """Names for everyone. A new email for professors and admins only, with the current
+    password: a student's email is their university number, which the administrator keeps."""
+    changes = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    password = changes.pop("current_password", None)
+    email = changes.pop("email", None)
+    if email is not None and email != user.email:
+        if user.role == "student":
+            raise AppError(
+                403,
+                "STUDENT_EMAIL_FIXED",
+                "A student's email is their university number; the administrator changes it.",
+            )
+        domain = get_settings().signup_email_domain
+        if user.role == "professor" and not email.endswith(f"@{domain}"):
+            raise AppError(422, "EMAIL_DOMAIN", f"Use your university email address (@{domain}).")
+        if not password:
+            raise AppError(400, "PASSWORD_NEEDED", "Enter your current password to change your email.")
+        # Limited like a password change: a stolen access token must not be a way to guess it.
+        login_limiter.check(f"password|{user.user_id}")
+        if not verify_password(password, user.password_hash):
+            raise AppError(400, "WRONG_PASSWORD", "The current password is incorrect.")
+        # Everyone on the public link knows the seed password, so a demo account keeps its
+        # email there, or one visitor could lock everyone else out of it (docs/security.md).
+        if password == SEED_PASSWORD and came_through_tunnel(request):
+            raise AppError(
+                403,
+                "DEMO_ACCOUNT",
+                "This is a shared demo account, so its email cannot be changed through the public link.",
+            )
+        accounts.ensure_email_free(db, email, except_user_id=user.user_id)
+        changes["email"] = email
+    for field, value in changes.items():
+        setattr(user, field, value)
+    if changes:
+        user.updated_at = clock.now()
+    db.commit()
+    return me_out(db, user)
+
+
+@router.patch("/professor", response_model=MeOut, summary="Choose my office (null for none)")
+def update_my_office(
+    body: ProfessorSelfIn,
+    user: User = Depends(current_professor),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MeOut:
+    accounts.ensure_exists(db, None, body.office_id)
+    db.get(Professor, user.user_id).office_id = body.office_id
+    user.updated_at = clock.now()
+    db.commit()
+    return me_out(db, user)
+
+
+PHOTO_MAX_BYTES = 262_144  # 256 KB, as ck_users_photo_size
+# How each image type starts; the declared type must match the bytes.
+PHOTO_SIGNATURES = {
+    "image/jpeg": lambda b: b.startswith(b"\xff\xd8\xff"),
+    "image/png": lambda b: b.startswith(b"\x89PNG\r\n\x1a\n"),
+    "image/webp": lambda b: b[:4] == b"RIFF" and b[8:12] == b"WEBP",
+}
+photo_limiter = RateLimiter(10, 60)  # uploads per minute per account
+
+
+@router.put("/photo", response_model=MeOut, summary="Add or replace my profile photo")
+def set_my_photo(
+    body: PhotoIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MeOut:
+    photo_limiter.check(str(user.user_id))
+    try:
+        image = base64.b64decode(body.data, validate=True)
+    except (binascii.Error, ValueError):
+        image = b""
+    if not 100 <= len(image) <= PHOTO_MAX_BYTES or not PHOTO_SIGNATURES[body.content_type](image):
+        raise AppError(422, "PHOTO_INVALID", "Choose a JPEG, PNG or WebP image of at most 256 KB.")
+    now = clock.now()
+    user.photo, user.photo_type, user.photo_updated_at = image, body.content_type, now
+    user.updated_at = now
+    db.commit()
+    return me_out(db, user)
+
+
+@router.delete("/photo", response_model=MeOut, summary="Remove my profile photo (idempotent)")
+def delete_my_photo(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+) -> MeOut:
+    if user.photo_updated_at is not None:
+        user.photo = user.photo_type = user.photo_updated_at = None
+        user.updated_at = clock.now()
+        db.commit()
     return me_out(db, user)

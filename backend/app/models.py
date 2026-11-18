@@ -15,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
+    LargeBinary,
     String,
     Time,
 )
@@ -58,6 +59,11 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default="(UTC_TIMESTAMP())")
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default="(UTC_TIMESTAMP())")
+    # Optional profile photo (2026-11-18). The image is loaded only when read (deferred), so
+    # every query that touches users, and the professors that join them, stays small.
+    photo: Mapped[bytes | None] = mapped_column(LargeBinary(16_777_215), deferred=True)
+    photo_type: Mapped[str | None] = mapped_column(String(10))
+    photo_updated_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class Office(Base):
