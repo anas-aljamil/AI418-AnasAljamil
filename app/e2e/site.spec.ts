@@ -193,6 +193,7 @@ test('a student changes their password, and only the new one signs in', async ({
   const sheet = page.getByRole('dialog', { name: 'Change password' });
   await sheet.getByLabel('Current password').fill('not-the-password');
   await sheet.getByLabel('New password (at least 8 characters)').fill('New-pass-2026');
+  await sheet.getByLabel('Confirm the new password').fill('New-pass-2026'); // typed twice (2026-11-18)
   await sheet.getByRole('button', { name: 'Save the new password' }).click();
   await expect(sheet.getByText('The current password is incorrect.')).toBeVisible();
   await sheet.getByLabel('Current password').fill('Mawjood-Demo-2026');

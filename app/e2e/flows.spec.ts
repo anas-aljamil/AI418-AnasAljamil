@@ -192,8 +192,10 @@ test('a cancellation frees time and the next student moves earlier in one tap', 
   const sheet = lama.getByRole('dialog', { name: /^Book with/ });
   // The calendar (2026-11-11): this week and next, Sunday to Thursday.
   await sheet.getByRole('radio', { name: 'Sunday 11 October', exact: true }).click();
-  await sheet.getByRole('button', { name: /^Start, / }).click();
-  await lama.getByRole('radio', { name: '10:00 AM', exact: true }).click();
+  // The start wheels (2026-11-18): the hour, then the minutes.
+  await sheet.getByRole('radio', { name: '10 AM', exact: true }).click();
+  await sheet.getByRole('radio', { name: '10:00 AM', exact: true }).click();
+  await expect(sheet.getByText('Starts at 10:00 AM', { exact: true })).toBeVisible();
   await sheet.getByRole('button', { name: 'Change length', exact: true }).click();
   await sheet.getByRole('button', { name: '30 minutes', exact: true }).click();
   await expect(sheet.getByText('30 min, until 10:30 AM', { exact: true })).toBeVisible();
