@@ -78,22 +78,14 @@ async function chooseFirstFreeTime(page: Page, sheetName: RegExp) {
   const days = sheet.locator('[role="radiogroup"] [role="radio"]:not([aria-disabled="true"])');
   for (let i = 0; i < (await days.count()); i++) {
     await days.nth(i).click();
-    // The start is one menu (our own on a computer); taken and past starts are disabled
-    // options named "9:00 AM, booked" or "9:00 AM, already passed".
-    const start = sheet.getByRole('button', { name: /^(Start, |البداية، )/ });
-    const shown = await start
+    // The start is on two wheels (2026-11-18), and the day's first free start is chosen to
+    // begin with; the line under the wheels says which.
+    const chosen = sheet.getByText(/^(Starts at |يبدأ الساعة )/);
+    const shown = await chosen
       .waitFor({ timeout: 3000 })
       .then(() => true)
       .catch(() => false);
-    if (!shown) continue;
-    await start.click();
-    const menu = page.getByRole('dialog', { name: /^(Start|البداية)$/ });
-    const free = menu.locator('[role="radio"]:not([aria-disabled="true"])');
-    if (await free.count()) {
-      await free.first().click();
-      return sheet;
-    }
-    await menu.getByRole('button', { name: /^(Close|إغلاق)$/ }).click();
+    if (shown) return sheet;
   }
   throw new Error('no free time in the booking window');
 }

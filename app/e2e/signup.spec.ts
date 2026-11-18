@@ -64,6 +64,7 @@ async function fillAccount(page: Page, who: { ar: string; en: string; email: str
   await page.getByLabel('Name in English').fill(who.en);
   await field(page, 'University email').fill(who.email);
   await page.getByLabel('Password (at least 8 characters)').fill('a-long-password');
+  await page.getByLabel('Confirm the password').fill('a-long-password'); // typed twice (2026-11-18)
 }
 
 // Close the browser contexts this test opened: the browser is shared by every spec (one
@@ -152,10 +153,12 @@ test('Arabic sign-up form, and the domain rule', async ({ browser }) => {
   await page.getByLabel('الاسم بالعربية').fill('رنا');
   await page.getByLabel('الاسم بالإنجليزية').fill('Rana');
   await page.getByLabel('كلمة المرور (8 أحرف على الأقل)').fill('a-long-password');
+  await page.getByLabel('أكّد كلمة المرور').fill('a-long-password');
   await page.getByRole('button', { name: /^القسم، / }).click();
   await page.getByRole('radio', { name: 'الأمن السيبراني والحوسبة الجنائية' }).click();
   await page.getByRole('button', { name: 'إنشاء الحساب' }).click();
   // Caught before sending, next to the email field.
-  await expect(page.getByText('استخدم بريدك الجامعي المنتهي بـ @upm.edu.sa.')).toBeVisible();
+  // The address keeps its own left-to-right order inside the Arabic sentence (2026-11-18).
+  await expect(page.getByText('استخدم بريدك الجامعي المنتهي بـ ⁦@upm.edu.sa⁩.')).toBeVisible();
   expect(sql("SELECT COUNT(*) FROM users WHERE email = '4519002@gmail.com'")).toBe('0');
 });
